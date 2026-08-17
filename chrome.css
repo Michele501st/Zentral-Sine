@@ -1,0 +1,719 @@
+/* ============================================================================ */
+/*               ZENTRAL TAB GROUPS & UI STYLESHEET (v0.1.5a)                  */
+/* ============================================================================ */
+/*  Part of the Zentral userChrome.js suite for Zen Browser.                   */
+/*  License: CC BY-NC-SA 4.0                                                   */
+/* ============================================================================ */
+
+/* Remove focus frame/outline on click */
+#tabbrowser-tabs tab-group *,
+#tabbrowser-tabs tab-group *:focus,
+#tabbrowser-tabs tab-group *:focus-visible,
+#tabbrowser-tabs tab-group *:-moz-focusring {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+#tabbrowser-tabs tab-group {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  margin: 2px 0 !important;
+}
+
+/* Neutralize native pill backgrounds & aspect-ratio constraints */
+#tabbrowser-tabs tab-group > .tab-group-label-container,
+#tabbrowser-tabs tab-group > .tab-group-label-container.tab-group-label-container,
+#tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label,
+#tabbrowser-tabs tab-group:hover > .tab-group-label-container,
+#tabbrowser-tabs tab-group:hover > .tab-group-label-container .tab-group-label {
+  --tab-group-color: transparent !important;
+  background: transparent !important;
+}
+
+/* ===========================================================================
+   Smooth Translucent Pill Tinted with Group Color (No Edge Highlights)
+   =========================================================================== */
+/* Base Container (Left Sidebar default: pills align to RIGHT inner edge) */
+#tabbrowser-tabs tab-group > .tab-group-label-container,
+#tabbrowser-tabs tab-group > .tab-group-label-container.tab-group-label-container {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  pointer-events: auto !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  aspect-ratio: auto !important;
+  margin: 3px 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  opacity: 1 !important;
+  position: relative !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+/* Extension Shelf (Flush-aligned to BOTTOM of pill, tucked inside title pill so it never pokes past outer corner) */
+#tabbrowser-tabs tab-group > .tab-group-label-container::before {
+  content: "" !important;
+  position: absolute !important;
+  top: auto !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 14px !important;
+  height: 10px !important;
+  border-radius: 10px 0 0 10px !important;
+  background-color: color-mix(in srgb, var(--zentral-custom-color, var(--tab-group-color, #777777)) calc(var(--zentral-tabgroup-label-opacity, 0.85) * 100%), transparent) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  transform: scaleX(0) !important;
+  transform-origin: calc(100% - 14px) bottom !important;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, background-color 0.2s ease !important;
+}
+
+/* Title Pill (Left Sidebar: aligned to RIGHT inner edge) */
+#tabbrowser-tabs tab-group > .tab-group-label-container .zentral-tab-title-wrapper {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  height: 28px !important;
+  padding: 0 14px 0 10px !important;
+  border-radius: 14px !important;
+  background-color: color-mix(in srgb, var(--zentral-custom-color, var(--tab-group-color, #777777)) calc(var(--zentral-tabgroup-label-opacity, 0.85) * 100%), transparent) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  z-index: 3 !important;
+  position: relative !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  transition: background-color 0.2s ease, border-radius 0.2s ease !important;
+}
+
+/* Nested Groups on Left Sidebar: 12px indentation towards LEFT outer edge */
+tab-group tab-group > .tab-group-label-container .zentral-tab-title-wrapper,
+tab-group .tab-group-container tab-group > .tab-group-label-container .zentral-tab-title-wrapper,
+tab-group[depth] > .tab-group-label-container .zentral-tab-title-wrapper,
+tab-group[nesting-level] > .tab-group-label-container .zentral-tab-title-wrapper {
+  margin-right: 12px !important;
+  margin-left: auto !important;
+}
+
+#zentral-group-color-picker,
+#zentral-group-color-picker::part(content),
+#zentral-group-color-picker::part(arrow),
+panel#zentral-group-color-picker,
+#zentral-group-color-picker .panel-arrowcontent,
+#zentral-group-color-picker .panel-subview-body {
+  --panel-background: transparent !important;
+  --panel-border-color: transparent !important;
+  --panel-box-shadow: none !important;
+  --panel-padding: 0 !important;
+  --arrowpanel-background: transparent !important;
+  --arrowpanel-border-color: transparent !important;
+  --arrowpanel-border-radius: 0px !important;
+  --arrowpanel-borderRadius: 0px !important;
+  --arrowpanel-box-shadow: none !important;
+  --arrowpanel-padding: 0 !important;
+  --arrowpanel-margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+.ztg-cp-box {
+  padding: 12px 14px 14px 14px !important;
+  gap: 10px !important;
+  background: #1e1e24 !important;
+  color: #fbfbfe !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75) !important;
+  backdrop-filter: blur(20px) !important;
+  width: 184px !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  overflow: visible !important;
+}
+
+/* Right Sidebar Mode (Sidebar on Right side of screen -> Pills align to LEFT inner edge) */
+html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container,
+html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container.tab-group-label-container,
+html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-container,
+html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-container.tab-group-label-container {
+  justify-content: flex-start !important;
+}
+
+html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-container .zentral-tab-title-wrapper {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+html[zen-sidebar-right="true"] tab-group tab-group > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-sidebar-right="true"] tab-group .tab-group-container tab-group > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-sidebar-right="true"] tab-group[depth] > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-sidebar-right="true"] tab-group[nesting-level] > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-right-side="true"] tab-group tab-group > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-right-side="true"] tab-group .tab-group-container tab-group > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-right-side="true"] tab-group[depth] > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-right-side="true"] tab-group[nesting-level] > .tab-group-label-container .zentral-tab-title-wrapper {
+  margin-left: 12px !important;
+  margin-right: auto !important;
+}
+
+html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container::before,
+html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-container::before {
+  left: 14px !important;
+  right: 0 !important;
+  border-radius: 0 10px 10px 0 !important;
+  transform-origin: 14px bottom !important;
+}
+
+/* Smooth Translucent Hover State:
+   - Below 85%: Jump to 100% full group color opacity.
+   - At or above 85%: Traditional brightened highlight (15% white tint mix). */
+/* Hover State Highlights for Folder Tab Pill & Long Strip Reveal */
+#tabbrowser-tabs tab-group > .tab-group-label-container:hover::before,
+#tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container::before {
+  opacity: 1 !important;
+  transform: scaleX(1) !important;
+  background-color: color-mix(in srgb, var(--zentral-custom-color, var(--tab-group-color, #777777)) 85%, #ffffff 15%) !important;
+}
+
+/* Left Sidebar Mode (default): Inner edge is on the LEFT -> top-left & bottom-left inner curve */
+#tabbrowser-tabs tab-group > .tab-group-label-container:hover .zentral-tab-title-wrapper,
+#tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper {
+  background-color: color-mix(in srgb, var(--zentral-custom-color, var(--tab-group-color, #777777)) 85%, #ffffff 15%) !important;
+  border-radius: 16px 14px 14px 4px !important;
+}
+
+/* Right Sidebar Mode: Inner edge is on the RIGHT -> top-right & bottom-right inner curve */
+html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container:hover .zentral-tab-title-wrapper,
+html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-container:hover .zentral-tab-title-wrapper,
+html[zen-right-side="true"] #tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper {
+  border-radius: 14px 16px 4px 14px !important;
+}
+
+html[zentral-label-opacity-below-85="true"] #tabbrowser-tabs tab-group > .tab-group-label-container:hover::before,
+html[zentral-label-opacity-below-85="true"] #tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container::before {
+  opacity: 1 !important;
+  transform: scaleX(1) !important;
+  background-color: var(--zentral-custom-color, var(--tab-group-color, #777777)) !important;
+}
+
+html[zentral-label-opacity-below-85="true"] #tabbrowser-tabs tab-group > .tab-group-label-container:hover .zentral-tab-title-wrapper,
+html[zentral-label-opacity-below-85="true"] #tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper {
+  background-color: var(--zentral-custom-color, var(--tab-group-color, #777777)) !important;
+  border-radius: 16px 14px 14px 4px !important;
+}
+
+html[zentral-label-opacity-below-85="true"][zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container:hover .zentral-tab-title-wrapper,
+html[zentral-label-opacity-below-85="true"][zen-sidebar-right="true"] #tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zentral-label-opacity-below-85="true"][zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-container:hover .zentral-tab-title-wrapper,
+html[zentral-label-opacity-below-85="true"][zen-right-side="true"] #tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper {
+  border-radius: 14px 16px 4px 14px !important;
+}
+
+/* Label text - Dynamically Auto-Contrast (Black or White) based on Label Color */
+#tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label,
+#tabbrowser-tabs tab-group:hover > .tab-group-label-container .tab-group-label,
+#tabbrowser-tabs tab-group[active] > .tab-group-label-container .tab-group-label,
+#tabbrowser-tabs tab-group:not([collapsed]) > .tab-group-label-container .tab-group-label {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 1 auto !important;
+  text-align: center !important;
+  background-color: transparent !important;
+  opacity: 1 !important;
+  color: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  width: auto !important;
+  max-width: 100% !important;
+  order: 2 !important;
+  transition: color 0.15s ease !important;
+}
+
+html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label {
+  text-align: center !important;
+}
+
+/* Chevron icon - Dynamically Auto-Contrast (Black or White) based on Label Color */
+#tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-icon,
+#tabbrowser-tabs tab-group[collapsed] > .tab-group-label-container .tab-group-icon,
+tab-group .tab-group-icon,
+tab-group[collapsed] .tab-group-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 1 !important;
+  color: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
+  fill: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
+  stroke: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
+  width: 14px !important;
+  height: 14px !important;
+  margin-right: 6px !important;
+  margin-left: 0 !important;
+  flex-shrink: 0 !important;
+  order: 1 !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  background-image: none !important;
+  text-decoration: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+#tabbrowser-tabs tab-group .tab-group-icon::before,
+#tabbrowser-tabs tab-group[collapsed] .tab-group-icon::before,
+tab-group .tab-group-icon::before,
+tab-group[collapsed] .tab-group-icon::before {
+  display: none !important;
+  content: none !important;
+  border: none !important;
+  outline: none !important;
+  background: none !important;
+}
+
+/* Complete obliteration of native image.group-marker and children inside .tab-group-icon */
+tab-group .group-marker,
+tab-group[collapsed] .group-marker,
+#tabbrowser-tabs tab-group .group-marker,
+#tabbrowser-tabs tab-group[collapsed] .group-marker,
+#tabbrowser-tabs tab-group .tab-group-icon .group-marker,
+#tabbrowser-tabs tab-group[collapsed] .tab-group-icon .group-marker,
+.tab-group-icon image,
+.tab-group-icon img,
+.tab-group-icon svg,
+.tab-group-icon label,
+.tab-group-icon span,
+.tab-group-icon > *,
+#tabbrowser-tabs tab-group .tab-group-icon > *,
+#tabbrowser-tabs tab-group[collapsed] .tab-group-icon > * {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: 0 !important;
+  max-height: 0 !important;
+  opacity: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  list-style-image: none !important;
+  background: none !important;
+  background-image: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+tab-group .group-marker::before,
+tab-group .group-marker::after,
+tab-group[collapsed] .group-marker::before,
+tab-group[collapsed] .group-marker::after,
+.group-marker::before,
+.group-marker::after {
+  display: none !important;
+  content: none !important;
+  border: none !important;
+}
+
+tab-group .tab-group-icon::after {
+  content: "" !important;
+  display: block !important;
+  width: 10px !important;
+  height: 10px !important;
+  background-color: currentColor !important;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  -webkit-mask-size: contain !important;
+  mask-size: contain !important;
+  -webkit-mask-repeat: no-repeat !important;
+  mask-repeat: no-repeat !important;
+  -webkit-mask-position: center !important;
+  mask-position: center !important;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+  transform: rotate(0deg) !important;
+}
+
+tab-group[collapsed] .tab-group-icon::after {
+  transform: rotate(-90deg) !important;
+}
+
+/* Hide chevron icon when user disables it in Zentral Settings (in all open & collapsed states) */
+html[zentral-show-chevron="false"] #tabbrowser-tabs tab-group .tab-group-icon,
+html[zentral-show-chevron="false"] #tabbrowser-tabs tab-group[collapsed] .tab-group-icon,
+html[zentral-show-chevron="false"] tab-group .tab-group-icon,
+html[zentral-show-chevron="false"] tab-group[collapsed] .tab-group-icon {
+  display: none !important;
+}
+
+/* Hierarchy & Nested Groups (Outer-edge alignment) */
+/* Hierarchy & Nested Groups Indentation (Mirrored for Left vs Right Sidebar) */
+tab-group tab-group {
+  margin-right: 12px !important;
+  margin-left: 0 !important;
+  position: relative !important;
+  width: calc(100% - 12px) !important;
+}
+
+tab-group tab-group::before {
+  content: "" !important;
+  position: absolute !important;
+  right: -6px !important;
+  left: auto !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 1.5px !important;
+  background-color: var(--zen-colors-border, rgba(255, 255, 255, 0.15)) !important;
+  z-index: 1 !important;
+}
+
+.zentral-group-initials {
+  display: none !important;
+}
+
+/* Tab Group Container & Collapsed Tab Hiding Rules (Mirrored for Left vs Right Sidebar) */
+tab-group:not([split-view-group]) .tab-group-container {
+  max-height: 100% !important;
+  position: relative !important;
+  margin-right: 12px !important;
+  margin-left: 0 !important;
+  margin-inline-start: 0 !important;
+  margin-inline-end: 12px !important;
+}
+
+tab-group:not([split-view-group]) .tab-group-container::after {
+  content: "" !important;
+  position: absolute !important;
+  right: -6px !important;
+  left: auto !important;
+  top: 0 !important;
+  background: var(--zen-colors-border, rgba(255, 255, 255, 0.15)) !important;
+  height: 100% !important;
+  width: 1.5px !important;
+  pointer-events: none !important;
+}
+
+/* Right Sidebar Mode Overrides (Outer edge is on the RIGHT) */
+html[zen-sidebar-right="true"] tab-group tab-group,
+html[zen-right-side="true"] tab-group tab-group {
+  margin-left: 12px !important;
+  margin-right: 0 !important;
+}
+
+html[zen-sidebar-right="true"] tab-group tab-group::before,
+html[zen-right-side="true"] tab-group tab-group::before {
+  left: -6px !important;
+  right: auto !important;
+}
+
+html[zen-sidebar-right="true"] tab-group:not([split-view-group]) .tab-group-container,
+html[zen-right-side="true"] tab-group:not([split-view-group]) .tab-group-container {
+  margin-right: 0 !important;
+  margin-left: 12px !important;
+  margin-inline-start: 12px !important;
+  margin-inline-end: 0 !important;
+}
+
+html[zen-sidebar-right="true"] tab-group:not([split-view-group]) .tab-group-container::after {
+  right: -6px !important;
+  left: auto !important;
+}
+
+tab-group:not([split-view-group]) .tab-group-container tab {
+  transition: max-height 0.15s ease, opacity 0.15s ease !important;
+}
+
+tab-group:not([split-view-group])[collapsed] .tab-group-container tab:not([selected]) {
+  max-height: 0 !important;
+  min-height: 0 !important;
+  opacity: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Hide tree guide lines and native pseudo-elements when a tab group is collapsed/closed or in Collapsed Sidebar Mode */
+tab-group[collapsed] .tab-group-container::after,
+tab-group[collapsed] .tab-group-container::before,
+tab-group[collapsed]::before,
+tab-group[collapsed]::after,
+tab-group[collapsed] > .tab-group-label-container::before,
+tab-group[collapsed] > .tab-group-label-container::after,
+tab-group:not([open]) .tab-group-container::after,
+tab-group:not([open]) .tab-group-container::before,
+#tabbrowser-tabs[zentral-sidebar-collapsed="true"] tab-group::before,
+#tabbrowser-tabs[zentral-sidebar-collapsed="true"] tab-group::after,
+#tabbrowser-tabs[zentral-sidebar-collapsed="true"] tab-group .tab-group-container::before,
+#tabbrowser-tabs[zentral-sidebar-collapsed="true"] tab-group .tab-group-container::after,
+#tabbrowser-tabs[zentral-sidebar-collapsed="true"] tab-group > .tab-group-label-container::before,
+#tabbrowser-tabs[zentral-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after,
+html[zentral-sidebar-collapsed="true"] tab-group::before,
+html[zentral-sidebar-collapsed="true"] tab-group::after,
+html[zentral-sidebar-collapsed="true"] tab-group .tab-group-container::before,
+html[zentral-sidebar-collapsed="true"] tab-group .tab-group-container::after,
+html[zentral-sidebar-collapsed="true"] tab-group > .tab-group-label-container::before,
+html[zentral-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after,
+html[zen-sidebar-collapsed="true"] tab-group::before,
+html[zen-sidebar-collapsed="true"] tab-group::after,
+html[zen-sidebar-collapsed="true"] tab-group .tab-group-container::before,
+html[zen-sidebar-collapsed="true"] tab-group .tab-group-container::after,
+html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::before,
+html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after {
+  display: none !important;
+  content: none !important;
+  border: none !important;
+  width: 0 !important;
+  opacity: 0 !important;
+}
+
+/* Collapsed Sidebar Mode Styling */
+#tabbrowser-tabs[zentral-sidebar-collapsed="true"] tab-group > .tab-group-label-container.tab-group-label-container,
+html[zentral-sidebar-collapsed="true"] #tabbrowser-tabs tab-group > .tab-group-label-container.tab-group-label-container,
+html[zen-sidebar-collapsed="true"] #tabbrowser-tabs tab-group > .tab-group-label-container.tab-group-label-container {
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 0 !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  min-height: 28px !important;
+  box-sizing: border-box !important;
+}
+
+/* Disable Chevrons completely in Collapsed Sidebar Mode */
+#tabbrowser-tabs[zentral-sidebar-collapsed="true"] tab-group .tab-group-icon,
+#tabbrowser-tabs[zentral-sidebar-collapsed="true"] tab-group[collapsed] .tab-group-icon,
+#tabbrowser-tabs[zentral-sidebar-collapsed="true"] .tab-group-icon-container,
+html[zentral-sidebar-collapsed="true"] #tabbrowser-tabs tab-group .tab-group-icon,
+html[zentral-sidebar-collapsed="true"] #tabbrowser-tabs tab-group[collapsed] .tab-group-icon,
+html[zen-sidebar-collapsed="true"] #tabbrowser-tabs tab-group .tab-group-icon,
+html[zen-sidebar-collapsed="true"] #tabbrowser-tabs tab-group[collapsed] .tab-group-icon {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  opacity: 0 !important;
+}
+
+/* Hide Label Title text in Collapsed Sidebar Mode */
+#tabbrowser-tabs[zentral-sidebar-collapsed="true"] tab-group > .tab-group-label-container .tab-group-label,
+html[zentral-sidebar-collapsed="true"] #tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label,
+html[zen-sidebar-collapsed="true"] #tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label {
+  display: none !important;
+}
+
+/* Show Initials centered & highly legible in Collapsed Sidebar Mode with Priority Contrast */
+#tabbrowser-tabs[zentral-sidebar-collapsed="true"] tab-group > .tab-group-label-container .zentral-group-initials,
+html[zentral-sidebar-collapsed="true"] #tabbrowser-tabs tab-group > .tab-group-label-container .zentral-group-initials,
+html[zen-sidebar-collapsed="true"] #tabbrowser-tabs tab-group > .tab-group-label-container .zentral-group-initials {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 1 1 auto !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  color: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
+  text-align: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+}
+
+/* ===========================================================================
+   Zentral - Compact Sidebar Hover-Extendable Apps Drawer
+   =========================================================================== */
+
+/* Top 1/3 Screen Edge Invisible Hover Trigger Strip */
+#zen-compact-apps-trigger {
+  position: fixed !important;
+  top: 0 !important;
+  height: 33.33vh !important;
+  width: 18px !important;
+  z-index: 2147483647 !important;
+  background: transparent !important;
+  pointer-events: auto !important;
+}
+
+#zen-compact-apps-trigger[disabled="true"],
+#zen-compact-apps-drawer[disabled="true"] {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+:root:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zen-compact-apps-trigger {
+  left: 0 !important;
+  right: auto !important;
+}
+
+:root[zen-right-side="true"] #zen-compact-apps-trigger,
+:root[zen-sidebar-right="true"] #zen-compact-apps-trigger {
+  right: 0 !important;
+  left: auto !important;
+}
+
+/* Floating Compact Drawer (Full height 100vh, 44px wide) */
+#zen-compact-apps-drawer {
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  height: 100vh !important;
+  width: 44px !important;
+  z-index: 2147483646 !important;
+  background: var(--tabpanels-background-color, color-mix(in srgb, var(--in-content-page-background, #16161a) 88%, transparent)) !important;
+  backdrop-filter: blur(20px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), 0 0 0 1px color-mix(in srgb, currentColor 10%, transparent) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  padding: 8px 0 !important;
+  box-sizing: border-box !important;
+  pointer-events: auto !important;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease !important;
+  will-change: transform;
+}
+
+/* Left Sidebar Placement (Drawer on Left Edge) */
+:root:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zen-compact-apps-drawer {
+  left: 0 !important;
+  right: auto !important;
+  border-radius: 0 14px 14px 0 !important;
+  border-right: 1px solid color-mix(in srgb, currentColor 12%, transparent) !important;
+}
+
+:root:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zen-compact-apps-drawer:not([open]) {
+  transform: translateX(-100%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+:root:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zen-compact-apps-drawer[open] {
+  transform: translateX(0) !important;
+  opacity: 1 !important;
+}
+
+/* Right Sidebar Placement (Drawer on Right Edge) */
+:root[zen-right-side="true"] #zen-compact-apps-drawer,
+:root[zen-sidebar-right="true"] #zen-compact-apps-drawer {
+  right: 0 !important;
+  left: auto !important;
+  border-radius: 14px 0 0 14px !important;
+  border-left: 1px solid color-mix(in srgb, currentColor 12%, transparent) !important;
+}
+
+:root[zen-right-side="true"] #zen-compact-apps-drawer:not([open]),
+:root[zen-sidebar-right="true"] #zen-compact-apps-drawer:not([open]) {
+  transform: translateX(100%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+:root[zen-right-side="true"] #zen-compact-apps-drawer[open],
+:root[zen-sidebar-right="true"] #zen-compact-apps-drawer[open] {
+  transform: translateX(0) !important;
+  opacity: 1 !important;
+}
+
+/* Fixed Top Header & Scrollable Body */
+#zen-compact-apps-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  padding-bottom: 6px !important;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent) !important;
+  flex-shrink: 0 !important;
+}
+
+#zen-compact-apps-list {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 6px !important;
+  width: 100% !important;
+  padding: 6px 0 !important;
+  overflow-y: auto !important;
+  scrollbar-width: none !important;
+  flex-grow: 1 !important;
+}
+
+#zen-compact-apps-list::-webkit-scrollbar {
+  display: none !important;
+}
+
+#zen-compact-apps-drawer .zen-app-tile {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  max-width: 34px !important;
+  max-height: 34px !important;
+  border-radius: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+/* ===========================================================================
+   Zentral - Extended Native Sidebar Resizing & Width Flexibility
+   (Compatible with Sine Theme Manager & Sine Compact Sidebar Mods)
+   =========================================================================== */
+:root:not([mod-sameerasw_zen_compact_sidebar_type]) #navigator-toolbox,
+:root:not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-box,
+:root:not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-container,
+:root:not([mod-sameerasw_zen_compact_sidebar_type]) .sidebar-panel {
+  max-width: 50vw !important;
+}
+
+/* Enforce minimum width for Sidebar when expanded so it cannot be crushed smaller than Apps Grid */
+:root[zen-sidebar-expanded="true"]:not([zentral-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #navigator-toolbox,
+:root[zen-sidebar-expanded="true"]:not([zentral-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-box,
+:root[zen-sidebar-expanded="true"]:not([zentral-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-container {
+  min-width: var(--zentral-sidebar-min-width, 240px) !important;
+}

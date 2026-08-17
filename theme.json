@@ -1,0 +1,21 @@
+{
+  "id": "zentral",
+  "name": "Zentral",
+  "description": "Unified Apps Grid, Tab Groups & Settings for Zen Browser",
+  "homepage": "https://github.com/Michele501st/Zentral-Sine",
+  "supportsUnload": true,
+  "style": {
+    "chrome": "chrome.css"
+  },
+  "scripts": {
+    "JS/Zentral.uc.js": {
+      "include": ["chrome://browser/content/browser.xhtml"]
+    }
+  },
+  "author": "Michele501st",
+  "version": "0.1.6",
+  "preferences": "preferences.json",
+  "tags": ["apps", "tabs", "sidebar", "groups"],
+  "fork": ["zen"],
+  "readme": "https://raw.githubusercontent.com/Michele501st/Zentral-Sine/main/README.md"
+}
