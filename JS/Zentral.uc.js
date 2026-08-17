@@ -533,6 +533,8 @@
         style.id = "zen-apps-sidebar-styles";
         style.textContent = css;
         (document.head || document.documentElement).appendChild(style);
+      } catch (e) {
+        console.error("[Zentral] Error injecting sidebar styles:", e);
       }
     }
 
@@ -2292,6 +2294,8 @@
         styleEl.id = "zentral-tabgroups-styles";
         styleEl.textContent = css;
         (document.head || document.documentElement).appendChild(styleEl);
+      } catch (e) {
+        console.error("[Zentral] Error injecting tabgroups styles:", e);
       }
     }
 
@@ -4128,6 +4132,8 @@
         style.id = "zentral-settings-styles";
         style.textContent = css;
         (document.head || document.documentElement).appendChild(style);
+      } catch (e) {
+        console.error("[Zentral] Error injecting settings styles:", e);
       }
     }
 
