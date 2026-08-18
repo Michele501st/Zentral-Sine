@@ -458,13 +458,52 @@
 
     /**
      * Determines whether Zen Browser is using the "Collapsed Sidebar" layout mode (horizontal apps bar in top toolbar).
+     * This includes:
+     *   - sidebar-expanded pref false (traditional collapsed layout)
+     *   - Compact Mode active (sidebar-expanded=true but physically collapsed/thin)
+     *   - zen-sidebar-collapsed DOM attribute set
      * @returns {boolean} True if in Collapsed Sidebar layout mode.
      */
     isCollapsedLayoutMode() {
       if (this.#dom.grid?.classList.contains("zen-apps-horizontal")) return true;
+      if (this.isPhysicallySidebarCollapsed()) return true;
       const useSingleToolbar = Core.getNativePref("zen.view.use-single-toolbar", true);
       const sidebarExpanded = Core.getNativePref("zen.view.sidebar-expanded", true);
       return !useSingleToolbar && !sidebarExpanded;
+    }
+
+    /**
+     * Checks physical sidebar state via DOM attributes and pixel width.
+     * Handles both Collapsed Sidebar mode and Compact Mode (sidebar-expanded=true but visually thin/hidden).
+     * @returns {boolean} True if the sidebar is physically not expanded.
+     */
+    isPhysicallySidebarCollapsed() {
+      // DOM attribute set by Zen in Collapsed Sidebar mode
+      const collapsedAttr = document.documentElement.getAttribute("zen-sidebar-collapsed");
+      if (collapsedAttr === "true") return true;
+
+      // Compact mode: sidebar is visually collapsed but pref says expanded.
+      // Detect by measuring physical width of the tab/sidebar container.
+      const sidebarBox = document.getElementById("tabbrowser-tabbox") ||
+                         document.getElementById("sidebar-box") ||
+                         document.getElementById("sidebar-container") ||
+                         gBrowser?.tabContainer;
+      if (sidebarBox) {
+        const rect = sidebarBox.getBoundingClientRect();
+        // Sidebar is considered collapsed if its width is narrower than 80px
+        // (icon-only compact mode) or 0px (fully hidden)
+        if (rect.width > 0 && rect.width < 80) return true;
+        if (rect.width === 0) return true;
+      }
+
+      // Also check via single-toolbar indicator
+      const useSingleToolbar = Core.getNativePref("zen.view.use-single-toolbar", true);
+      if (useSingleToolbar) return false; // Single toolbar = expanded layout
+
+      const sidebarExpanded = Core.getNativePref("zen.view.sidebar-expanded", true);
+      if (!sidebarExpanded) return true;
+
+      return false;
     }
 
     /* --------------------------------------------------------------------------
@@ -1762,21 +1801,27 @@
 
     /**
      * Repositions app grid container between vertical sidebar or horizontal toolbar based on Zen layout mode.
+     * Correctly handles:
+     *   - Normal Sidebar (expanded) → grid in sidebar
+     *   - Collapsed Sidebar layout mode → grid in top toolbar
+     *   - Compact Mode (sidebar-expanded=true but sidebar is visually icon-only) → grid in top toolbar
      */
     repositionGrid() {
       const grid = this.#dom.grid;
       if (!grid) return;
       try {
-        let useSingleToolbar = Core.getNativePref("zen.view.use-single-toolbar", true);
-        let sidebarExpanded = Core.getNativePref("zen.view.sidebar-expanded", true);
-        
-        if (!useSingleToolbar && !sidebarExpanded) {
+        // Use the comprehensive physical collapse check to handle both
+        // standard Collapsed Sidebar and Compact Mode edge cases.
+        const shouldUseToolbar = this.isPhysicallySidebarCollapsed();
+
+        if (shouldUseToolbar) {
           const bookmarksContainer = document.getElementById("personal-bookmarks") || document.getElementById("PlacesToolbarItems");
           const topToolbar = document.getElementById("nav-bar-customization-target") || document.getElementById("nav-bar");
-          
+
           grid.classList.add("zen-apps-horizontal");
           grid.style.order = "initial";
-          
+          console.log("[ZentralApps] repositionGrid: Collapsed/Compact mode → grid placed in toolbar.");
+
           if (bookmarksContainer && bookmarksContainer.parentNode) {
             const targetParent = bookmarksContainer.parentNode;
             if (grid.parentNode !== targetParent || grid.previousSibling !== bookmarksContainer) {
@@ -1799,6 +1844,7 @@
             }
             grid.style.order = "-1";
           }
+          console.log("[ZentralApps] repositionGrid: Expanded sidebar mode → grid placed in sidebar.");
         }
         this.updateScrollMask();
       } catch (e) {
@@ -1841,23 +1887,54 @@
       // Note: gZenWorkspaces monkey-patch removed (H-02) — the TabSelect listener
       // above already handles workspace switches reliably without fragile function wrapping.
 
+      // Observer 1: DOM attribute changes (zen-right-side, zen-sidebar-collapsed)
+      // zen-sidebar-collapsed fires when the user toggles Collapsed Sidebar mode or Compact Mode.
       const sideObserver = new window.MutationObserver((mutations) => {
         for (const m of mutations) {
           if (m.attributeName === "zen-right-side") {
             this.renderGrid();
             if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) this.positionPanel();
           }
+          if (m.attributeName === "zen-sidebar-collapsed") {
+            console.log("[ZentralApps] zen-sidebar-collapsed attribute changed → triggering repositionGrid");
+            // Small delay to let Zen finish its own layout transition
+            setTimeout(this.repositionGrid, 80);
+          }
         }
       });
-      sideObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["zen-right-side"] });
+      sideObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["zen-right-side", "zen-sidebar-collapsed"]
+      });
 
+      // Observer 2: Preference changes for toolbar/sidebar mode
       const layoutObserver = (subject, topic, data) => {
         if (data === "zen.view.use-single-toolbar" || data === "zen.view.sidebar-expanded") {
-          setTimeout(this.repositionGrid, 100);
+          // Use a longer delay here because Compact Mode changes sidebar-expanded
+          // but the physical sidebar DOM may take a frame to update its width.
+          setTimeout(this.repositionGrid, 150);
         }
       };
       Services.prefs.addObserver("zen.view.use-single-toolbar", layoutObserver, false);
       Services.prefs.addObserver("zen.view.sidebar-expanded", layoutObserver, false);
+
+      // Observer 3: sidebar-box width changes via ResizeObserver (catches Compact Mode transitions)
+      const sidebarBox = document.getElementById("tabbrowser-tabbox") ||
+                         document.getElementById("sidebar-box") ||
+                         document.getElementById("sidebar-container");
+      if (sidebarBox && typeof ResizeObserver !== "undefined") {
+        let lastWidth = sidebarBox.getBoundingClientRect().width;
+        const resizeObs = new ResizeObserver(() => {
+          const newWidth = sidebarBox.getBoundingClientRect().width;
+          const crossedThreshold = (lastWidth >= 80 && newWidth < 80) || (lastWidth < 80 && newWidth >= 80);
+          lastWidth = newWidth;
+          if (crossedThreshold) {
+            console.log("[ZentralApps] Sidebar width crossed 80px threshold (", newWidth, "px ) → repositionGrid");
+            setTimeout(this.repositionGrid, 80);
+          }
+        });
+        resizeObs.observe(sidebarBox);
+      }
 
       // Clean up pref observers when window closes to prevent ghost observers (H-03)
       window.addEventListener("unload", () => {
