@@ -1,4 +1,4 @@
-
+﻿
 // ==UserScript==
 // @name           Zentral
 // @description    Unified Apps Grid and Tabs Groups
@@ -84,7 +84,9 @@
       DEFAULT_SLIDE_MS: 450,
       DEFAULT_MAX_APPS: 21,
       DEFAULT_APPS_PER_ROW: 7,
-      DEFAULT_MAX_ROWS: 3
+      DEFAULT_MAX_ROWS: 3,
+      /** Sidebar width (px) below which layout is treated as collapsed. */
+      COLLAPSED_WIDTH_THRESHOLD: 140
     },
     /**
      * 1.2 Tab Groups Preference Keys
@@ -97,7 +99,9 @@
       PREF_THUMBNAILS: "zen.workspace.tabgroups.thumbnails",
       PREF_SHOW_CHEVRON: "zen.workspace.tabgroups.show_chevron",
       PREF_LABEL_OPACITY: "zen.workspace.tabgroups.label_opacity"
-    }
+    },
+    /** Debug logging preference Ã¢â‚¬â€ set true in about:config to enable verbose console output */
+    DEBUG_PREF: "zen.workspace.zentral.debug"
   };
 
   /* ============================================================================
@@ -269,7 +273,8 @@
       appBrowsers: new Map(),
       positionRafId: null,
       closeTimerId: null,
-      cachedScrollbarWidth: null
+      cachedScrollbarWidth: null,
+      repositionTimer: null
     };
 
     /**
@@ -424,13 +429,17 @@
      * @returns {boolean} True if sidebar is on the right side.
      */
     isSidebarRight() {
-      if (document.documentElement.getAttribute("zen-right-side") === "true") return true;
+      // Fast path: trust the Zen DOM attribute — always up-to-date via MutationObserver.
+      // Returning early on "false" eliminates 2 pref reads on every call in left-sidebar mode.
+      const rightAttr = document.documentElement.getAttribute("zen-right-side");
+      if (rightAttr === "true") return true;
+      if (rightAttr === "false") return false;
+      // Fallback: secondary attribute and prefs (only when primary attr is absent)
       if (document.documentElement.getAttribute("zen-sidebar-right") === "true") return true;
       if (Core.getNativePref("zen.view.sidebar-on-right", false)) return true;
       if (Core.getNativePref("zen.sidebar.right", false)) return true;
-      
-      const sidebarEl = document.getElementById("sidebar-box") || 
-                        document.getElementById("sidebar-container") || 
+      const sidebarEl = document.getElementById("sidebar-box") ||
+                        document.getElementById("sidebar-container") ||
                         document.getElementById("vertical-tabs") ||
                         gBrowser?.tabContainer;
       if (sidebarEl && sidebarEl.isConnected) {
@@ -445,15 +454,15 @@
      * @returns {boolean} True if sidebar is collapsed.
      */
     isCollapsedSidebar() {
-      if (document.documentElement.getAttribute("zen-sidebar-collapsed") === "true") return true;
-      if (document.getElementById("tabbrowser-tabs")?.getAttribute("zentral-sidebar-collapsed") === "true") return true;
-      if (!Core.getNativePref("zen.view.sidebar-expanded", true)) return true;
-
-      const sidebarBox = document.getElementById("sidebar-box") || document.getElementById("sidebar-container");
-      if (sidebarBox && (sidebarBox.getAttribute("collapsed") === "true" || sidebarBox.getAttribute("hidden") === "true")) return true;
-
-      return false;
+      // Fully delegate to the single authoritative collapse-detection method.
+      // Previously this method duplicated zen-sidebar-collapsed + sidebar-expanded pref reads
+      // that isPhysicallySidebarCollapsed() already handles — removed duplication (Q-05).
+      return this.isPhysicallySidebarCollapsed();
     }
+
+
+
+
 
     /**
      * Determines whether Zen Browser is using the "Collapsed Sidebar" layout mode (horizontal apps bar in top toolbar).
@@ -489,9 +498,9 @@
                          gBrowser?.tabContainer;
       if (sidebarBox) {
         const rect = sidebarBox.getBoundingClientRect();
-        // Sidebar is considered collapsed if its width is narrower than 80px
-        // (icon-only compact mode) or 0px (fully hidden)
-        if (rect.width > 0 && rect.width < 140) return true;
+        // Sidebar is considered collapsed if its width is narrower than COLLAPSED_WIDTH_THRESHOLD
+        const T = Constants.Apps.COLLAPSED_WIDTH_THRESHOLD;
+        if (rect.width > 0 && rect.width < T) return true;
         if (rect.width === 0) return true;
       }
 
@@ -858,7 +867,7 @@
       const oldAddBtn = this.#dom.grid.querySelector(".zen-app-add-btn");
       if (oldAddBtn) oldAddBtn.remove();
       const targetContainer = this.#dom.scrollBox || this.#dom.grid;
-      targetContainer.innerHTML = "";
+      targetContainer.replaceChildren(); // Faster than innerHTML = '' Ã¢â‚¬â€ avoids serialization
       
       const sidebarRight = this.isSidebarRight();
       const isCollapsed = this.isCollapsedSidebar();
@@ -1303,7 +1312,7 @@
       // Performance Optimization: Removed setInterval polling. Rely on DOMTitleChanged
       const titleHandler = (e) => {
         const title = b.contentTitle || "";
-        const match = title.match(/^\((\d+)\)/) || title.includes("â€¢") || title.match(/^\[(\d+)\]/);
+        const match = title.match(/^\((\d+)\)/) || title.includes("ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢") || title.match(/^\[(\d+)\]/);
         const hasNotification = !!match;
         
         let notifCount = null;
@@ -1388,6 +1397,8 @@
       };
 
       const triggerBurst = () => {
+        // Skip RAF burst entirely when panel is closed â€” avoids BCR reads at 60fps while idle
+        if (!this.#dom.root?.hasAttribute("open")) return;
         lastActivityTime = Date.now();
         if (!rafId) {
           rafId = requestAnimationFrame(rafLoop);
@@ -1503,7 +1514,7 @@
         }
       }
 
-      const isCollapsed = this.isCollapsedSidebar() || (sidebarRect.width > 0 && sidebarRect.width <= 80);
+      const isCollapsed = this.isCollapsedSidebar() || (sidebarRect.width > 0 && sidebarRect.width <= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD);
       const sideGap = isCollapsed ? 7 : gap;
 
       let top = 0;
@@ -1539,7 +1550,7 @@
         root.style.left = targetLeft + "px";
         root.style.transform = "translateX(0)";
       }
-      // console.log removed â€” was firing at 60fps causing console spam (C-04)
+      // console.log removed ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â was firing at 60fps causing console spam (C-04)
     }
 
     /**
@@ -1547,7 +1558,7 @@
      */
     togglePin() {
       this.#state.isPinned = !this.#state.isPinned;
-      console.log("[ZentralApps] togglePin - isPinned:", this.#state.isPinned);
+      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] togglePin - isPinned:", this.#state.isPinned);
       if(this.#dom.pinBtn) {
         this.#dom.pinBtn.setAttribute("data-pinned", this.#state.isPinned ? "true" : "false");
         this.#dom.pinBtn.title = this.#state.isPinned ? "Unpin panel" : "Pin panel";
@@ -1558,7 +1569,7 @@
      * Toggles expanded state for active floating app panel, maximizing width to fit viewport.
      */
     toggleExpand() {
-      console.log("[ZentralApps] toggleExpand - current isExpanded:", this.#state.isExpanded);
+      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] toggleExpand - current isExpanded:", this.#state.isExpanded);
       if (!this.#state.isExpanded) {
         this.#state.preExpandWidth = this.#state.panelWidthPx || this.loadWidth();
         
@@ -1794,16 +1805,31 @@
       if (e.target.closest && (e.target.closest("#navigator-toolbox") || e.target.closest("#sidebar-box") || e.target.closest("#PersonalToolbar") || e.target.closest("#nav-bar"))) return;
       if (e.target.closest && (e.target.closest("[id*='sine']") || e.target.closest("[class*='sine']"))) return;
       
-      console.log("[ZentralApps] handleOutsideClick closing panel due to click target:", e.target?.tagName, e.target?.id, e.target?.className);
+        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] handleOutsideClick closing panel due to click target:", e.target?.tagName, e.target?.id, e.target?.className);
       this.closePanel();
+    }
+
+    /**
+     * Debounces repositionGrid() calls Ã¢â‚¬â€ cancels any pending call and reschedules.
+     * This prevents the 2Ã¢â‚¬â€œ4Ãƒâ€” redundant DOM moves that fire when multiple observers
+     * (MutationObserver + Services.prefs + ResizeObserver) all trigger simultaneously
+     * during a single layout mode switch.
+     * @param {number} [delay=120] - Debounce delay in milliseconds.
+     */
+    scheduleRepositionGrid(delay = 120) {
+      if (this.#state.repositionTimer) clearTimeout(this.#state.repositionTimer);
+      this.#state.repositionTimer = setTimeout(() => {
+        this.#state.repositionTimer = null;
+        this.repositionGrid();
+      }, delay);
     }
 
     /**
      * Repositions app grid container between vertical sidebar or horizontal toolbar based on Zen layout mode.
      * Correctly handles:
-     *   - Normal Sidebar (expanded) â†’ grid in sidebar
-     *   - Collapsed Sidebar layout mode â†’ grid in top toolbar
-     *   - Compact Mode (sidebar-expanded=true but sidebar is visually icon-only) â†’ grid in top toolbar
+     *   - Normal Sidebar (expanded) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ grid in sidebar
+     *   - Collapsed Sidebar layout mode ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ grid in top toolbar
+     *   - Compact Mode (sidebar-expanded=true but sidebar is visually icon-only) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ grid in top toolbar
      */
     repositionGrid() {
       const grid = this.#dom.grid;
@@ -1819,7 +1845,7 @@
 
           grid.classList.add("zen-apps-horizontal");
           grid.style.order = "initial";
-          console.log("[ZentralApps] repositionGrid: Collapsed/Compact mode â†’ grid placed in toolbar.");
+          if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Collapsed/Compact mode \u2192 grid placed in toolbar.");
 
           if (bookmarksContainer && bookmarksContainer.parentNode) {
             const targetParent = bookmarksContainer.parentNode;
@@ -1843,7 +1869,7 @@
             }
             grid.style.order = "-1";
           }
-          console.log("[ZentralApps] repositionGrid: Expanded sidebar mode â†’ grid placed in sidebar.");
+          if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Expanded sidebar mode \u2192 grid placed in sidebar.");
         }
         this.updateScrollMask();
       } catch (e) {
@@ -1883,7 +1909,7 @@
         }
       });
 
-      // Note: gZenWorkspaces monkey-patch removed (H-02) â€” the TabSelect listener
+      // Note: gZenWorkspaces monkey-patch removed (H-02) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â the TabSelect listener
       // above already handles workspace switches reliably without fragile function wrapping.
 
       // Observer 1: DOM attribute changes (zen-right-side, zen-sidebar-collapsed)
@@ -1895,9 +1921,9 @@
             if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) this.positionPanel();
           }
           if (m.attributeName === "zen-sidebar-collapsed") {
-            console.log("[ZentralApps] zen-sidebar-collapsed attribute changed â†’ triggering repositionGrid");
-            // Small delay to let Zen finish its own layout transition
-            setTimeout(this.repositionGrid, 80);
+            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] zen-sidebar-collapsed attribute changed \u2192 triggering repositionGrid");
+            // Debounced Ã¢â‚¬â€ collapses simultaneous observer firings into one call
+            this.scheduleRepositionGrid(80);
           }
         }
       });
@@ -1909,9 +1935,8 @@
       // Observer 2: Preference changes for toolbar/sidebar mode
       const layoutObserver = (subject, topic, data) => {
         if (data === "zen.view.use-single-toolbar" || data === "zen.view.sidebar-expanded") {
-          // Use a longer delay here because Compact Mode changes sidebar-expanded
-          // but the physical sidebar DOM may take a frame to update its width.
-          setTimeout(this.repositionGrid, 150);
+          // Debounced Ã¢â‚¬â€ longer delay for prefs since DOM width lags behind pref change
+          this.scheduleRepositionGrid(150);
         }
       };
       Services.prefs.addObserver("zen.view.use-single-toolbar", layoutObserver, false);
@@ -1925,11 +1950,11 @@
         let lastWidth = sidebarBox.getBoundingClientRect().width;
         const resizeObs = new ResizeObserver(() => {
           const newWidth = sidebarBox.getBoundingClientRect().width;
-          const crossedThreshold = (lastWidth >= 80 && newWidth < 80) || (lastWidth < 80 && newWidth >= 80);
+          const crossedThreshold = (lastWidth >= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD && newWidth < Constants.Apps.COLLAPSED_WIDTH_THRESHOLD) || (lastWidth < Constants.Apps.COLLAPSED_WIDTH_THRESHOLD && newWidth >= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD);
           lastWidth = newWidth;
           if (crossedThreshold) {
-            console.log("[ZentralApps] Sidebar width crossed 80px threshold (", newWidth, "px ) â†’ repositionGrid");
-            setTimeout(this.repositionGrid, 80);
+            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] Sidebar width crossed threshold (", newWidth, "px) \u2192 repositionGrid");
+            this.scheduleRepositionGrid(80);
           }
         });
         resizeObs.observe(sidebarBox);
@@ -1942,10 +1967,10 @@
         this.stopPositionTracking();
       }, { once: true });
 
-      setTimeout(this.repositionGrid, 200);
+      this.scheduleRepositionGrid(200);
     }
   }
-  /* ============================================================================
+  /* ====
    * 4.0 TAB GROUPS MODULE (ZentralTabGroups)
    * ============================================================================
    */
@@ -2041,7 +2066,7 @@
           !!document.querySelector('[zentral-hover="true"]:hover');
 
         if (isHovered) {
-          // User is hovering the popup or label â€” keep it open!
+          // User is hovering the popup or label ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â keep it open!
           return;
         }
 
@@ -2066,8 +2091,10 @@
       this.enhanceTabContextMenu();
       this.processExistingGroups();
       
-      setTimeout(() => this.processExistingGroups(), 1000);
-      document.addEventListener("TabGroupCreate", (e) => this.onTabGroupCreate(e));
+      // Retry group scan after 1s to catch groups added after sessionrestore.
+      // Note: processGroup() is guarded by #processedGroups WeakSet — already-processed groups are skipped.
+      // loadTabGroupState() intentionally NOT repeated here — state is already loaded above. (C-03)
+      setTimeout(() => { document.querySelectorAll("tab-group:not([split-view-group])").forEach(g => this.processGroup(g)); }, 1000);
 
       // Collapsed Sidebar observer for Tab Groups
       const updateSidebarAttr = () => {
@@ -2076,7 +2103,7 @@
           const singleToolbar = Core.getNativePref("zen.view.use-single-toolbar", true);
           const isCollapsed = !sidebarExpanded || 
                               document.documentElement.getAttribute("zen-sidebar-collapsed") === "true" ||
-                              (document.getElementById("sidebar-box") && document.getElementById("sidebar-box").getAttribute("collapsed") === "true");
+                              (document.getElementById("sidebar-box")?.getAttribute("collapsed") === "true");
           const tabContainer = document.getElementById("tabbrowser-tabs");
           if (tabContainer) {
             tabContainer.setAttribute("zentral-sidebar-collapsed", isCollapsed ? "true" : "false");
@@ -2690,7 +2717,7 @@
         // Track for cleanup when this group is removed from the DOM (M-02)
         this.#groupObservers.set(group, styleWatcher);
 
-        // Labels are always full-width â€” no hover expand/collapse needed.
+        // Labels are always full-width ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no hover expand/collapse needed.
         
         let hoverTimer = null;
         labelContainer.addEventListener("mouseenter", () => {
@@ -3682,7 +3709,7 @@
         const state = JSON.parse(stateStr);
 
         // Sort ascending by saved index. Use Infinity (not || 0) for unknown/new groups
-        // so they go to the end rather than collapsing to position 0 â€” this was the
+        // so they go to the end rather than collapsing to position 0 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â this was the
         // root cause of H-04: || 0 made index -1 and undefined indistinguishable.
         const groupsToProcess = Array.from(
           document.querySelectorAll("tab-group:not([split-view-group])")
