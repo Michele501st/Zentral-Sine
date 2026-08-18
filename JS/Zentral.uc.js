@@ -491,7 +491,7 @@
         const rect = sidebarBox.getBoundingClientRect();
         // Sidebar is considered collapsed if its width is narrower than 80px
         // (icon-only compact mode) or 0px (fully hidden)
-        if (rect.width > 0 && rect.width < 80) return true;
+        if (rect.width > 0 && rect.width < 140) return true;
         if (rect.width === 0) return true;
       }
 

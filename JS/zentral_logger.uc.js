@@ -124,7 +124,7 @@
     
     // Root layout attributes
     const root = document.documentElement;
-    lines.push(`Root Attributes: zen-right-side="${root.getAttribute("zen-right-side")}" | zen-sidebar-collapsed="${root.getAttribute("zen-sidebar-collapsed")}" | zen-single-toolbar="${root.getAttribute("zen-single-toolbar")}"`);
+    const attrs = Array.from(root.attributes).map(a => `${a.name}="${a.value}"`).join(" | "); lines.push(`Root Attributes: ${attrs}`);
     
     // Apps Grid
     const grid = document.getElementById("zen-apps-sidebar-grid");
