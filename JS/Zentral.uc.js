@@ -442,15 +442,13 @@
     }
 
     /**
-     * Determines whether the Zen sidebar is currently collapsed.
-     * @returns {boolean} True if sidebar is collapsed.
+     * Determines whether the Zen sidebar is currently collapsed (temporarily hidden via compact mode hover).
+     * NOTE: Do NOT use for layout mode detection. Use isCollapsedLayoutMode() for that.
+     * @returns {boolean} True if sidebar is physically collapsed/hidden.
      */
     isCollapsedSidebar() {
       if (document.documentElement.getAttribute("zen-sidebar-collapsed") === "true") return true;
-      if (document.documentElement.getAttribute("zen-sidebar-expanded") === "false") return true;
-      if (document.documentElement.getAttribute("zen-compact-mode") === "true") return true;
       if (document.getElementById("tabbrowser-tabs")?.getAttribute("zentral-sidebar-collapsed") === "true") return true;
-      if (!Core.getNativePref("zen.view.sidebar-expanded", true)) return true;
 
       const sidebarBox = document.getElementById("sidebar-box") || document.getElementById("sidebar-container");
       if (sidebarBox && (sidebarBox.getAttribute("collapsed") === "true" || sidebarBox.getAttribute("hidden") === "true")) return true;
@@ -459,12 +457,15 @@
     }
 
     /**
-     * Determines whether Zen Browser is using the "Collapsed Sidebar" layout mode (horizontal apps bar in top toolbar).
+     * Determines whether Zen Browser is using the "Collapsed Sidebar" layout mode.
+     * In this mode the sidebar is replaced by a single top toolbar (zen.view.use-single-toolbar = true).
      * @returns {boolean} True if in Collapsed Sidebar layout mode.
      */
     isCollapsedLayoutMode() {
       if (this.#dom.grid?.classList.contains("zen-apps-horizontal")) return true;
-      return this.isCollapsedSidebar();
+      // Only the Collapsed Sidebar layout sets use-single-toolbar=true.
+      // Both "Only Sidebar" and "Sidebar and Top Toolbar" have it false.
+      return Core.getNativePref("zen.view.use-single-toolbar", false);
     }
 
     /* --------------------------------------------------------------------------
@@ -482,10 +483,6 @@
         #zen-apps-sidebar-grid { display: grid; grid-template-columns: repeat(var(--zentral-grid-cols, 7), minmax(0, 1fr)); justify-items: center; align-items: center; gap: 6px; padding: 8px 10px; width: 100%; box-sizing: border-box; position: relative; z-index: 10; max-height: calc(var(--zentral-max-rows, 3) * 42px + 16px); overflow-y: auto; scrollbar-width: none; }
         #zen-apps-sidebar-grid::-webkit-scrollbar { display: none; }
         .zen-apps-scroll-box { display: contents; }
-        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal),
-        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal),
-        :root[zen-sidebar-expanded="false"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal),
-        :root:not([zen-sidebar-expanded="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) { display: none !important; }
         #zen-apps-sidebar-grid.zen-apps-horizontal { display: flex !important; flex-direction: row !important; padding: 0 4px !important; gap: 2px !important; width: auto !important; height: 100% !important; max-height: 38px !important; align-items: center !important; -moz-window-dragging: no !important; position: relative !important; flex-shrink: 1 !important; min-width: 0 !important; margin-left: auto !important; }
         #zen-apps-sidebar-grid.zen-apps-horizontal .zen-apps-scroll-box { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 4px !important; overflow-x: auto !important; scrollbar-width: none !important; width: max-content !important; max-width: calc(10 * 38px + 9 * 4px) !important; scroll-behavior: smooth !important; -moz-window-dragging: no !important; flex-shrink: 1 !important; }
         #zen-apps-sidebar-grid.zen-apps-horizontal .zen-apps-scroll-box::-webkit-scrollbar { display: none !important; }
