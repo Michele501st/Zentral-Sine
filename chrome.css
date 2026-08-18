@@ -704,16 +704,20 @@ html[zen-sidebar-collapsed="true"] #tabbrowser-tabs tab-group > .tab-group-label
    Zentral - Extended Native Sidebar Resizing & Width Flexibility
    (Compatible with Sine Theme Manager & Sine Compact Sidebar Mods)
    =========================================================================== */
-:root:not([mod-sameerasw_zen_compact_sidebar_type]) #navigator-toolbox,
-:root:not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-box,
-:root:not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-container,
-:root:not([mod-sameerasw_zen_compact_sidebar_type]) .sidebar-panel {
+
+/* Allow sidebar to grow up to 50vw — but NEVER interfere with Collapsed Sidebar mode */
+:root:not([mod-sameerasw_zen_compact_sidebar_type]):not([zen-sidebar-collapsed="true"]) #navigator-toolbox,
+:root:not([mod-sameerasw_zen_compact_sidebar_type]):not([zen-sidebar-collapsed="true"]) #sidebar-box,
+:root:not([mod-sameerasw_zen_compact_sidebar_type]):not([zen-sidebar-collapsed="true"]) #sidebar-container,
+:root:not([mod-sameerasw_zen_compact_sidebar_type]):not([zen-sidebar-collapsed="true"]) .sidebar-panel {
   max-width: 50vw !important;
 }
 
-/* Enforce minimum width for Sidebar when expanded so it cannot be crushed smaller than Apps Grid */
-:root[zen-sidebar-expanded="true"]:not([zentral-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #navigator-toolbox,
-:root[zen-sidebar-expanded="true"]:not([zentral-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-box,
-:root[zen-sidebar-expanded="true"]:not([zentral-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-container {
+/* Enforce minimum width for Sidebar when expanded so it cannot be crushed smaller than Apps Grid.
+   Excluded in Collapsed Sidebar mode (zen-sidebar-collapsed="true") and when JS has set the
+   zentral-sidebar-collapsed attribute — either attribute is sufficient to lift this override. */
+:root[zen-sidebar-expanded="true"]:not([zen-sidebar-collapsed="true"]):not([zentral-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #navigator-toolbox,
+:root[zen-sidebar-expanded="true"]:not([zen-sidebar-collapsed="true"]):not([zentral-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-box,
+:root[zen-sidebar-expanded="true"]:not([zen-sidebar-collapsed="true"]):not([zentral-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-container {
   min-width: var(--zentral-sidebar-min-width, 240px) !important;
 }
