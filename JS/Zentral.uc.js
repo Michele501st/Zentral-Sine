@@ -447,6 +447,8 @@
      */
     isCollapsedSidebar() {
       if (document.documentElement.getAttribute("zen-sidebar-collapsed") === "true") return true;
+      if (document.documentElement.getAttribute("zen-sidebar-expanded") === "false") return true;
+      if (document.documentElement.getAttribute("zen-compact-mode") === "true") return true;
       if (document.getElementById("tabbrowser-tabs")?.getAttribute("zentral-sidebar-collapsed") === "true") return true;
       if (!Core.getNativePref("zen.view.sidebar-expanded", true)) return true;
 
@@ -462,9 +464,7 @@
      */
     isCollapsedLayoutMode() {
       if (this.#dom.grid?.classList.contains("zen-apps-horizontal")) return true;
-      const useSingleToolbar = Core.getNativePref("zen.view.use-single-toolbar", true);
-      const sidebarExpanded = Core.getNativePref("zen.view.sidebar-expanded", true);
-      return !useSingleToolbar && !sidebarExpanded;
+      return this.isCollapsedSidebar();
     }
 
     /* --------------------------------------------------------------------------
@@ -482,10 +482,14 @@
         #zen-apps-sidebar-grid { display: grid; grid-template-columns: repeat(var(--zentral-grid-cols, 7), minmax(0, 1fr)); justify-items: center; align-items: center; gap: 6px; padding: 8px 10px; width: 100%; box-sizing: border-box; position: relative; z-index: 10; max-height: calc(var(--zentral-max-rows, 3) * 42px + 16px); overflow-y: auto; scrollbar-width: none; }
         #zen-apps-sidebar-grid::-webkit-scrollbar { display: none; }
         .zen-apps-scroll-box { display: contents; }
-        #zen-apps-sidebar-grid.zen-apps-horizontal { display: flex; flex-direction: row; padding: 0 2px; gap: 2px; width: auto; align-items: center; -moz-window-dragging: no; position: relative; flex-shrink: 1 !important; min-width: 0 !important; margin-left: auto !important; }
-        #zen-apps-sidebar-grid.zen-apps-horizontal .zen-apps-scroll-box { display: flex; flex-direction: row; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; width: max-content; max-width: calc(10 * 38px + 9 * 4px) !important; scroll-behavior: smooth; -moz-window-dragging: no; flex-shrink: 1 !important; }
-        #zen-apps-sidebar-grid.zen-apps-horizontal .zen-apps-scroll-box::-webkit-scrollbar { display: none; }
-        #zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile { width: 38px !important; min-width: 38px !important; max-width: 38px !important; height: 28px !important; padding: 0 !important; aspect-ratio: auto; border-radius: var(--toolbarbutton-border-radius, 6px); flex-shrink: 0 !important; }
+        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal),
+        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal),
+        :root[zen-sidebar-expanded="false"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal),
+        :root:not([zen-sidebar-expanded="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) { display: none !important; }
+        #zen-apps-sidebar-grid.zen-apps-horizontal { display: flex !important; flex-direction: row !important; padding: 0 4px !important; gap: 2px !important; width: auto !important; height: 100% !important; max-height: 38px !important; align-items: center !important; -moz-window-dragging: no !important; position: relative !important; flex-shrink: 1 !important; min-width: 0 !important; margin-left: auto !important; }
+        #zen-apps-sidebar-grid.zen-apps-horizontal .zen-apps-scroll-box { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 4px !important; overflow-x: auto !important; scrollbar-width: none !important; width: max-content !important; max-width: calc(10 * 38px + 9 * 4px) !important; scroll-behavior: smooth !important; -moz-window-dragging: no !important; flex-shrink: 1 !important; }
+        #zen-apps-sidebar-grid.zen-apps-horizontal .zen-apps-scroll-box::-webkit-scrollbar { display: none !important; }
+        #zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile { width: 28px !important; min-width: 28px !important; max-width: 28px !important; height: 28px !important; padding: 0 !important; aspect-ratio: auto !important; border-radius: var(--toolbarbutton-border-radius, 6px) !important; flex-shrink: 0 !important; }
         .zen-app-tile { position: relative; appearance: none; border: none; width: 100%; height: auto; aspect-ratio: 1 / 1; max-width: 36px; max-height: 36px; border-radius: var(--toolbarbutton-border-radius, 8px); background-color: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.15s ease, opacity 0.15s ease, transform 0.1s ease; padding: 0; margin: 0; overflow: visible; -moz-window-dragging: no-drag; pointer-events: auto !important; }
         .zen-app-tile:hover { background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, currentColor 10%, transparent)) !important; }
         .zen-app-tile:active { transform: scale(0.95); }
@@ -1767,10 +1771,9 @@
       const grid = this.#dom.grid;
       if (!grid) return;
       try {
-        let useSingleToolbar = Core.getNativePref("zen.view.use-single-toolbar", true);
-        let sidebarExpanded = Core.getNativePref("zen.view.sidebar-expanded", true);
+        const isCollapsed = this.isCollapsedSidebar();
         
-        if (!useSingleToolbar && !sidebarExpanded) {
+        if (isCollapsed) {
           const bookmarksContainer = document.getElementById("personal-bookmarks") || document.getElementById("PlacesToolbarItems");
           const topToolbar = document.getElementById("nav-bar-customization-target") || document.getElementById("nav-bar");
           
@@ -1838,35 +1841,63 @@
         }
       });
 
-      // Note: gZenWorkspaces monkey-patch removed (H-02) — the TabSelect listener
-      // above already handles workspace switches reliably without fragile function wrapping.
-
       const sideObserver = new window.MutationObserver((mutations) => {
+        let shouldReposition = false;
+        let shouldRender = false;
         for (const m of mutations) {
           if (m.attributeName === "zen-right-side") {
-            this.renderGrid();
-            if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) this.positionPanel();
+            shouldRender = true;
+            shouldReposition = true;
+          }
+          if (m.attributeName === "zen-sidebar-expanded" ||
+              m.attributeName === "zen-sidebar-collapsed" ||
+              m.attributeName === "zen-compact-mode" ||
+              m.attributeName === "zen-single-toolbar" ||
+              m.attributeName === "zen-has-hover") {
+            shouldReposition = true;
           }
         }
+        if (shouldReposition) this.repositionGrid();
+        if (shouldRender) this.renderGrid();
+        if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) this.positionPanel();
       });
-      sideObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["zen-right-side"] });
+      sideObserver.observe(document.documentElement, { 
+        attributes: true, 
+        attributeFilter: [
+          "zen-right-side",
+          "zen-sidebar-expanded",
+          "zen-sidebar-collapsed",
+          "zen-compact-mode",
+          "zen-single-toolbar",
+          "zen-has-hover"
+        ] 
+      });
 
       const layoutObserver = (subject, topic, data) => {
-        if (data === "zen.view.use-single-toolbar" || data === "zen.view.sidebar-expanded") {
-          setTimeout(this.repositionGrid, 100);
+        if (data === "zen.view.use-single-toolbar" || 
+            data === "zen.view.sidebar-expanded" || 
+            data === "zen.view.compact" ||
+            data === "zen.tabs.vertical") {
+          setTimeout(this.repositionGrid, 50);
+          setTimeout(this.repositionGrid, 250);
         }
       };
       Services.prefs.addObserver("zen.view.use-single-toolbar", layoutObserver, false);
       Services.prefs.addObserver("zen.view.sidebar-expanded", layoutObserver, false);
+      try { Services.prefs.addObserver("zen.view.compact", layoutObserver, false); } catch (_) {}
+      try { Services.prefs.addObserver("zen.tabs.vertical", layoutObserver, false); } catch (_) {}
 
       // Clean up pref observers when window closes to prevent ghost observers (H-03)
       window.addEventListener("unload", () => {
         try { Services.prefs.removeObserver("zen.view.use-single-toolbar", layoutObserver); } catch (_) {}
         try { Services.prefs.removeObserver("zen.view.sidebar-expanded", layoutObserver); } catch (_) {}
+        try { Services.prefs.removeObserver("zen.view.compact", layoutObserver); } catch (_) {}
+        try { Services.prefs.removeObserver("zen.tabs.vertical", layoutObserver); } catch (_) {}
         this.stopPositionTracking();
       }, { once: true });
 
-      setTimeout(this.repositionGrid, 200);
+      setTimeout(this.repositionGrid, 100);
+      setTimeout(this.repositionGrid, 400);
     }
   }
   /* ============================================================================
