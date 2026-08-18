@@ -8,6 +8,9 @@
     "chrome": "chrome.css"
   },
   "scripts": {
+    "JS/zentral_logger.uc.js": {
+      "include": ["chrome://browser/content/browser.xhtml"]
+    },
     "JS/Zentral.uc.js": {
       "include": ["chrome://browser/content/browser.xhtml"]
     }
