@@ -5,7 +5,8 @@
   "homepage": "https://github.com/Michele501st/Zentral-Sine",
   "supportsUnload": true,
   "style": {
-    "chrome": "chrome.css"
+    "chrome": "chrome.css",
+    "content": ""
   },
   "scripts": {
     "JS/zentral_logger.uc.js": {
