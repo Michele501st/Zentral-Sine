@@ -211,11 +211,10 @@
      * @returns {any} The preference value or fallback.
      */
     getNativePref(key, fallback) {
-      if (!Services.prefs.prefHasUserValue(key)) return fallback;
       try {
-        if (typeof fallback === "boolean") return Services.prefs.getBoolPref(key);
-        if (typeof fallback === "number") return Number.isInteger(fallback) ? Services.prefs.getIntPref(key) : parseFloat(Services.prefs.getStringPref(key));
-        if (typeof fallback === "string") return Services.prefs.getStringPref(key);
+        if (typeof fallback === "boolean") return Services.prefs.getBoolPref(key, fallback);
+        if (typeof fallback === "number") return Number.isInteger(fallback) ? Services.prefs.getIntPref(key, fallback) : parseFloat(Services.prefs.getStringPref(key, String(fallback)));
+        if (typeof fallback === "string") return Services.prefs.getStringPref(key, fallback);
       } catch (e) {
         return fallback;
       }
@@ -1304,7 +1303,7 @@
       // Performance Optimization: Removed setInterval polling. Rely on DOMTitleChanged
       const titleHandler = (e) => {
         const title = b.contentTitle || "";
-        const match = title.match(/^\((\d+)\)/) || title.includes("•") || title.match(/^\[(\d+)\]/);
+        const match = title.match(/^\((\d+)\)/) || title.includes("â€¢") || title.match(/^\[(\d+)\]/);
         const hasNotification = !!match;
         
         let notifCount = null;
@@ -1540,7 +1539,7 @@
         root.style.left = targetLeft + "px";
         root.style.transform = "translateX(0)";
       }
-      // console.log removed — was firing at 60fps causing console spam (C-04)
+      // console.log removed â€” was firing at 60fps causing console spam (C-04)
     }
 
     /**
@@ -1802,9 +1801,9 @@
     /**
      * Repositions app grid container between vertical sidebar or horizontal toolbar based on Zen layout mode.
      * Correctly handles:
-     *   - Normal Sidebar (expanded) → grid in sidebar
-     *   - Collapsed Sidebar layout mode → grid in top toolbar
-     *   - Compact Mode (sidebar-expanded=true but sidebar is visually icon-only) → grid in top toolbar
+     *   - Normal Sidebar (expanded) â†’ grid in sidebar
+     *   - Collapsed Sidebar layout mode â†’ grid in top toolbar
+     *   - Compact Mode (sidebar-expanded=true but sidebar is visually icon-only) â†’ grid in top toolbar
      */
     repositionGrid() {
       const grid = this.#dom.grid;
@@ -1820,7 +1819,7 @@
 
           grid.classList.add("zen-apps-horizontal");
           grid.style.order = "initial";
-          console.log("[ZentralApps] repositionGrid: Collapsed/Compact mode → grid placed in toolbar.");
+          console.log("[ZentralApps] repositionGrid: Collapsed/Compact mode â†’ grid placed in toolbar.");
 
           if (bookmarksContainer && bookmarksContainer.parentNode) {
             const targetParent = bookmarksContainer.parentNode;
@@ -1844,7 +1843,7 @@
             }
             grid.style.order = "-1";
           }
-          console.log("[ZentralApps] repositionGrid: Expanded sidebar mode → grid placed in sidebar.");
+          console.log("[ZentralApps] repositionGrid: Expanded sidebar mode â†’ grid placed in sidebar.");
         }
         this.updateScrollMask();
       } catch (e) {
@@ -1884,7 +1883,7 @@
         }
       });
 
-      // Note: gZenWorkspaces monkey-patch removed (H-02) — the TabSelect listener
+      // Note: gZenWorkspaces monkey-patch removed (H-02) â€” the TabSelect listener
       // above already handles workspace switches reliably without fragile function wrapping.
 
       // Observer 1: DOM attribute changes (zen-right-side, zen-sidebar-collapsed)
@@ -1896,7 +1895,7 @@
             if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) this.positionPanel();
           }
           if (m.attributeName === "zen-sidebar-collapsed") {
-            console.log("[ZentralApps] zen-sidebar-collapsed attribute changed → triggering repositionGrid");
+            console.log("[ZentralApps] zen-sidebar-collapsed attribute changed â†’ triggering repositionGrid");
             // Small delay to let Zen finish its own layout transition
             setTimeout(this.repositionGrid, 80);
           }
@@ -1929,7 +1928,7 @@
           const crossedThreshold = (lastWidth >= 80 && newWidth < 80) || (lastWidth < 80 && newWidth >= 80);
           lastWidth = newWidth;
           if (crossedThreshold) {
-            console.log("[ZentralApps] Sidebar width crossed 80px threshold (", newWidth, "px ) → repositionGrid");
+            console.log("[ZentralApps] Sidebar width crossed 80px threshold (", newWidth, "px ) â†’ repositionGrid");
             setTimeout(this.repositionGrid, 80);
           }
         });
@@ -2042,7 +2041,7 @@
           !!document.querySelector('[zentral-hover="true"]:hover');
 
         if (isHovered) {
-          // User is hovering the popup or label — keep it open!
+          // User is hovering the popup or label â€” keep it open!
           return;
         }
 
@@ -2071,11 +2070,13 @@
       document.addEventListener("TabGroupCreate", (e) => this.onTabGroupCreate(e));
 
       // Collapsed Sidebar observer for Tab Groups
-      const prefName = "zen.view.sidebar-expanded";
       const updateSidebarAttr = () => {
         try {
-          const expanded = Core.getNativePref(prefName, true);
-          const isCollapsed = !expanded || document.documentElement.getAttribute("zen-sidebar-collapsed") === "true";
+          const sidebarExpanded = Core.getNativePref("zen.view.sidebar-expanded", true);
+          const singleToolbar = Core.getNativePref("zen.view.use-single-toolbar", true);
+          const isCollapsed = !sidebarExpanded || 
+                              document.documentElement.getAttribute("zen-sidebar-collapsed") === "true" ||
+                              (document.getElementById("sidebar-box") && document.getElementById("sidebar-box").getAttribute("collapsed") === "true");
           const tabContainer = document.getElementById("tabbrowser-tabs");
           if (tabContainer) {
             tabContainer.setAttribute("zentral-sidebar-collapsed", isCollapsed ? "true" : "false");
@@ -2084,10 +2085,25 @@
         } catch (e) {}
       };
       updateSidebarAttr();
-      Services.prefs.addObserver(prefName, updateSidebarAttr, false);
+      Services.prefs.addObserver("zen.view.sidebar-expanded", updateSidebarAttr, false);
+      Services.prefs.addObserver("zen.view.use-single-toolbar", updateSidebarAttr, false);
+      
+      const rootAttrObs = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          if (m.attributeName === "zen-sidebar-collapsed" || m.attributeName === "zen-right-side") {
+            updateSidebarAttr();
+          }
+        }
+      });
+      rootAttrObs.observe(document.documentElement, { attributes: true, attributeFilter: ["zen-sidebar-collapsed", "zen-right-side"] });
+
       // Clean up pref observer on window close to prevent ghost observers (H-03)
       window.addEventListener("unload", () => {
-        try { Services.prefs.removeObserver(prefName, updateSidebarAttr); } catch (_) {}
+        try { 
+          Services.prefs.removeObserver("zen.view.sidebar-expanded", updateSidebarAttr);
+          Services.prefs.removeObserver("zen.view.use-single-toolbar", updateSidebarAttr);
+          rootAttrObs.disconnect();
+        } catch (_) {}
       }, { once: true });
 
       // Tooltip injection (XUL panel with noautohide=true to avoid stealing click events)
@@ -2674,7 +2690,7 @@
         // Track for cleanup when this group is removed from the DOM (M-02)
         this.#groupObservers.set(group, styleWatcher);
 
-        // Labels are always full-width — no hover expand/collapse needed.
+        // Labels are always full-width â€” no hover expand/collapse needed.
         
         let hoverTimer = null;
         labelContainer.addEventListener("mouseenter", () => {
@@ -3666,7 +3682,7 @@
         const state = JSON.parse(stateStr);
 
         // Sort ascending by saved index. Use Infinity (not || 0) for unknown/new groups
-        // so they go to the end rather than collapsing to position 0 — this was the
+        // so they go to the end rather than collapsing to position 0 â€” this was the
         // root cause of H-04: || 0 made index -1 and undefined indistinguishable.
         const groupsToProcess = Array.from(
           document.querySelectorAll("tab-group:not([split-view-group])")

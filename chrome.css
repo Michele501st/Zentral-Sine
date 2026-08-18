@@ -705,7 +705,7 @@ html[zen-sidebar-collapsed="true"] #tabbrowser-tabs tab-group > .tab-group-label
    (Compatible with Sine Theme Manager & Sine Compact Sidebar Mods)
    =========================================================================== */
 
-/* Allow sidebar to grow up to 50vw — but NEVER interfere with Collapsed Sidebar mode */
+/* Allow sidebar to grow up to 50vw â€” but NEVER interfere with Collapsed Sidebar mode */
 :root:not([mod-sameerasw_zen_compact_sidebar_type]):not([zen-sidebar-collapsed="true"]) #navigator-toolbox,
 :root:not([mod-sameerasw_zen_compact_sidebar_type]):not([zen-sidebar-collapsed="true"]) #sidebar-box,
 :root:not([mod-sameerasw_zen_compact_sidebar_type]):not([zen-sidebar-collapsed="true"]) #sidebar-container,
@@ -715,7 +715,7 @@ html[zen-sidebar-collapsed="true"] #tabbrowser-tabs tab-group > .tab-group-label
 
 /* Enforce minimum width for Sidebar when expanded so it cannot be crushed smaller than Apps Grid.
    Excluded in Collapsed Sidebar mode (zen-sidebar-collapsed="true") and when JS has set the
-   zentral-sidebar-collapsed attribute — either attribute is sufficient to lift this override. */
+   zentral-sidebar-collapsed attribute â€” either attribute is sufficient to lift this override. */
 :root[zen-sidebar-expanded="true"]:not([zen-sidebar-collapsed="true"]):not([zentral-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #navigator-toolbox,
 :root[zen-sidebar-expanded="true"]:not([zen-sidebar-collapsed="true"]):not([zentral-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-box,
 :root[zen-sidebar-expanded="true"]:not([zen-sidebar-collapsed="true"]):not([zentral-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-container {
