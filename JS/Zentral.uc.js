@@ -1769,16 +1769,14 @@
       try {
         let useSingleToolbar = Core.getNativePref("zen.view.use-single-toolbar", true);
         let sidebarExpanded = Core.getNativePref("zen.view.sidebar-expanded", true);
-        // Also treat an actively collapsed sidebar as a horizontal-toolbar layout.
-        const sidebarIsCollapsed = this.isCollapsedSidebar();
-
-        if ((!useSingleToolbar && !sidebarExpanded) || sidebarIsCollapsed) {
+        
+        if (!useSingleToolbar && !sidebarExpanded) {
           const bookmarksContainer = document.getElementById("personal-bookmarks") || document.getElementById("PlacesToolbarItems");
           const topToolbar = document.getElementById("nav-bar-customization-target") || document.getElementById("nav-bar");
-
+          
           grid.classList.add("zen-apps-horizontal");
           grid.style.order = "initial";
-
+          
           if (bookmarksContainer && bookmarksContainer.parentNode) {
             const targetParent = bookmarksContainer.parentNode;
             if (grid.parentNode !== targetParent || grid.previousSibling !== bookmarksContainer) {
@@ -1849,13 +1847,9 @@
             this.renderGrid();
             if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) this.positionPanel();
           }
-          // When the sidebar collapses/expands, reposition grid between toolbar and sidebar.
-          if (m.attributeName === "zen-sidebar-collapsed") {
-            setTimeout(this.repositionGrid, 50);
-          }
         }
       });
-      sideObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["zen-right-side", "zen-sidebar-collapsed"] });
+      sideObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["zen-right-side"] });
 
       const layoutObserver = (subject, topic, data) => {
         if (data === "zen.view.use-single-toolbar" || data === "zen.view.sidebar-expanded") {
