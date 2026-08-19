@@ -2062,6 +2062,8 @@
     #popupShowingListener = null;
     /** @private Global group context menu event listener */
     #groupContextMenuHandler = null;
+    /** @private Global blocker for group toggle on right click */
+    #groupRightClickBlocker = null;
 
     /**
      * Safely retrieves Firefox SessionStore service for persistent tab metadata across restarts.
@@ -2123,6 +2125,12 @@
         if (this.#groupContextMenuHandler) {
           try { window.removeEventListener("contextmenu", this.#groupContextMenuHandler, true); } catch (_) {}
           this.#groupContextMenuHandler = null;
+        }
+        if (this.#groupRightClickBlocker) {
+          try { window.removeEventListener("mousedown", this.#groupRightClickBlocker, true); } catch (_) {}
+          try { window.removeEventListener("mouseup", this.#groupRightClickBlocker, true); } catch (_) {}
+          try { window.removeEventListener("click", this.#groupRightClickBlocker, true); } catch (_) {}
+          this.#groupRightClickBlocker = null;
         }
 
         // 3. Remove injected DOM elements
@@ -3030,6 +3038,32 @@
       const tabContainer = document.getElementById("tabbrowser-tabs") || document.body;
       observer.observe(tabContainer, { childList: true, subtree: true, attributes: true, attributeFilter: ["collapsed"] });
       this.#tabStripObserver = observer;
+
+      // Block native toggle on right click by capturing mousedown/mouseup/click
+      if (!this.#groupRightClickBlocker) {
+        this.#groupRightClickBlocker = (event) => {
+          if (event.button !== 2) return;
+          const target = event.target;
+          if (target.closest("#tab-label-input")) return;
+          const group = target.closest("tab-group:not([split-view-group])");
+          if (!group) return;
+          const isHeader = target.closest(".tab-group-label-container") ||
+                           target.closest(".zentral-tab-title-wrapper") ||
+                           target.classList.contains("tab-group-label") ||
+                           target.classList.contains("zentral-group-initials") ||
+                           target.classList.contains("tab-group-icon") ||
+                           target.tagName?.toLowerCase() === "tab-group";
+          if (target.closest("tab, tabbrowser-tab, .tabbrowser-tab") && !isHeader) return;
+
+          if (isHeader) {
+            // Stop propagation to prevent group toggle logic from triggering
+            event.stopPropagation();
+          }
+        };
+        window.addEventListener("mousedown", this.#groupRightClickBlocker, true);
+        window.addEventListener("mouseup", this.#groupRightClickBlocker, true);
+        window.addEventListener("click", this.#groupRightClickBlocker, true);
+      }
 
       // Global capture-phase contextmenu listener to guarantee right-click triggers custom menu on any group header
       if (!this.#groupContextMenuHandler) {
