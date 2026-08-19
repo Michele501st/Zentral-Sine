@@ -4582,6 +4582,41 @@
     /**
      * Opens the Zentral settings modal dialog and populates form fields with current preferences.
      */
+    updatePosition() {
+      if (!this.modal) return;
+      try {
+        const sidebar = document.getElementById("navigator-toolbox") || 
+                        document.getElementById("zen-sidebar-box") || 
+                        document.getElementById("tabbrowser-tabs")?.closest("#navigator-toolbox, #sidebar-box, .zen-sidebar");
+        if (sidebar) {
+          const rect = sidebar.getBoundingClientRect();
+          const isRight = document.documentElement.getAttribute("zen-sidebar-right") === "true" || 
+                          document.documentElement.getAttribute("zen-right-side") === "true" ||
+                          rect.left > (window.innerWidth / 2);
+          const width = Math.round(rect.width);
+          if (width > 40 && width < window.innerWidth) {
+            if (isRight) {
+              this.modal.style.left = "0px";
+              this.modal.style.right = width + "px";
+              this.modal.style.width = "calc(100vw - " + width + "px)";
+            } else {
+              this.modal.style.left = width + "px";
+              this.modal.style.right = "0px";
+              this.modal.style.width = "calc(100vw - " + width + "px)";
+            }
+            this.modal.style.height = "100vh";
+            this.modal.style.top = "0px";
+            this.modal.style.bottom = "0px";
+            return;
+          }
+        }
+      } catch (_) {}
+      this.modal.style.left = "0px";
+      this.modal.style.right = "0px";
+      this.modal.style.width = "100vw";
+      this.modal.style.height = "100vh";
+    }
+
     open() {
       if (!this.modal) {
         this.createModal();
@@ -4589,11 +4624,9 @@
         this.modal.style.display = "flex";
         this.populate();
       }
+      this.updatePosition();
     }
-    
-    /**
-     * Hides the settings modal dialog.
-     */
+
     close() {
       if (this.modal) this.modal.style.display = "none";
     }
@@ -4669,10 +4702,12 @@
       const css = `
         #zentral-settings-modal {
           position: fixed;
-          inset: 0;
-          width: 100vw;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          right: 0;
           height: 100vh;
-          background: rgba(0, 0, 0, 0.65);
+          background: rgba(0, 0, 0, 0.62);
           backdrop-filter: blur(16px) saturate(140%);
           -webkit-backdrop-filter: blur(16px) saturate(140%);
           z-index: 2147483647;
@@ -4681,6 +4716,20 @@
           justify-content: center;
           font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
           animation: zsFadeIn 0.18s ease-out;
+        }
+
+        /* Responsive sidebar-exclusion rules */
+        html[zen-sidebar-right="true"] #zentral-settings-modal,
+        html[zen-right-side="true"] #zentral-settings-modal {
+          right: var(--zen-sidebar-width, 240px);
+          left: 0;
+          width: calc(100vw - var(--zen-sidebar-width, 240px));
+        }
+
+        html:not([zen-sidebar-right="true"]):not([zen-right-side="true"]):not([zen-sidebar-collapsed="true"]):not([zentral-sidebar-collapsed="true"]) #zentral-settings-modal {
+          left: var(--zen-sidebar-width, 240px);
+          right: 0;
+          width: calc(100vw - var(--zen-sidebar-width, 240px));
         }
 
         @keyframes zsFadeIn {
@@ -4699,7 +4748,7 @@
           width: 480px;
           max-width: 92vw;
           border-radius: 16px;
-          box-shadow: 0 28px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08);
+          box-shadow: 0 28px 70px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
           display: flex;
           flex-direction: column;
@@ -4808,18 +4857,27 @@
           margin-top: 2px;
         }
 
+        /* High-contrast number inputs without clunky bright spin arrows */
         .zs-input-number {
-          width: 68px;
+          width: 74px;
           background: rgba(255, 255, 255, 0.08) !important;
-          border: 1px solid rgba(255, 255, 255, 0.14) !important;
+          border: 1px solid rgba(255, 255, 255, 0.16) !important;
           border-radius: 8px;
           color: #ffffff !important;
           padding: 6px 8px;
           font-size: 13px;
           text-align: center;
-          font-weight: 500;
+          font-weight: 600;
           outline: none;
           transition: all 0.15s ease;
+          -moz-appearance: textfield !important;
+          appearance: textfield !important;
+        }
+
+        .zs-input-number::-webkit-outer-spin-button,
+        .zs-input-number::-webkit-inner-spin-button {
+          -webkit-appearance: none !important;
+          margin: 0 !important;
         }
 
         .zs-input-number:focus {
@@ -4827,13 +4885,16 @@
           box-shadow: 0 0 0 2px rgba(255, 85, 85, 0.3) !important;
         }
 
+        /* Sleek select box with integrated subtle arrow */
         .zs-select {
-          width: 145px;
-          background: #242429 !important;
-          border: 1px solid rgba(255, 255, 255, 0.14) !important;
+          width: 155px;
+          background: #242429 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>') no-repeat right 10px center !important;
+          -moz-appearance: none !important;
+          appearance: none !important;
+          border: 1px solid rgba(255, 255, 255, 0.16) !important;
           border-radius: 8px;
           color: #ffffff !important;
-          padding: 6px 10px;
+          padding: 6px 28px 6px 10px;
           font-size: 13px;
           font-weight: 500;
           outline: none;
@@ -4842,7 +4903,7 @@
         }
 
         .zs-select:hover {
-          border-color: rgba(255, 255, 255, 0.3) !important;
+          border-color: rgba(255, 255, 255, 0.35) !important;
         }
 
         .zs-select:focus {
@@ -5030,9 +5091,7 @@
       } catch (e) {
         console.error("[Zentral] Error injecting settings styles:", e);
       }
-    }
-
-    createModal() {
+    }    createModal() {
       this.injectStyles();
       this.modal = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
       this.modal.id = "zentral-settings-modal";

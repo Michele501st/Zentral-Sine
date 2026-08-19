@@ -838,3 +838,42 @@ panel[id*="tabgroup-editor"] {
   color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
 }
+
+/* --------------------------------------------------------------------------
+ * Zentral Settings Modal: Exclude Sidebar & Clean Inputs
+ * -------------------------------------------------------------------------- */
+#zentral-settings-modal {
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  height: 100vh !important;
+  z-index: 2147483647 !important;
+}
+
+html[zen-sidebar-right="true"] #zentral-settings-modal,
+html[zen-right-side="true"] #zentral-settings-modal {
+  right: var(--zen-sidebar-width, 240px) !important;
+  left: 0 !important;
+  width: calc(100vw - var(--zen-sidebar-width, 240px)) !important;
+}
+
+html:not([zen-sidebar-right="true"]):not([zen-right-side="true"]):not([zen-sidebar-collapsed="true"]):not([zentral-sidebar-collapsed="true"]) #zentral-settings-modal {
+  left: var(--zen-sidebar-width, 240px) !important;
+  right: 0 !important;
+  width: calc(100vw - var(--zen-sidebar-width, 240px)) !important;
+}
+
+#zentral-settings-modal .zs-input-number {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+  width: 74px !important;
+  padding: 6px 8px !important;
+  text-align: center !important;
+  font-weight: 600 !important;
+}
+
+#zentral-settings-modal .zs-input-number::-webkit-outer-spin-button,
+#zentral-settings-modal .zs-input-number::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
