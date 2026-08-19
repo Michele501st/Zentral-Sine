@@ -1776,12 +1776,14 @@
         const currentSpaceBtn = popup.querySelector("#zen-apps-sidebar-space-current-item");
         const allSpacesBtn = popup.querySelector("#zen-apps-sidebar-space-all-item");
         const spaceSep = popup.querySelector("#zen-apps-sidebar-space-sep");
+        const settingsSep = popup.querySelector("#zen-apps-sidebar-settings-sep");
         
         if (removeBtn) removeBtn.hidden = !hasApp;
         if (preloadBtn) preloadBtn.hidden = !hasApp;
         if (currentSpaceBtn) currentSpaceBtn.hidden = !hasApp;
         if (allSpacesBtn) allSpacesBtn.hidden = !hasApp;
         if (spaceSep) spaceSep.hidden = !hasApp;
+        if (settingsSep) settingsSep.hidden = !hasApp;
 
         if (hasApp) {
           const app = this.#state.apps.find(a => a.id === popup.dataset.activeAppId);

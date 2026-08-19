@@ -792,3 +792,10 @@ panel[id*="tabgroup-editor"] {
   fill: var(--tab-group-color, var(--zentral-custom-color, #777777)) !important;
   border-radius: 4px !important;
 }
+
+/* Hide separator line in Apps Grid context menu when only Settings is shown */
+#zen-apps-sidebar-tile-context #zen-apps-sidebar-settings-sep[hidden="true"],
+#zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-settings-sep,
+#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-settings-sep {
+  display: none !important;
+}
