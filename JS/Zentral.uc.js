@@ -239,21 +239,96 @@
    * Manages sidebar app grid, floating app panels, workspace isolation, and drag/drop reordering.
    */
   class ZentralApps {
+    /** @private Side attribute MutationObserver */
+    #sideObserver = null;
+    /** @private Pref observer callback */
+    #layoutObserver = null;
+    /** @private ResizeObserver on sidebar */
+    #resizeObs = null;
+    /** @private TabSelect event listener */
+    #tabSelectListener = null;
+
     /**
      * Module tear down for Sine hot unloading
      */
     destroy() {
       try {
-        const els = ["zs-app-style", "zs-app-grid-container", "zs-apps-resize-handle", "zs-app-drawer-toggle"];
-        els.forEach(id => {
+        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] Destroying Apps module...");
+        
+        // 1. Clear timers and animation frames
+        if (this.#state.repositionTimer) {
+          clearTimeout(this.#state.repositionTimer);
+          this.#state.repositionTimer = null;
+        }
+        if (this.#state.closeTimerId) {
+          clearTimeout(this.#state.closeTimerId);
+          this.#state.closeTimerId = null;
+        }
+        if (this.#state.positionRafId) {
+          cancelAnimationFrame(this.#state.positionRafId);
+          this.#state.positionRafId = null;
+        }
+        this.stopPositionTracking();
+
+        // 2. Disconnect observers
+        if (this.#sideObserver) {
+          try { this.#sideObserver.disconnect(); } catch (_) {}
+          this.#sideObserver = null;
+        }
+        if (this.#resizeObs) {
+          try { this.#resizeObs.disconnect(); } catch (_) {}
+          this.#resizeObs = null;
+        }
+        if (this.#layoutObserver) {
+          try { Services.prefs.removeObserver("zen.view.use-single-toolbar", this.#layoutObserver); } catch (_) {}
+          try { Services.prefs.removeObserver("zen.view.sidebar-expanded", this.#layoutObserver); } catch (_) {}
+          this.#layoutObserver = null;
+        }
+
+        // 3. Remove window / document event listeners
+        window.removeEventListener("mousedown", this.handleOutsideClick);
+        if (this.#tabSelectListener) {
+          window.removeEventListener("TabSelect", this.#tabSelectListener);
+          this.#tabSelectListener = null;
+        }
+        document.removeEventListener("mousemove", this.onDrag);
+        document.removeEventListener("mouseup", this.onStopDrag);
+
+        // 4. Remove injected DOM elements
+        const idsToRemove = [
+          "zen-apps-sidebar-grid",
+          "zen-apps-sidebar-styles",
+          "zen-app-panel-root",
+          "zen-compact-apps-drawer",
+          "zen-compact-apps-trigger",
+          "zen-apps-sidebar-tile-context",
+          "context_zenAppsSidebarAdd_sep",
+          "context_zenAppsSidebarAdd"
+        ];
+        idsToRemove.forEach(id => {
           const el = document.getElementById(id);
           if (el) el.remove();
         });
-        document.querySelectorAll(".zs-app-panel").forEach(p => p.remove());
+
+        // 5. Clean up floating panels and browser frames
+        document.querySelectorAll(".zs-app-panel, .zen-app-floating-panel, #zen-app-panel-root").forEach(p => p.remove());
         if (this.#state && this.#state.appBrowsers) {
           this.#state.appBrowsers.forEach(b => { if (b && b.remove) b.remove(); });
           this.#state.appBrowsers.clear();
         }
+
+        // 6. Reset DOM references and state
+        this.#dom = {
+          grid: null,
+          root: null,
+          clip: null,
+          panel: null,
+          pill: null,
+          pinBtn: null,
+          expandBtn: null
+        };
+        this._stylesInjected = false;
+        delete window.ZenApps;
       } catch(e) {
         console.error("[Zentral] Apps destroy error:", e);
       }
@@ -1901,20 +1976,21 @@
 
       window.addEventListener("mousedown", this.handleOutsideClick);
 
-      window.addEventListener("TabSelect", () => {
+      this.#tabSelectListener = () => {
         const currentWs = window.gZenWorkspaces?.activeWorkspace;
         if (this.#state.lastWorkspaceId !== currentWs) {
           this.#state.lastWorkspaceId = currentWs;
           this.renderGrid();
         }
-      });
+      };
+      window.addEventListener("TabSelect", this.#tabSelectListener);
 
       // Note: gZenWorkspaces monkey-patch removed (H-02) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â the TabSelect listener
       // above already handles workspace switches reliably without fragile function wrapping.
 
       // Observer 1: DOM attribute changes (zen-right-side, zen-sidebar-collapsed)
       // zen-sidebar-collapsed fires when the user toggles Collapsed Sidebar mode or Compact Mode.
-      const sideObserver = new window.MutationObserver((mutations) => {
+      this.#sideObserver = new window.MutationObserver((mutations) => {
         for (const m of mutations) {
           if (m.attributeName === "zen-right-side") {
             this.renderGrid();
@@ -1927,20 +2003,20 @@
           }
         }
       });
-      sideObserver.observe(document.documentElement, {
+      this.#sideObserver.observe(document.documentElement, {
         attributes: true,
         attributeFilter: ["zen-right-side", "zen-sidebar-collapsed"]
       });
 
       // Observer 2: Preference changes for toolbar/sidebar mode
-      const layoutObserver = (subject, topic, data) => {
+      this.#layoutObserver = (subject, topic, data) => {
         if (data === "zen.view.use-single-toolbar" || data === "zen.view.sidebar-expanded") {
           // Debounced Ã¢â‚¬â€ longer delay for prefs since DOM width lags behind pref change
           this.scheduleRepositionGrid(150);
         }
       };
-      Services.prefs.addObserver("zen.view.use-single-toolbar", layoutObserver, false);
-      Services.prefs.addObserver("zen.view.sidebar-expanded", layoutObserver, false);
+      Services.prefs.addObserver("zen.view.use-single-toolbar", this.#layoutObserver, false);
+      Services.prefs.addObserver("zen.view.sidebar-expanded", this.#layoutObserver, false);
 
       // Observer 3: sidebar-box width changes via ResizeObserver (catches Compact Mode transitions)
       const sidebarBox = document.getElementById("tabbrowser-tabbox") ||
@@ -1948,7 +2024,7 @@
                          document.getElementById("sidebar-container");
       if (sidebarBox && typeof ResizeObserver !== "undefined") {
         let lastWidth = sidebarBox.getBoundingClientRect().width;
-        const resizeObs = new ResizeObserver(() => {
+        this.#resizeObs = new ResizeObserver(() => {
           const newWidth = sidebarBox.getBoundingClientRect().width;
           const crossedThreshold = (lastWidth >= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD && newWidth < Constants.Apps.COLLAPSED_WIDTH_THRESHOLD) || (lastWidth < Constants.Apps.COLLAPSED_WIDTH_THRESHOLD && newWidth >= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD);
           lastWidth = newWidth;
@@ -1957,7 +2033,7 @@
             this.scheduleRepositionGrid(80);
           }
         });
-        resizeObs.observe(sidebarBox);
+        this.#resizeObs.observe(sidebarBox);
       }
 
       // Clean up pref observers when window closes to prevent ghost observers (H-03)
@@ -1980,19 +2056,154 @@
    * Enhances native tab groups with color pickers, folder integration, tooltips, and state persistence.
    */
   class ZentralTabGroups {
+    /** @private Tabstrip MutationObserver */
+    #tabStripObserver = null;
+    /** @private Root attribute MutationObserver */
+    #rootAttrObs = null;
+    /** @private Sidebar attr update listener for prefs */
+    #updateSidebarAttr = null;
+
     /**
      * Module tear down for Sine hot unloading
      */
     destroy() {
       try {
-        const els = ["zs-tabgroup-style", "zs-tabgroup-color-picker", "zs-tabgroup-context-menu"];
-        els.forEach(id => {
+        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralTabGroups] Destroying TabGroups module...");
+
+        // 1. Clear timers
+        if (this.#state && this.#state.saveStateTimer) {
+          clearTimeout(this.#state.saveStateTimer);
+          this.#state.saveStateTimer = null;
+        }
+        if (window.zentralTooltipHideTimer) {
+          clearTimeout(window.zentralTooltipHideTimer);
+          window.zentralTooltipHideTimer = null;
+        }
+
+        // 2. Disconnect observers
+        if (this.#tabStripObserver) {
+          try { this.#tabStripObserver.disconnect(); } catch (_) {}
+          this.#tabStripObserver = null;
+        }
+        if (this.#rootAttrObs) {
+          try { this.#rootAttrObs.disconnect(); } catch (_) {}
+          this.#rootAttrObs = null;
+        }
+        if (this.#updateSidebarAttr) {
+          try { Services.prefs.removeObserver("zen.view.sidebar-expanded", this.#updateSidebarAttr); } catch (_) {}
+          try { Services.prefs.removeObserver("zen.view.use-single-toolbar", this.#updateSidebarAttr); } catch (_) {}
+          this.#updateSidebarAttr = null;
+        }
+
+        // 3. Remove injected DOM elements
+        const idsToRemove = [
+          "zentral-tabgroups-styles",
+          "zentral-tabgroup-tooltip",
+          "zentral-tabgroup-tooltip-container",
+          "zentral-tabgroup-context-menu",
+          "zentral-color-picker-panel",
+          "context_zenFolderUngroup_sep",
+          "context_zenFolderUngroup"
+        ];
+        idsToRemove.forEach(id => {
           const el = document.getElementById(id);
           if (el) el.remove();
         });
-        if (this.#state && this.#state.saveStateTimer) {
-          clearTimeout(this.#state.saveStateTimer);
-        }
+
+        // 4. Revert all tab-group nodes back to native Zen markup
+        document.querySelectorAll("tab-group").forEach(group => {
+          try {
+            // Disconnect group style observer if any
+            const obs = this.#groupObservers.get(group);
+            if (obs) {
+              obs.disconnect();
+              this.#groupObservers.delete(group);
+            }
+
+            // Remove shadow style
+            if (group.shadowRoot) {
+              group.shadowRoot.querySelectorAll('.zentral-shadow-style').forEach(s => s.remove());
+            }
+
+            // Remove custom UI components
+            group.querySelectorAll('.zentral-chevron, .zentral-group-initials, .ztg-drag-handle, .zentral-close-btn').forEach(el => el.remove());
+
+            // Unwrap or restore title wrapper if necessary
+            const titleWrapper = group.querySelector('.zentral-tab-title-wrapper');
+            if (titleWrapper) {
+              const labelContainer = group.querySelector('.tab-group-label-container');
+              const label = titleWrapper.querySelector('.tab-group-label') || group.querySelector('.tab-group-label');
+              if (label && labelContainer && !labelContainer.contains(label)) {
+                labelContainer.appendChild(label);
+              }
+              titleWrapper.remove();
+            }
+
+            // Unhide native children in .tab-group-icon
+            const iconEl = group.querySelector('.tab-group-icon');
+            if (iconEl) {
+              Array.from(iconEl.children).forEach(child => {
+                child.style.removeProperty('display');
+                child.style.removeProperty('visibility');
+                child.style.removeProperty('width');
+                child.style.removeProperty('height');
+                child.style.removeProperty('min-width');
+                child.style.removeProperty('min-height');
+                child.style.removeProperty('opacity');
+                child.style.removeProperty('list-style-image');
+                child.style.removeProperty('background');
+                child.removeAttribute('hidden');
+              });
+              iconEl.style.removeProperty('border');
+              iconEl.style.removeProperty('outline');
+              iconEl.style.removeProperty('box-shadow');
+              iconEl.style.removeProperty('background');
+              iconEl.style.removeProperty('background-image');
+              iconEl.style.removeProperty('display');
+            }
+
+            // Remove inline layout styles
+            group.style.removeProperty('border-radius');
+            const labelContainer = group.querySelector('.tab-group-label-container');
+            if (labelContainer) {
+              labelContainer.style.removeProperty('border-radius');
+              labelContainer.style.removeProperty('aspect-ratio');
+              labelContainer.style.removeProperty('align-self');
+              labelContainer.style.removeProperty('width');
+              labelContainer.style.removeProperty('min-width');
+              labelContainer.style.removeProperty('max-width');
+              labelContainer.style.removeProperty('height');
+              labelContainer.style.removeProperty('min-height');
+              labelContainer.style.removeProperty('box-sizing');
+              labelContainer.style.removeProperty('display');
+              labelContainer.style.removeProperty('flex-direction');
+              labelContainer.style.removeProperty('align-items');
+              labelContainer.style.removeProperty('justify-content');
+              labelContainer.style.removeProperty('padding');
+            }
+
+            const innerLabel = group.querySelector('.tab-group-label');
+            if (innerLabel) {
+              innerLabel.style.removeProperty('border-radius');
+              innerLabel.style.removeProperty('display');
+              innerLabel.classList.remove('tab-group-label-editing');
+            }
+
+            // Remove custom attributes
+            group.removeAttribute('data-close-button-added');
+            group.removeAttribute('zentral-hover');
+          } catch (_) {}
+        });
+
+        // 5. Clean up root attributes
+        document.documentElement.removeAttribute("zentral-sidebar-collapsed");
+        document.documentElement.removeAttribute("zentral-show-chevron");
+        document.documentElement.removeAttribute("zentral-label-opacity-below-85");
+        document.documentElement.removeAttribute("zen-renaming-group");
+        document.documentElement.style.removeProperty("--zentral-tabgroup-label-opacity");
+        document.getElementById("tabbrowser-tabs")?.removeAttribute("zentral-sidebar-collapsed");
+
+        this.#processedGroups = new WeakSet();
       } catch(e) {
         console.error("[Zentral] TabGroups destroy error:", e);
       }
@@ -2112,17 +2323,18 @@
         } catch (e) {}
       };
       updateSidebarAttr();
+      this.#updateSidebarAttr = updateSidebarAttr;
       Services.prefs.addObserver("zen.view.sidebar-expanded", updateSidebarAttr, false);
       Services.prefs.addObserver("zen.view.use-single-toolbar", updateSidebarAttr, false);
       
-      const rootAttrObs = new MutationObserver((mutations) => {
+      this.#rootAttrObs = new MutationObserver((mutations) => {
         for (const m of mutations) {
           if (m.attributeName === "zen-sidebar-collapsed" || m.attributeName === "zen-right-side") {
             updateSidebarAttr();
           }
         }
       });
-      rootAttrObs.observe(document.documentElement, { attributes: true, attributeFilter: ["zen-sidebar-collapsed", "zen-right-side"] });
+      this.#rootAttrObs.observe(document.documentElement, { attributes: true, attributeFilter: ["zen-sidebar-collapsed", "zen-right-side"] });
 
       // Clean up pref observer on window close to prevent ghost observers (H-03)
       window.addEventListener("unload", () => {
@@ -2478,6 +2690,7 @@
       });
       const tabContainer = document.getElementById("tabbrowser-tabs") || document.body;
       observer.observe(tabContainer, { childList: true, subtree: true, attributes: true, attributeFilter: ["collapsed"] });
+      this.#tabStripObserver = observer;
     }
 
     /* --------------------------------------------------------------------------
@@ -3810,10 +4023,21 @@
      * Module tear down for Sine hot unloading
      */
     destroy() {
-      if (this.modal) {
-        if (this.close) this.close();
-        if (this.modal.parentNode) this.modal.remove();
-        this.modal = null;
+      try {
+        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralSettings] Destroying Settings module...");
+        if (this.modal) {
+          if (this.close) this.close();
+          if (this.modal.parentNode) this.modal.remove();
+          this.modal = null;
+        }
+        const modalEl = document.getElementById("zentral-settings-modal");
+        if (modalEl) modalEl.remove();
+        const stylesEl = document.getElementById("zentral-settings-styles");
+        if (stylesEl) stylesEl.remove();
+        this._stylesInjected = false;
+        delete window.ZentralSettingsInstance;
+      } catch (e) {
+        console.error("[Zentral] Settings destroy error:", e);
       }
     }
     
