@@ -2068,6 +2068,10 @@
     #groupRightClickBlocker = null;
     /** @private Global listener for submenu popups */
     _tabContextSubmenuListener = null;
+    /** @private Cleanup function for tab drag selection guard */
+    #dragGuardCleanup = null;
+    /** @private Flag indicating if tab drag selection guard is active */
+    #tabDragGuardInitialized = false;
 
     /**
      * Safely retrieves Firefox SessionStore service for persistent tab metadata across restarts.
@@ -2139,6 +2143,10 @@
         if (this._tabContextSubmenuListener) {
           try { window.removeEventListener("popupshowing", this._tabContextSubmenuListener, true); } catch (_) {}
           this._tabContextSubmenuListener = null;
+        }
+        if (this.#dragGuardCleanup) {
+          try { this.#dragGuardCleanup(); } catch (_) {}
+          this.#dragGuardCleanup = null;
         }
 
         // 3. Remove injected DOM elements
@@ -2637,6 +2645,7 @@
       this.addFolderContextMenuItems();
       this.removeBuiltinTabGroupMenu();
       this.enhanceTabContextMenu();
+      this.initTabDragSelectionGuard();
       this.processExistingGroups();
       
       // Retry group scan after 1s to catch groups added after sessionrestore.
@@ -4242,6 +4251,118 @@
         group.style.setProperty("--zentral-custom-color", colorString);
         this.saveTabGroupColors();
       }
+    }
+
+    /**
+     * Prevents tabs from being selected and loaded while being dragged or reordered,
+     * ensuring sleeping/unloaded tabs remain dormant and only activate on explicit click.
+     */
+    initTabDragSelectionGuard() {
+      const tabContainer = gBrowser?.tabContainer || document.getElementById("tabbrowser-tabs");
+      if (!tabContainer || this.#tabDragGuardInitialized) return;
+      this.#tabDragGuardInitialized = true;
+
+      let prevSelectedTab = null;
+      let targetTab = null;
+      let isDragging = false;
+      let wasPending = false;
+
+      // 1. Intercept mousedown on tabs in capture phase
+      const onMouseDown = (e) => {
+        if (e.button !== 0) return;
+        const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab");
+        if (!tab) return;
+        // Do not intercept special action buttons (close button, audio mute, pin icon)
+        if (e.target.closest(".tab-close-button, .tab-icon-sound, .tab-audio-button, .tab-pin-icon")) return;
+
+        prevSelectedTab = gBrowser.selectedTab;
+        targetTab = tab;
+        isDragging = false;
+        wasPending = tab.hasAttribute("pending") || tab.getAttribute("pending") === "true";
+      };
+
+      // 2. Detect drag initiation
+      const onDragStart = (e) => {
+        const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab") || targetTab;
+        if (!tab) return;
+
+        isDragging = true;
+        targetTab = tab;
+
+        // If dragging a tab that was not already active before mousedown:
+        if (prevSelectedTab && prevSelectedTab.isConnected && prevSelectedTab !== tab) {
+          // Immediately revert selection so the dragged tab does NOT activate or load
+          if (gBrowser.selectedTab !== prevSelectedTab) {
+            try {
+              gBrowser.selectedTab = prevSelectedTab;
+            } catch (_) {}
+          }
+          // Preserve pending / discarded state on the dragged tab so it does not wake up
+          if (wasPending && !tab.hasAttribute("pending")) {
+            try { tab.setAttribute("pending", "true"); } catch (_) {}
+          }
+        }
+      };
+
+      // 3. Keep previous tab selected throughout drag duration
+      const onDragOver = (e) => {
+        if (isDragging && prevSelectedTab && prevSelectedTab.isConnected && targetTab && targetTab !== prevSelectedTab) {
+          if (gBrowser.selectedTab !== prevSelectedTab) {
+            try { gBrowser.selectedTab = prevSelectedTab; } catch (_) {}
+          }
+        }
+      };
+
+      // 4. Conclude drag: ensure previous tab remains selected and clean up
+      const onDragEnd = (e) => {
+        if (isDragging && prevSelectedTab && prevSelectedTab.isConnected && targetTab && targetTab !== prevSelectedTab) {
+          if (gBrowser.selectedTab !== prevSelectedTab) {
+            try { gBrowser.selectedTab = prevSelectedTab; } catch (_) {}
+          }
+          if (wasPending && targetTab && !targetTab.hasAttribute("pending")) {
+            try { targetTab.setAttribute("pending", "true"); } catch (_) {}
+          }
+        }
+        setTimeout(() => {
+          if (isDragging && prevSelectedTab && prevSelectedTab.isConnected && targetTab && targetTab !== prevSelectedTab) {
+            if (gBrowser.selectedTab !== prevSelectedTab) {
+              try { gBrowser.selectedTab = prevSelectedTab; } catch (_) {}
+            }
+          }
+          isDragging = false;
+          targetTab = null;
+          prevSelectedTab = null;
+          wasPending = false;
+        }, 60);
+      };
+
+      const onDrop = (e) => {
+        if (isDragging && prevSelectedTab && prevSelectedTab.isConnected && targetTab && targetTab !== prevSelectedTab) {
+          setTimeout(() => {
+            if (prevSelectedTab && prevSelectedTab.isConnected && gBrowser.selectedTab !== prevSelectedTab) {
+              try { gBrowser.selectedTab = prevSelectedTab; } catch (_) {}
+            }
+            if (wasPending && targetTab && !targetTab.hasAttribute("pending")) {
+              try { targetTab.setAttribute("pending", "true"); } catch (_) {}
+            }
+          }, 0);
+        }
+      };
+
+      tabContainer.addEventListener("mousedown", onMouseDown, { capture: true, passive: true });
+      tabContainer.addEventListener("dragstart", onDragStart, { capture: true });
+      tabContainer.addEventListener("dragover", onDragOver, { capture: true });
+      tabContainer.addEventListener("dragend", onDragEnd, { capture: true });
+      tabContainer.addEventListener("drop", onDrop, { capture: true });
+
+      this.#dragGuardCleanup = () => {
+        tabContainer.removeEventListener("mousedown", onMouseDown, { capture: true });
+        tabContainer.removeEventListener("dragstart", onDragStart, { capture: true });
+        tabContainer.removeEventListener("dragover", onDragOver, { capture: true });
+        tabContainer.removeEventListener("dragend", onDragEnd, { capture: true });
+        tabContainer.removeEventListener("drop", onDrop, { capture: true });
+        this.#tabDragGuardInitialized = false;
+      };
     }
 
     /* --------------------------------------------------------------------------
