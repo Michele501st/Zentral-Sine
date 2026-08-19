@@ -2125,7 +2125,9 @@
           "zentral-tabgroup-tooltip",
           "zentral-tabgroup-tooltip-container",
           "zentral-tabgroup-context-menu",
+          "advanced-tab-groups-context-menu",
           "zentral-color-picker-panel",
+          "zentral-group-color-picker",
           "context_zenFolderUngroup_sep",
           "context_zenFolderUngroup"
         ];
@@ -2268,6 +2270,11 @@
         document.getElementById("tabbrowser-tabs")?.removeAttribute("zentral-sidebar-collapsed");
 
         this.#processedGroups = new WeakSet();
+        if (this.#state) {
+          this.#state.sharedContextMenu = null;
+          this.#state.colorPickerPanel = null;
+          this.#state.contextMenuCurrentGroup = null;
+        }
       } catch(e) {
         console.error("[Zentral] TabGroups destroy error:", e);
       }
@@ -3517,19 +3524,39 @@
      * @returns {Element} XUL menupopup element.
      */
     ensureSharedContextMenu() {
-      if (this.#state.sharedContextMenu) return this.#state.sharedContextMenu;
+      if (this.#state.sharedContextMenu && this.#state.sharedContextMenu.isConnected) {
+        return this.#state.sharedContextMenu;
+      }
+
+      const popupSet = document.getElementById("mainPopupSet") || document.documentElement || document.body;
+      let existing = document.getElementById("zentral-tabgroup-context-menu") || document.getElementById("advanced-tab-groups-context-menu");
+      if (existing && existing.isConnected) {
+        this.#state.sharedContextMenu = existing;
+        return existing;
+      }
 
       if (window.MozXULElement?.parseXULToFragment) {
         const frag = window.MozXULElement.parseXULToFragment(`
-          <menupopup id="advanced-tab-groups-context-menu">
-            <menu class="change-group-color" label="Change Group Color"><menupopup><menuitem class="set-group-color" label="Set Group Color"/><menuitem class="use-favicon-color" label="Average Group's Color"/></menupopup></menu>
+          <menupopup id="zentral-tabgroup-context-menu">
+            <menu class="change-group-color" label="Change Group Color">
+              <menupopup>
+                <menuitem class="set-group-color" label="Set Group Color"/>
+                <menuitem class="use-favicon-color" label="Average Group's Color"/>
+              </menupopup>
+            </menu>
             <menuitem class="rename-group" label="Rename Group"/>
             <menuseparator/>
             <menuitem class="ungroup-tabs" label="Ungroup Tabs"/>
           </menupopup>
         `);
         const contextMenu = frag.firstElementChild;
-        document.body.appendChild(contextMenu);
+        popupSet.appendChild(contextMenu);
+
+        contextMenu.addEventListener("popupshowing", (e) => {
+          const trigger = contextMenu.triggerNode;
+          const grp = trigger?.closest?.("tab-group") || this.#state.contextMenuCurrentGroup;
+          if (grp) this.#state.contextMenuCurrentGroup = grp;
+        });
 
         contextMenu.querySelector(".set-group-color")?.addEventListener("command", (e) => {
           if (this.#state.contextMenuCurrentGroup) {
@@ -3539,10 +3566,11 @@
                 picker._currentGroup = this.#state.contextMenuCurrentGroup;
                 const currentColor = picker._currentGroup.style.getPropertyValue("--tab-group-color").trim() || "#2b2b2b";
                 const hex = currentColor.startsWith("#") && currentColor.length >= 7 ? currentColor.substring(0,7) : "#2b2b2b";
-                picker.querySelector("#ztg-input-hex").value = hex;
+                const hexInput = picker.querySelector("#ztg-input-hex");
+                if (hexInput) hexInput.value = hex;
                 const bigint = parseInt(hex.slice(1), 16);
                 const rgbInput = picker.querySelector("#ztg-input-rgb");
-                if (rgbInput) rgbInput.value = `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
+                if (rgbInput && !isNaN(bigint)) rgbInput.value = `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
                 const nativeColorInput = picker.querySelector("#ztg-native-color");
                 if (nativeColorInput) nativeColorInput.value = hex;
              }
@@ -3558,9 +3586,6 @@
           if (this.#state.contextMenuCurrentGroup?.ungroupTabs) this.#state.contextMenuCurrentGroup.ungroupTabs();
         });
 
-        contextMenu.addEventListener("popuphidden", () => { 
-           // do not nullify current group here so the color picker can still reference it if needed
-        });
         this.#state.sharedContextMenu = contextMenu;
         return contextMenu;
       }
@@ -3577,7 +3602,17 @@
      * @returns {Element} XUL panel element for color selection.
      */
     ensureColorPickerPanel() {
-      if (this.#state.colorPickerPanel) return this.#state.colorPickerPanel;
+      if (this.#state.colorPickerPanel && this.#state.colorPickerPanel.isConnected) {
+        return this.#state.colorPickerPanel;
+      }
+
+      const popupSet = document.getElementById("mainPopupSet") || document.documentElement || document.body;
+      let existing = document.getElementById("zentral-group-color-picker");
+      if (existing && existing.isConnected) {
+        this.#state.colorPickerPanel = existing;
+        return existing;
+      }
+
       if (!window.MozXULElement?.parseXULToFragment) return null;
 
       const palette = [
@@ -3617,257 +3652,143 @@
       `);
 
       const panel = frag.firstElementChild;
-      document.body.appendChild(panel);
+      popupSet.appendChild(panel);
 
-      // High-Performance RAF Panel Dragging Logic (0 Lag)
-      const dragHandle = panel.querySelector("#ztg-drag-handle");
-      let isDraggingPanel = false;
-      let startPanelX = 0;
-      let startPanelY = 0;
-      let startMouseX = 0;
-      let startMouseY = 0;
-      let targetX = 0;
-      let targetY = 0;
-      let dragRafId = null;
-
-      const updateDragPosition = () => {
-        if (!isDraggingPanel) return;
-        if (typeof panel.moveTo === "function") {
-          panel.moveTo(targetX, targetY);
-        } else {
-          panel.style.left = targetX + "px";
-          panel.style.top = targetY + "px";
+      const applyColor = (color) => {
+        if (panel._currentGroup) {
+          panel._currentGroup.style.setProperty("--tab-group-color", color);
+          panel._currentGroup.style.setProperty("--tab-group-color-invert", color);
+          panel._currentGroup.style.setProperty("--zentral-custom-color", color);
+          panel._currentGroup.style.setProperty("--zentral-tabgroup-contrast-color", this.getContrastColor(color));
+          panel._currentGroup.style.setProperty("--atg-contrast-color", this.getContrastColor(color));
+          this.saveTabGroupColors();
+          this.scheduleStateSave();
         }
-        dragRafId = null;
       };
 
-      if (dragHandle) {
-        dragHandle.addEventListener("mousedown", (e) => {
-          if (e.button !== 0) return;
-          isDraggingPanel = true;
-          startMouseX = e.screenX;
-          startMouseY = e.screenY;
+      // Palette swatches
+      panel.querySelectorAll(".zentral-color-swatch").forEach(swatch => {
+        swatch.addEventListener("click", () => applyColor(swatch.dataset.color));
+      });
 
-          const rect = panel.getBoundingClientRect();
-          startPanelX = panel.screenX !== undefined ? panel.screenX : window.screenX + rect.left;
-          startPanelY = panel.screenY !== undefined ? panel.screenY : window.screenY + rect.top;
-          targetX = startPanelX;
-          targetY = startPanelY;
-
-          e.preventDefault();
-          e.stopPropagation();
-        });
-
-        window.addEventListener("mousemove", (e) => {
-          if (!isDraggingPanel) return;
-          const dx = e.screenX - startMouseX;
-          const dy = e.screenY - startMouseY;
-          targetX = startPanelX + dx;
-          targetY = startPanelY + dy;
-
-          if (!dragRafId) {
-            dragRafId = requestAnimationFrame(updateDragPosition);
-          }
-        });
-
-        window.addEventListener("mouseup", () => {
-          isDraggingPanel = false;
-          if (dragRafId) {
-            cancelAnimationFrame(dragRafId);
-            dragRafId = null;
-          }
-        });
-      }
-
-      const applyColor = (hex) => {
-        if (!panel._currentGroup) return;
-        panel._currentGroup.style.setProperty("--tab-group-color", hex);
-        panel._currentGroup.style.setProperty("--tab-group-color-invert", hex);
-        panel._currentGroup.style.setProperty("--zentral-custom-color", hex);
-        panel._currentGroup.style.setProperty("--zentral-tabgroup-contrast-color", this.getContrastColor(hex));
-        panel._currentGroup.style.setProperty("--atg-contrast-color", this.getContrastColor(hex));
-        panel.querySelector("#ztg-input-hex").value = hex;
-        const bigint = parseInt(hex.slice(1), 16);
-        panel.querySelector("#ztg-input-rgb").value = `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
-        this.saveTabGroupColors();
-      };
-
-      panel.querySelector("#ztg-palette-container").addEventListener("click", (e) => {
-        if (e.target.classList.contains("zentral-color-swatch")) {
-          applyColor(e.target.dataset.color);
+      // Wheel/Palette toggle
+      const paletteContainer = panel.querySelector("#ztg-palette-container");
+      const wheelContainer = panel.querySelector("#ztg-wheel-container");
+      const btnWheel = panel.querySelector("#ztg-btn-wheel");
+      btnWheel.addEventListener("click", () => {
+        if (wheelContainer.style.display === "none") {
+          wheelContainer.style.display = "flex";
+          paletteContainer.style.display = "none";
+          btnWheel.textContent = "Palette";
+          drawSatVal();
+          drawHue();
+        } else {
+          wheelContainer.style.display = "none";
+          paletteContainer.style.display = "grid";
+          btnWheel.textContent = "Wheel";
         }
       });
 
-      // Canvas Color Spectrum initialization
+      // Canvas Color Wheel Logic
+      let currentHue = 0;
       const satValCanvas = panel.querySelector("#ztg-satval-canvas");
       const hueCanvas = panel.querySelector("#ztg-hue-canvas");
-      let currentHue = 0;
 
-      const drawHueCanvas = () => {
+      const drawHue = () => {
         const ctx = hueCanvas.getContext("2d");
         const grad = ctx.createLinearGradient(0, 0, hueCanvas.width, 0);
-        grad.addColorStop(0, "#ff0000");
-        grad.addColorStop(0.17, "#ffff00");
-        grad.addColorStop(0.33, "#00ff00");
-        grad.addColorStop(0.50, "#00ffff");
-        grad.addColorStop(0.67, "#0000ff");
-        grad.addColorStop(0.83, "#ff00ff");
-        grad.addColorStop(1, "#ff0000");
+        for (let i = 0; i <= 360; i += 60) grad.addColorStop(i / 360, `hsl(${i}, 100%, 50%)`);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, hueCanvas.width, hueCanvas.height);
       };
 
-      const drawSatValCanvas = (hue) => {
+      const drawSatVal = () => {
         const ctx = satValCanvas.getContext("2d");
-        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+        ctx.fillStyle = `hsl(${currentHue}, 100%, 50%)`;
         ctx.fillRect(0, 0, satValCanvas.width, satValCanvas.height);
 
         const whiteGrad = ctx.createLinearGradient(0, 0, satValCanvas.width, 0);
-        whiteGrad.addColorStop(0, "#ffffff");
-        whiteGrad.addColorStop(1, "rgba(255,255,255,0)");
+        whiteGrad.addColorStop(0, "rgba(255, 255, 255, 1)");
+        whiteGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
         ctx.fillStyle = whiteGrad;
         ctx.fillRect(0, 0, satValCanvas.width, satValCanvas.height);
 
         const blackGrad = ctx.createLinearGradient(0, 0, 0, satValCanvas.height);
-        blackGrad.addColorStop(0, "rgba(0,0,0,0)");
-        blackGrad.addColorStop(1, "#000000");
+        blackGrad.addColorStop(0, "rgba(0, 0, 0, 0)");
+        blackGrad.addColorStop(1, "rgba(0, 0, 0, 1)");
         ctx.fillStyle = blackGrad;
         ctx.fillRect(0, 0, satValCanvas.width, satValCanvas.height);
       };
 
-      let isDraggingSatVal = false;
-      let isDraggingHue = false;
-
-      const pickSatValColor = (e) => {
-        const rect = satValCanvas.getBoundingClientRect();
-        const x = Math.max(0, Math.min(e.clientX - rect.left, satValCanvas.width - 1));
-        const y = Math.max(0, Math.min(e.clientY - rect.top, satValCanvas.height - 1));
-        const ctx = satValCanvas.getContext("2d");
-        const p = ctx.getImageData(x, y, 1, 1).data;
-        const hex = "#" + ((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1);
-        applyColor(hex);
-      };
-
-      const pickHueColor = (e) => {
+      hueCanvas.addEventListener("click", (e) => {
         const rect = hueCanvas.getBoundingClientRect();
-        const x = Math.max(0, Math.min(e.clientX - rect.left, hueCanvas.width - 1));
-        currentHue = Math.round((x / hueCanvas.width) * 360);
-        drawSatValCanvas(currentHue);
-        pickSatValColor({ clientX: rect.left + satValCanvas.width / 2, clientY: rect.top + satValCanvas.height / 2 });
-      };
+        currentHue = Math.min(360, Math.max(0, ((e.clientX - rect.left) / rect.width) * 360));
+        drawSatVal();
+      });
 
-      satValCanvas.addEventListener("mousedown", (e) => { isDraggingSatVal = true; pickSatValColor(e); });
-      hueCanvas.addEventListener("mousedown", (e) => { isDraggingHue = true; pickHueColor(e); });
+      satValCanvas.addEventListener("click", (e) => {
+        const rect = satValCanvas.getBoundingClientRect();
+        const x = Math.min(satValCanvas.width - 1, Math.max(0, e.clientX - rect.left));
+        const y = Math.min(satValCanvas.height - 1, Math.max(0, e.clientY - rect.top));
+        const ctx = satValCanvas.getContext("2d");
+        const pixel = ctx.getImageData(x, y, 1, 1).data;
+        const hex = "#" + [pixel[0], pixel[1], pixel[2]].map(x => x.toString(16).padStart(2, "0")).join("");
+        applyColor(hex);
+        panel.querySelector("#ztg-input-hex").value = hex;
+        panel.querySelector("#ztg-input-rgb").value = `${pixel[0]}, ${pixel[1]}, ${pixel[2]}`;
+      });
 
-      // Convert to named functions so they can be removed on window unload (C-03).
-      // Anonymous arrow functions added to window can never be removed, causing a
-      // permanent mousemove listener that runs for the entire browser session.
-      const onSatHueMouseMove = (e) => {
-        if (isDraggingSatVal) pickSatValColor(e);
-        if (isDraggingHue) pickHueColor(e);
-      };
-      const onSatHueMouseUp = () => {
-        isDraggingSatVal = false;
-        isDraggingHue = false;
-      };
-      window.addEventListener("mousemove", onSatHueMouseMove);
-      window.addEventListener("mouseup", onSatHueMouseUp);
-      window.addEventListener("unload", () => {
-        window.removeEventListener("mousemove", onSatHueMouseMove);
-        window.removeEventListener("mouseup", onSatHueMouseUp);
-      }, { once: true });
+      // Eyedropper API
+      const btnPick = panel.querySelector("#ztg-btn-pick");
+      if (window.EyeDropper) {
+        btnPick.addEventListener("click", async () => {
+          try {
+            const eyeDropper = new EyeDropper();
+            const result = await eyeDropper.open();
+            if (result && result.sRGBHex) applyColor(result.sRGBHex);
+          } catch (_) {}
+        });
+      } else {
+        btnPick.style.display = "none";
+      }
 
+      // Auto Average Favicon Color
       panel.querySelector("#ztg-btn-auto").addEventListener("click", () => {
-        if (panel._currentGroup && typeof panel._currentGroup._useFaviconColor === "function") {
+        if (panel._currentGroup && panel._currentGroup._useFaviconColor) {
           panel._currentGroup._useFaviconColor();
-          const currentColor = panel._currentGroup.style.getPropertyValue("--tab-group-color").trim();
-          if (currentColor) {
-            const hex = currentColor.startsWith("#") && currentColor.length >= 7 ? currentColor.substring(0, 7) : currentColor;
-            panel.querySelector("#ztg-input-hex").value = hex;
-            if (hex.startsWith("#") && hex.length === 7) {
-              const bigint = parseInt(hex.slice(1), 16);
-              const rgbInput = panel.querySelector("#ztg-input-rgb");
-              if (rgbInput) rgbInput.value = `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
-            }
-          }
         }
       });
 
-      panel.querySelector("#ztg-btn-wheel").addEventListener("click", () => {
-        const paletteContainer = panel.querySelector("#ztg-palette-container");
-        const wheelContainer = panel.querySelector("#ztg-wheel-container");
-        const btn = panel.querySelector("#ztg-btn-wheel");
+      // Draggable Color Picker Logic
+      const handle = panel.querySelector("#ztg-drag-handle");
+      let isDragging = false;
+      let startX, startY;
 
-        if (wheelContainer.style.display === "none") {
-          wheelContainer.style.display = "flex";
-          paletteContainer.style.display = "none";
-          btn.textContent = "Palette";
-          drawHueCanvas();
-          drawSatValCanvas(currentHue);
-        } else {
-          wheelContainer.style.display = "none";
-          paletteContainer.style.display = "grid";
-          btn.textContent = "Wheel";
-        }
+      handle.addEventListener("mousedown", (e) => {
+        if (e.button !== 0) return;
+        isDragging = true;
+        startX = e.screenX;
+        startY = e.screenY;
+        handle.classList.add("dragging");
+        e.preventDefault();
       });
 
-      panel.querySelector("#ztg-btn-pick").addEventListener("click", () => {
-        panel.hidePopup();
-        try {
-          const canvas = document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
-          canvas.width = window.innerWidth;
-          canvas.height = window.innerHeight;
-          canvas.style.position = "fixed";
-          canvas.style.top = "0";
-          canvas.style.left = "0";
-          canvas.style.zIndex = "2147483647";
-          canvas.style.cursor = "crosshair";
+      window.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        const deltaX = e.screenX - startX;
+        const deltaY = e.screenY - startY;
+        startX = e.screenX;
+        startY = e.screenY;
 
-          const ctx = canvas.getContext("2d");
-          ctx.drawWindow(window, 0, 0, window.innerWidth, window.innerHeight, "rgb(255,255,255)");
+        const currentX = parseInt(panel.getAttribute("left")) || panel.screenX || 0;
+        const currentY = parseInt(panel.getAttribute("top")) || panel.screenY || 0;
+        panel.moveTo(currentX + deltaX, currentY + deltaY);
+      });
 
-          const loupe = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
-          loupe.style.position = "fixed";
-          loupe.style.width = "40px";
-          loupe.style.height = "40px";
-          loupe.style.borderRadius = "50%";
-          loupe.style.border = "2px solid #ffffff";
-          loupe.style.boxShadow = "0 2px 10px rgba(0,0,0,0.5)";
-          loupe.style.pointerEvents = "none";
-          loupe.style.zIndex = "2147483647";
-          loupe.style.display = "none";
-
-          document.documentElement.appendChild(canvas);
-          document.documentElement.appendChild(loupe);
-
-          const cleanup = () => {
-            if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
-            if (loupe.parentNode) loupe.parentNode.removeChild(loupe);
-            window.removeEventListener("keydown", onKeyDown);
-          };
-
-          const onKeyDown = (e) => {
-            if (e.key === "Escape") cleanup();
-          };
-          window.addEventListener("keydown", onKeyDown);
-
-          canvas.addEventListener("mousemove", (e) => {
-            loupe.style.display = "block";
-            loupe.style.left = `${e.clientX + 15}px`;
-            loupe.style.top = `${e.clientY + 15}px`;
-            const p = ctx.getImageData(e.clientX, e.clientY, 1, 1).data;
-            const hex = "#" + ((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1);
-            loupe.style.backgroundColor = hex;
-          });
-
-          canvas.addEventListener("click", (e) => {
-            const p = ctx.getImageData(e.clientX, e.clientY, 1, 1).data;
-            const hex = "#" + ((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1);
-            applyColor(hex);
-            cleanup();
-          });
-        } catch (err) {
-          console.error("Eyedropper drawWindow failed:", err);
+      window.addEventListener("mouseup", (e) => {
+        if (isDragging && e.button === 0) {
+          isDragging = false;
+          handle.classList.remove("dragging");
         }
       });
 
@@ -3885,7 +3806,6 @@
       this.#state.colorPickerPanel = panel;
       return panel;
     }
-
     /**
      * Attaches custom context menu actions to native Zen folder menus.
      */
@@ -3987,26 +3907,33 @@
      * @param {Element} group - Tab group DOM element.
      */
     addContextMenu(group) {
-      if (group._contextMenuAdded) return;
-      group._contextMenuAdded = true;
-
       const sharedMenu = this.ensureSharedContextMenu();
       const labelContainer = group.querySelector(".tab-group-label-container");
       if (labelContainer) {
-        labelContainer.removeAttribute("context");
-        labelContainer.addEventListener("contextmenu", (event) => {
-          event.preventDefault(); event.stopPropagation();
-          this.#state.contextMenuCurrentGroup = group;
-          this.#state.lastContextMenuX = event.screenX;
-          this.#state.lastContextMenuY = event.screenY;
-          sharedMenu?.openPopupAtScreen(event.screenX, event.screenY, false);
-        });
+        labelContainer.setAttribute("context", "zentral-tabgroup-context-menu");
+        if (!labelContainer._zentralContextMenuBound) {
+          labelContainer._zentralContextMenuBound = true;
+          labelContainer.addEventListener("contextmenu", (event) => {
+            if (event.target.closest("#tab-label-input")) return;
+            event.preventDefault();
+            event.stopPropagation();
+            this.#state.contextMenuCurrentGroup = group;
+            this.#state.lastContextMenuX = event.screenX;
+            this.#state.lastContextMenuY = event.screenY;
+            if (sharedMenu) {
+              if (typeof sharedMenu.openPopupAtScreen === "function") {
+                sharedMenu.openPopupAtScreen(event.screenX, event.screenY, true);
+              } else if (typeof sharedMenu.openPopup === "function") {
+                sharedMenu.openPopup(labelContainer, "after_start", 0, 0, true, false, event);
+              }
+            }
+          });
+        }
       }
-      group.removeAttribute("context");
+      group.setAttribute("context", "zentral-tabgroup-context-menu");
 
       // Bind group specific actions for external callers
       // Color picking is now handled natively via ensureColorPickerPanel
-
       group._useFaviconColor = () => {
         let favicons = Array.from(group.querySelectorAll(".tab-icon-image"));
         if (favicons.length === 0) {
