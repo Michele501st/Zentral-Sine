@@ -2128,12 +2128,92 @@
           if (el) el.remove();
         });
 
-        // 4. Save state before teardown
-        this.saveTabGroupState();
-
-        // 5. Cleanly un-decorate all tab-group DOM elements without destroying them
+        // 4. Secure state persistence across restarts: capture full hierarchy and tab assignments
+        const ss = this.#getSessionStore();
         const allGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
+        const stateToSave = {
+          groups: {},
+          tabMapping: {}
+        };
+
         allGroups.forEach(group => {
+          if (!group.id) group.id = "zentral-group-" + Math.random().toString(36).substr(2, 9);
+          const parentGroup = group.parentElement?.closest("tab-group:not([split-view-group])");
+          const parentId = parentGroup?.id || null;
+          const label = group.label || group.getAttribute("label") || "Group";
+          const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || "";
+          const isCollapsed = group.hasAttribute("collapsed") && group.getAttribute("collapsed") === "true";
+          const wsId = group.getAttribute("zen-workspace-id") || "";
+
+          const posContainer = parentGroup || group.parentElement;
+          const groupSiblings = posContainer
+            ? Array.from(posContainer.children).filter(el => el.tagName?.toLowerCase() === "tab-group" && !el.hasAttribute("split-view-group"))
+            : [];
+          const index = groupSiblings.indexOf(group);
+
+          stateToSave.groups[group.id] = {
+            id: group.id,
+            label,
+            color,
+            collapsed: isCollapsed,
+            parentId,
+            workspaceId: wsId,
+            index: index >= 0 ? index : 0
+          };
+
+          // Collect direct tabs of this group
+          let directTabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
+          if (directTabs.length === 0 && group.tabs) {
+            directTabs = Array.from(group.tabs);
+          }
+
+          stateToSave.tabMapping[group.id] = directTabs.map(tab => ({
+            url: tab.linkedBrowser?.currentURI?.spec || "",
+            label: tab.label || "",
+            zenTabId: tab.getAttribute("zen-tab-id") || tab.id || ""
+          }));
+
+          directTabs.forEach(tab => {
+            if (!tab) return;
+            tab.setAttribute("data-zentral-group-id", group.id);
+            tab.setAttribute("data-zentral-group-label", label);
+            if (color) tab.setAttribute("data-zentral-group-color", color);
+            tab.setAttribute("data-zentral-group-collapsed", isCollapsed ? "true" : "false");
+            if (wsId) tab.setAttribute("data-zentral-group-ws", wsId);
+            if (parentId) tab.setAttribute("data-zentral-parent-id", parentId);
+
+            // Persist into Firefox SessionStore so metadata survives browser restarts & cache clears
+            if (ss && typeof ss.setCustomTabValue === "function") {
+              try {
+                ss.setCustomTabValue(tab, "zentral-group-id", group.id);
+                ss.setCustomTabValue(tab, "zentral-group-label", label);
+                if (color) ss.setCustomTabValue(tab, "zentral-group-color", color);
+                if (parentId) ss.setCustomTabValue(tab, "zentral-parent-id", parentId);
+                ss.setCustomTabValue(tab, "zentral-group-collapsed", isCollapsed ? "true" : "false");
+                if (wsId) ss.setCustomTabValue(tab, "zentral-group-ws", wsId);
+              } catch (_) {}
+            }
+          });
+        });
+
+        // Persist full state to preferences
+        Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify(stateToSave));
+
+        // 5. Flatten groups cleanly without leaving gaps in the root strip
+        const rootTabContainer = (typeof gZenWorkspaces !== "undefined" && gZenWorkspaces.activeWorkspaceStrip) ||
+                                 gBrowser?.tabContainer?.arrowscrollbox ||
+                                 gBrowser?.tabContainer ||
+                                 document.getElementById("tabbrowser-tabs");
+
+        const sortedGroups = allGroups.slice().sort((a, b) => {
+          let depthA = 0, currA = a;
+          while ((currA = currA.parentElement?.closest("tab-group"))) depthA++;
+          let depthB = 0, currB = b;
+          while ((currB = currB.parentElement?.closest("tab-group"))) depthB++;
+          return depthB - depthA;
+        });
+
+        sortedGroups.forEach(group => {
           try {
             const obs = this.#groupObservers.get(group);
             if (obs) {
@@ -2144,58 +2224,32 @@
             if (group.shadowRoot) {
               group.shadowRoot.querySelectorAll('.zentral-shadow-style').forEach(s => s.remove());
             }
-
-            // Restore .tab-group-label back into .tab-group-label-container if wrapped
-            const labelContainer = group.querySelector(".tab-group-label-container");
-            const titleWrapper = group.querySelector(".zentral-tab-title-wrapper");
-            const innerLabel = group.querySelector(".tab-group-label");
-            if (titleWrapper && innerLabel && labelContainer) {
-              labelContainer.insertBefore(innerLabel, titleWrapper);
-            }
-
             group.querySelectorAll('.zentral-chevron, .zentral-group-initials, .ztg-drag-handle, .zentral-close-btn, .zentral-tab-title-wrapper').forEach(el => el.remove());
 
-            // Unhide native icon children
-            const iconEl = group.querySelector('.tab-group-icon');
-            if (iconEl) {
-              Array.from(iconEl.children).forEach(child => {
-                child.style.removeProperty('display');
-                child.style.removeProperty('visibility');
-                child.style.removeProperty('width');
-                child.style.removeProperty('height');
-                child.style.removeProperty('opacity');
-                child.removeAttribute('hidden');
-              });
-              iconEl.style.removeProperty('border');
-              iconEl.style.removeProperty('outline');
-              iconEl.style.removeProperty('box-shadow');
-              iconEl.style.removeProperty('background');
-              iconEl.style.removeProperty('background-image');
-            }
+            const tabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
 
-            // Reset labelContainer styles
-            if (labelContainer) {
-              labelContainer.style.removeProperty("border-radius");
-              labelContainer.style.removeProperty("aspect-ratio");
-              labelContainer.style.removeProperty("align-self");
-              labelContainer.style.removeProperty("width");
-              labelContainer.style.removeProperty("min-width");
-              labelContainer.style.removeProperty("max-width");
-              labelContainer.style.removeProperty("height");
-              labelContainer.style.removeProperty("min-height");
-              labelContainer.style.removeProperty("box-sizing");
-              labelContainer.style.removeProperty("display");
-              labelContainer.style.removeProperty("flex-direction");
-              labelContainer.style.removeProperty("align-items");
-              labelContainer.style.removeProperty("justify-content");
-              labelContainer.style.removeProperty("padding");
-            }
+            // Move tabs directly before the group container
+            tabs.forEach(tab => {
+              if (group.parentNode) {
+                try {
+                  group.parentNode.insertBefore(tab, group);
+                } catch (_) {
+                  try { rootTabContainer.appendChild(tab); } catch (_) {}
+                }
+              } else if (rootTabContainer) {
+                try { rootTabContainer.appendChild(tab); } catch (_) {}
+              }
+              try { if (typeof gBrowser?.addTabToGroup === "function") gBrowser.addTabToGroup(tab, null); } catch (_) {}
+              try { tab.group = null; } catch (_) {}
+              try { tab.removeAttribute("group"); tab.removeAttribute("zen-group"); } catch (_) {}
+            });
 
-            group.style.removeProperty("border-radius");
-            group.removeAttribute("data-close-button-added");
-            delete group._contextMenuAdded;
+            // Cleanly remove the tab-group element directly
+            try {
+              group.remove();
+            } catch (_) {}
           } catch (e) {
-            console.error("[ZentralTabGroups] Error cleaning group on destroy:", e);
+            console.error("[ZentralTabGroups] Error flattening group on destroy:", e);
           }
         });
 
@@ -2541,50 +2595,99 @@
       }
       this.clearStoredColorData();
       this.loadSavedColors();
+      this.reconstructSavedGroups();
       this.injectStyles();
       this.setupObserver();
       this.addFolderContextMenuItems();
       this.removeBuiltinTabGroupMenu();
       this.enhanceTabContextMenu();
       this.processExistingGroups();
-
-      // Ensure groups discovered slightly later by sessionrestore are processed
-      setTimeout(() => {
-        document.querySelectorAll("tab-group:not([split-view-group])").forEach(g => this.processGroup(g));
-        this.loadTabGroupState();
-      }, 500);
+      
+      // Retry group scan after 1s to catch groups added after sessionrestore.
+      // Note: processGroup() is guarded by #processedGroups WeakSet — already-processed groups are skipped.
+      // loadTabGroupState() intentionally NOT repeated here — state is already loaded above. (C-03)
+      setTimeout(() => { document.querySelectorAll("tab-group:not([split-view-group])").forEach(g => this.processGroup(g)); }, 1000);
 
       // Collapsed Sidebar observer for Tab Groups
       const updateSidebarAttr = () => {
         try {
-          const isCollapsed = Apps.isCollapsedLayoutMode();
-          document.documentElement.setAttribute("zentral-sidebar-collapsed", isCollapsed ? "true" : "false");
-          const tabTabs = document.getElementById("tabbrowser-tabs");
-          if (tabTabs) {
-            tabTabs.setAttribute("zentral-sidebar-collapsed", isCollapsed ? "true" : "false");
+          const sidebarExpanded = Core.getNativePref("zen.view.sidebar-expanded", true);
+          const singleToolbar = Core.getNativePref("zen.view.use-single-toolbar", true);
+          const isCollapsed = !sidebarExpanded || 
+                              document.documentElement.getAttribute("zen-sidebar-collapsed") === "true" ||
+                              (document.getElementById("sidebar-box")?.getAttribute("collapsed") === "true");
+          const tabContainer = document.getElementById("tabbrowser-tabs");
+          if (tabContainer) {
+            tabContainer.setAttribute("zentral-sidebar-collapsed", isCollapsed ? "true" : "false");
           }
-        } catch (_) {}
+          document.documentElement.setAttribute("zentral-sidebar-collapsed", isCollapsed ? "true" : "false");
+        } catch (e) {}
       };
       updateSidebarAttr();
       this.#updateSidebarAttr = updateSidebarAttr;
-      try {
-        Services.prefs.addObserver("zen.view.sidebar-expanded", updateSidebarAttr);
-        Services.prefs.addObserver("zen.view.use-single-toolbar", updateSidebarAttr);
-      } catch (_) {}
-
-      // Observe root attribute changes that might affect collapsed sidebar
-      const rootAttrObs = new MutationObserver(() => updateSidebarAttr());
-      rootAttrObs.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ["zen-sidebar-collapsed", "zen-compact-mode", "uidensity"]
+      Services.prefs.addObserver("zen.view.sidebar-expanded", updateSidebarAttr, false);
+      Services.prefs.addObserver("zen.view.use-single-toolbar", updateSidebarAttr, false);
+      
+      this.#rootAttrObs = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          if (m.attributeName === "zen-sidebar-collapsed" || m.attributeName === "zen-right-side") {
+            updateSidebarAttr();
+          }
+        }
       });
-      this.#rootAttrObs = rootAttrObs;
+      this.#rootAttrObs.observe(document.documentElement, { attributes: true, attributeFilter: ["zen-sidebar-collapsed", "zen-right-side"] });
 
+      // Clean up pref observer on window close to prevent ghost observers (H-03)
+      window.addEventListener("unload", () => {
+        try { 
+          Services.prefs.removeObserver("zen.view.sidebar-expanded", updateSidebarAttr);
+          Services.prefs.removeObserver("zen.view.use-single-toolbar", updateSidebarAttr);
+          rootAttrObs.disconnect();
+        } catch (_) {}
+      }, { once: true });
+
+      // Tooltip injection (XUL panel with noautohide=true to avoid stealing click events)
+      if (!document.getElementById("zentral-tabgroup-tooltip")) {
+        const panel = document.createXULElement("panel");
+        panel.id = "zentral-tabgroup-tooltip";
+        panel.setAttribute("noautofocus", "true");
+        panel.setAttribute("noautohide", "true");
+        panel.setAttribute("type", "arrow");
+        panel.setAttribute("role", "tooltip");
+
+        const cancelHideTimer = () => {
+          if (window.zentralTooltipHideTimer) {
+            clearTimeout(window.zentralTooltipHideTimer);
+            window.zentralTooltipHideTimer = null;
+          }
+        };
+
+        panel.addEventListener("mouseenter", cancelHideTimer);
+        panel.addEventListener("mouseleave", () => this.safeHideTooltip(350));
+        panel.addEventListener("mouseover", cancelHideTimer);
+
+        const container = document.createElement("div");
+        container.id = "zentral-tabgroup-tooltip-container";
+        container.style.display = "flex";
+        container.style.flexDirection = "column";
+        container.style.overflowY = "auto";
+        container.addEventListener("mouseenter", cancelHideTimer);
+        container.addEventListener("mouseleave", () => this.safeHideTooltip(350));
+        container.addEventListener("mouseover", cancelHideTimer);
+        panel.appendChild(container);
+
+        const popupset = document.getElementById("mainPopupSet") || document.documentElement;
+        popupset.appendChild(panel);
+      }
+      
       this.applyChevronPref();
       this.applyLabelOpacityPref();
       Core.emit("tabGroupsInitComplete", this);
     }
 
+    /**
+     * Reads show_chevron preference and sets zentral-show-chevron attribute on root.
+     */
     applyChevronPref() {
       const showChevron = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON);
       document.documentElement.setAttribute("zentral-show-chevron", showChevron !== false ? "true" : "false");
@@ -2900,37 +3003,10 @@
      * Removes builtin native tab group context menus to prevent UI redundancy.
      * @param {Element|Document} [root=document] - Container scope to scan.
      */
-    /**
-     * Suppresses and removes native tab group editor dialog panels and popup menus.
-     * @param {Element|Document} [root=document] - Container scope to scan.
-     */
     removeBuiltinTabGroupMenu(root = document) {
       try {
-        const builtinMenu = document.getElementById("tabGroupContextMenu");
-        if (builtinMenu) builtinMenu.remove();
-
-        const list = root.querySelectorAll ? root.querySelectorAll("#tab-group-editor, panel#tab-group-editor, tabgroup-meu, #tabgroup-editor-panel") : [];
-        list.forEach(el => {
-          try {
-            if (typeof el.hidePopup === "function") el.hidePopup();
-            el.style.setProperty("display", "none", "important");
-            el.style.setProperty("visibility", "hidden", "important");
-            el.style.setProperty("pointer-events", "none", "important");
-            if (!el._zentralSuppressed) {
-              el._zentralSuppressed = true;
-              el.addEventListener("popupshowing", (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                try { el.hidePopup(); } catch (_) {}
-              }, true);
-              el.addEventListener("popupshown", (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                try { el.hidePopup(); } catch (_) {}
-              }, true);
-            }
-          } catch (_) {}
-        });
+        const list = root.querySelectorAll ? root.querySelectorAll("#tab-group-editor, tabgroup-meu") : [];
+        list.forEach(el => el.remove());
       } catch (e) {
         console.error("[ZentralTabGroups] Error removing built-in menu:", e);
       }
@@ -3050,6 +3126,8 @@
      * @param {Element} group - Tab group DOM element.
      */
     processGroup(group) {
+      // Use a WeakSet instead of a DOM attribute to avoid persisting across restarts
+      // and to prevent guard bypasses when native code resets group attributes.
       if (this.#processedGroups.has(group) || group.classList.contains("zen-folder") || group.hasAttribute("zen-folder") || group.hasAttribute("split-view-group")) {
         return;
       }
@@ -3078,8 +3156,6 @@
       if (!labelContainer._zentralToggleBound) {
         labelContainer._zentralToggleBound = true;
         labelContainer.addEventListener("click", (e) => {
-          // ONLY trigger on primary LEFT click (e.button === 0) so right click opens context menu
-          if (e.button !== 0) return;
           if (e.target.closest(".tab-close-button") || e.target.closest("#tab-label-input") || e.target.closest(".ztg-drag-handle")) return;
           e.preventDefault();
           e.stopPropagation();
@@ -3118,7 +3194,6 @@
         `;
         group.shadowRoot.appendChild(style);
       }
-
       // Clear and hide any native children (like image.group-marker) inside .tab-group-icon
       const iconEl = group.querySelector('.tab-group-icon');
       if (iconEl) {
@@ -3142,10 +3217,15 @@
         iconEl.style.setProperty('background', 'transparent', 'important');
         iconEl.style.setProperty('background-image', 'none', 'important');
       }
-
       if (labelContainer) {
+        // Track hover state so we don't collapse during a hover
         let _isHovered = false;
 
+        /**
+         * Enforces our inline layout styles on the labelContainer.
+         * Called initially and re-called by the style MutationObserver
+         * whenever Zen's own JS rewrites the element's style attribute.
+         */
         const enforceRestingStyles = () => {
           labelContainer.style.setProperty("border-radius", "14px", "important");
           labelContainer.style.setProperty("aspect-ratio", "auto", "important");
@@ -3161,14 +3241,15 @@
           labelContainer.style.setProperty("align-items", "center", "important");
           labelContainer.style.setProperty("justify-content", "center", "important");
           labelContainer.style.setProperty("padding", "0 10px", "important");
-
-          const icon = labelContainer.querySelector(".tab-group-icon");
-          if (icon) {
+          // Sync chevron icon visibility with the pref to prevent CSS vs inline-style conflict (H-05)
+          const iconEl = labelContainer.querySelector(".tab-group-icon");
+          if (iconEl) {
             const showChevron = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON) !== false;
-            icon.style.setProperty("display", showChevron ? "inline-flex" : "none", "important");
+            iconEl.style.setProperty("display", showChevron ? "inline-flex" : "none", "important");
           }
         };
 
+        // Apply immediately
         enforceRestingStyles();
 
         const innerLabel = labelContainer.querySelector(".tab-group-label");
@@ -3180,6 +3261,7 @@
           innerLabel.style.setProperty("text-overflow", "ellipsis", "important");
         }
 
+        // Guard against MutationObserver re-entrancy
         let _styleGuard = false;
         const styleWatcher = new MutationObserver(() => {
           if (_styleGuard || _isHovered) return;
@@ -3188,8 +3270,11 @@
           _styleGuard = false;
         });
         styleWatcher.observe(labelContainer, { attributes: true, attributeFilter: ["style"] });
+        // Track for cleanup when this group is removed from the DOM (M-02)
         this.#groupObservers.set(group, styleWatcher);
 
+        // Labels are always full-width ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no hover expand/collapse needed.
+        
         let hoverTimer = null;
         labelContainer.addEventListener("mouseenter", () => {
           if (!Core.getPref(Constants.TabGroups.PREF_THUMBNAILS)) return;
@@ -3291,9 +3376,8 @@
         }
         initialsEl.textContent = this.getGroupInitials(labelValue);
       }
-
       if (!labelContainer || labelContainer.querySelector(".tab-close-button")) return;
-
+      // Safe DOM injection
       if (window.MozXULElement?.parseXULToFragment) {
         const frag = window.MozXULElement.parseXULToFragment(`
           <div class="tab-group-icon-container"><div class="tab-group-icon"><image class="group-marker" role="button" keyNav="false" tooltiptext="Toggle Group"/></div></div>
@@ -3315,6 +3399,7 @@
         });
       }
 
+      // Wrap title elements in .zentral-tab-title-wrapper for physical Folder Tab contour
       if (!labelContainer.querySelector(".zentral-tab-title-wrapper")) {
         const wrapper = document.createElement("div");
         wrapper.className = "zentral-tab-title-wrapper";
@@ -3332,7 +3417,7 @@
 
       group.classList.remove('tab-group-editor-mode-create');
       this.#processedGroups.add(group);
-      group.setAttribute("data-close-button-added", "true");
+      group.setAttribute("data-close-button-added", "true"); // Kept for external compatibility
 
       this.addContextMenu(group);
 
@@ -3345,6 +3430,413 @@
       }
     }
 
+    /**
+     * Constructs or returns the shared context menu popup for tab groups.
+     * @returns {Element} XUL menupopup element.
+     */
+    ensureSharedContextMenu() {
+      if (this.#state.sharedContextMenu) return this.#state.sharedContextMenu;
+
+      if (window.MozXULElement?.parseXULToFragment) {
+        const frag = window.MozXULElement.parseXULToFragment(`
+          <menupopup id="advanced-tab-groups-context-menu">
+            <menu class="change-group-color" label="Change Group Color"><menupopup><menuitem class="set-group-color" label="Set Group Color"/><menuitem class="use-favicon-color" label="Average Group's Color"/></menupopup></menu>
+            <menuitem class="rename-group" label="Rename Group"/>
+            <menuseparator/>
+            <menuitem class="ungroup-tabs" label="Ungroup Tabs"/>
+          </menupopup>
+        `);
+        const contextMenu = frag.firstElementChild;
+        document.body.appendChild(contextMenu);
+
+        contextMenu.querySelector(".set-group-color")?.addEventListener("command", (e) => {
+          if (this.#state.contextMenuCurrentGroup) {
+             const picker = this.ensureColorPickerPanel();
+             if (picker) {
+                picker.openPopupAtScreen(this.#state.lastContextMenuX || 0, this.#state.lastContextMenuY || 0, false);
+                picker._currentGroup = this.#state.contextMenuCurrentGroup;
+                const currentColor = picker._currentGroup.style.getPropertyValue("--tab-group-color").trim() || "#2b2b2b";
+                const hex = currentColor.startsWith("#") && currentColor.length >= 7 ? currentColor.substring(0,7) : "#2b2b2b";
+                picker.querySelector("#ztg-input-hex").value = hex;
+                const bigint = parseInt(hex.slice(1), 16);
+                const rgbInput = picker.querySelector("#ztg-input-rgb");
+                if (rgbInput) rgbInput.value = `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
+                const nativeColorInput = picker.querySelector("#ztg-native-color");
+                if (nativeColorInput) nativeColorInput.value = hex;
+             }
+          }
+        });
+        contextMenu.querySelector(".use-favicon-color")?.addEventListener("command", () => {
+          if (this.#state.contextMenuCurrentGroup?._useFaviconColor) this.#state.contextMenuCurrentGroup._useFaviconColor();
+        });
+        contextMenu.querySelector(".rename-group")?.addEventListener("command", () => {
+          if (this.#state.contextMenuCurrentGroup) this.renameGroupStart(this.#state.contextMenuCurrentGroup);
+        });
+        contextMenu.querySelector(".ungroup-tabs")?.addEventListener("command", () => {
+          if (this.#state.contextMenuCurrentGroup?.ungroupTabs) this.#state.contextMenuCurrentGroup.ungroupTabs();
+        });
+
+        contextMenu.addEventListener("popuphidden", () => { 
+           // do not nullify current group here so the color picker can still reference it if needed
+        });
+        this.#state.sharedContextMenu = contextMenu;
+        return contextMenu;
+      }
+      return null;
+    }
+
+    /* --------------------------------------------------------------------------
+     * 4.4 Color Picker & Theme Processing
+     * --------------------------------------------------------------------------
+     */
+
+    /**
+     * Constructs and initializes the interactive popup color picker panel with spectrum wheel and eyedropper.
+     * @returns {Element} XUL panel element for color selection.
+     */
+    ensureColorPickerPanel() {
+      if (this.#state.colorPickerPanel) return this.#state.colorPickerPanel;
+      if (!window.MozXULElement?.parseXULToFragment) return null;
+
+      const palette = [
+        "#ff4b4b", "#ff8f3d", "#f2c94c", "#2196f3", "#9b51e0",
+        "#eb5757", "#f2994a", "#6fcf97", "#2d9cdb", "#bb6bd9",
+        "#e53935", "#fb8c00", "#43a047", "#1e88e5", "#8e24aa",
+        "#d32f2f", "#f57c00", "#388e3c", "#1976d2", "#7b1fa2",
+        "#c62828", "#ef6c00", "#2e7d32", "#1565c0", "#6a1b9a"
+      ];
+
+      const htmlPalette = palette.map(c => `<div class="zentral-color-swatch" data-color="${c}" style="background-color: ${c};"></div>`).join("");
+
+      const frag = window.MozXULElement.parseXULToFragment(`
+        <panel id="zentral-group-color-picker" type="arrow" rolluponmousewheel="true" noautofocus="true" consumeoutsideclicks="false">
+          <vbox class="ztg-cp-box">
+            <html:div id="ztg-drag-handle" class="ztg-drag-handle" title="Drag to move">
+              <html:div class="ztg-drag-pill"></html:div>
+            </html:div>
+            <html:div id="ztg-palette-container" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 156px; height: 144px;">
+              ${htmlPalette}
+            </html:div>
+            <html:div id="ztg-wheel-container" style="display: none; flex-direction: column; gap: 6px; align-items: center; width: 156px; height: 144px;">
+              <html:canvas id="ztg-satval-canvas" width="156" height="124" style="border-radius: 8px; cursor: crosshair; border: 1px solid color-mix(in srgb, currentColor 12%, transparent);"></html:canvas>
+              <html:canvas id="ztg-hue-canvas" width="156" height="14" style="border-radius: 8px; cursor: pointer; border: 1px solid color-mix(in srgb, currentColor 12%, transparent);"></html:canvas>
+            </html:div>
+            <hbox style="align-items: center; justify-content: space-between; gap: 4px; width: 156px;">
+              <html:button id="ztg-btn-auto" class="ztg-btn" title="Average Group's Color">Auto</html:button>
+              <html:button id="ztg-btn-wheel" class="ztg-btn">Wheel</html:button>
+              <html:button id="ztg-btn-pick" class="ztg-btn">Pick</html:button>
+            </hbox>
+            <hbox style="align-items: center; justify-content: space-between; gap: 6px; width: 156px;">
+              <html:input id="ztg-input-hex" type="text" placeholder="#HEX" class="ztg-input" style="width: 70px;"/>
+              <html:input id="ztg-input-rgb" type="text" placeholder="R, G, B" class="ztg-input" style="width: 80px;"/>
+            </hbox>
+          </vbox>
+        </panel>
+      `);
+
+      const panel = frag.firstElementChild;
+      document.body.appendChild(panel);
+
+      // High-Performance RAF Panel Dragging Logic (0 Lag)
+      const dragHandle = panel.querySelector("#ztg-drag-handle");
+      let isDraggingPanel = false;
+      let startPanelX = 0;
+      let startPanelY = 0;
+      let startMouseX = 0;
+      let startMouseY = 0;
+      let targetX = 0;
+      let targetY = 0;
+      let dragRafId = null;
+
+      const updateDragPosition = () => {
+        if (!isDraggingPanel) return;
+        if (typeof panel.moveTo === "function") {
+          panel.moveTo(targetX, targetY);
+        } else {
+          panel.style.left = targetX + "px";
+          panel.style.top = targetY + "px";
+        }
+        dragRafId = null;
+      };
+
+      if (dragHandle) {
+        dragHandle.addEventListener("mousedown", (e) => {
+          if (e.button !== 0) return;
+          isDraggingPanel = true;
+          startMouseX = e.screenX;
+          startMouseY = e.screenY;
+
+          const rect = panel.getBoundingClientRect();
+          startPanelX = panel.screenX !== undefined ? panel.screenX : window.screenX + rect.left;
+          startPanelY = panel.screenY !== undefined ? panel.screenY : window.screenY + rect.top;
+          targetX = startPanelX;
+          targetY = startPanelY;
+
+          e.preventDefault();
+          e.stopPropagation();
+        });
+
+        window.addEventListener("mousemove", (e) => {
+          if (!isDraggingPanel) return;
+          const dx = e.screenX - startMouseX;
+          const dy = e.screenY - startMouseY;
+          targetX = startPanelX + dx;
+          targetY = startPanelY + dy;
+
+          if (!dragRafId) {
+            dragRafId = requestAnimationFrame(updateDragPosition);
+          }
+        });
+
+        window.addEventListener("mouseup", () => {
+          isDraggingPanel = false;
+          if (dragRafId) {
+            cancelAnimationFrame(dragRafId);
+            dragRafId = null;
+          }
+        });
+      }
+
+      const applyColor = (hex) => {
+        if (!panel._currentGroup) return;
+        panel._currentGroup.style.setProperty("--tab-group-color", hex);
+        panel._currentGroup.style.setProperty("--tab-group-color-invert", hex);
+        panel._currentGroup.style.setProperty("--zentral-custom-color", hex);
+        panel._currentGroup.style.setProperty("--zentral-tabgroup-contrast-color", this.getContrastColor(hex));
+        panel._currentGroup.style.setProperty("--atg-contrast-color", this.getContrastColor(hex));
+        panel.querySelector("#ztg-input-hex").value = hex;
+        const bigint = parseInt(hex.slice(1), 16);
+        panel.querySelector("#ztg-input-rgb").value = `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
+        this.saveTabGroupColors();
+      };
+
+      panel.querySelector("#ztg-palette-container").addEventListener("click", (e) => {
+        if (e.target.classList.contains("zentral-color-swatch")) {
+          applyColor(e.target.dataset.color);
+        }
+      });
+
+      // Canvas Color Spectrum initialization
+      const satValCanvas = panel.querySelector("#ztg-satval-canvas");
+      const hueCanvas = panel.querySelector("#ztg-hue-canvas");
+      let currentHue = 0;
+
+      const drawHueCanvas = () => {
+        const ctx = hueCanvas.getContext("2d");
+        const grad = ctx.createLinearGradient(0, 0, hueCanvas.width, 0);
+        grad.addColorStop(0, "#ff0000");
+        grad.addColorStop(0.17, "#ffff00");
+        grad.addColorStop(0.33, "#00ff00");
+        grad.addColorStop(0.50, "#00ffff");
+        grad.addColorStop(0.67, "#0000ff");
+        grad.addColorStop(0.83, "#ff00ff");
+        grad.addColorStop(1, "#ff0000");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, hueCanvas.width, hueCanvas.height);
+      };
+
+      const drawSatValCanvas = (hue) => {
+        const ctx = satValCanvas.getContext("2d");
+        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+        ctx.fillRect(0, 0, satValCanvas.width, satValCanvas.height);
+
+        const whiteGrad = ctx.createLinearGradient(0, 0, satValCanvas.width, 0);
+        whiteGrad.addColorStop(0, "#ffffff");
+        whiteGrad.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = whiteGrad;
+        ctx.fillRect(0, 0, satValCanvas.width, satValCanvas.height);
+
+        const blackGrad = ctx.createLinearGradient(0, 0, 0, satValCanvas.height);
+        blackGrad.addColorStop(0, "rgba(0,0,0,0)");
+        blackGrad.addColorStop(1, "#000000");
+        ctx.fillStyle = blackGrad;
+        ctx.fillRect(0, 0, satValCanvas.width, satValCanvas.height);
+      };
+
+      let isDraggingSatVal = false;
+      let isDraggingHue = false;
+
+      const pickSatValColor = (e) => {
+        const rect = satValCanvas.getBoundingClientRect();
+        const x = Math.max(0, Math.min(e.clientX - rect.left, satValCanvas.width - 1));
+        const y = Math.max(0, Math.min(e.clientY - rect.top, satValCanvas.height - 1));
+        const ctx = satValCanvas.getContext("2d");
+        const p = ctx.getImageData(x, y, 1, 1).data;
+        const hex = "#" + ((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1);
+        applyColor(hex);
+      };
+
+      const pickHueColor = (e) => {
+        const rect = hueCanvas.getBoundingClientRect();
+        const x = Math.max(0, Math.min(e.clientX - rect.left, hueCanvas.width - 1));
+        currentHue = Math.round((x / hueCanvas.width) * 360);
+        drawSatValCanvas(currentHue);
+        pickSatValColor({ clientX: rect.left + satValCanvas.width / 2, clientY: rect.top + satValCanvas.height / 2 });
+      };
+
+      satValCanvas.addEventListener("mousedown", (e) => { isDraggingSatVal = true; pickSatValColor(e); });
+      hueCanvas.addEventListener("mousedown", (e) => { isDraggingHue = true; pickHueColor(e); });
+
+      // Convert to named functions so they can be removed on window unload (C-03).
+      // Anonymous arrow functions added to window can never be removed, causing a
+      // permanent mousemove listener that runs for the entire browser session.
+      const onSatHueMouseMove = (e) => {
+        if (isDraggingSatVal) pickSatValColor(e);
+        if (isDraggingHue) pickHueColor(e);
+      };
+      const onSatHueMouseUp = () => {
+        isDraggingSatVal = false;
+        isDraggingHue = false;
+      };
+      window.addEventListener("mousemove", onSatHueMouseMove);
+      window.addEventListener("mouseup", onSatHueMouseUp);
+      window.addEventListener("unload", () => {
+        window.removeEventListener("mousemove", onSatHueMouseMove);
+        window.removeEventListener("mouseup", onSatHueMouseUp);
+      }, { once: true });
+
+      panel.querySelector("#ztg-btn-auto").addEventListener("click", () => {
+        if (panel._currentGroup && typeof panel._currentGroup._useFaviconColor === "function") {
+          panel._currentGroup._useFaviconColor();
+          const currentColor = panel._currentGroup.style.getPropertyValue("--tab-group-color").trim();
+          if (currentColor) {
+            const hex = currentColor.startsWith("#") && currentColor.length >= 7 ? currentColor.substring(0, 7) : currentColor;
+            panel.querySelector("#ztg-input-hex").value = hex;
+            if (hex.startsWith("#") && hex.length === 7) {
+              const bigint = parseInt(hex.slice(1), 16);
+              const rgbInput = panel.querySelector("#ztg-input-rgb");
+              if (rgbInput) rgbInput.value = `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
+            }
+          }
+        }
+      });
+
+      panel.querySelector("#ztg-btn-wheel").addEventListener("click", () => {
+        const paletteContainer = panel.querySelector("#ztg-palette-container");
+        const wheelContainer = panel.querySelector("#ztg-wheel-container");
+        const btn = panel.querySelector("#ztg-btn-wheel");
+
+        if (wheelContainer.style.display === "none") {
+          wheelContainer.style.display = "flex";
+          paletteContainer.style.display = "none";
+          btn.textContent = "Palette";
+          drawHueCanvas();
+          drawSatValCanvas(currentHue);
+        } else {
+          wheelContainer.style.display = "none";
+          paletteContainer.style.display = "grid";
+          btn.textContent = "Wheel";
+        }
+      });
+
+      panel.querySelector("#ztg-btn-pick").addEventListener("click", () => {
+        panel.hidePopup();
+        try {
+          const canvas = document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+          canvas.style.position = "fixed";
+          canvas.style.top = "0";
+          canvas.style.left = "0";
+          canvas.style.zIndex = "2147483647";
+          canvas.style.cursor = "crosshair";
+
+          const ctx = canvas.getContext("2d");
+          ctx.drawWindow(window, 0, 0, window.innerWidth, window.innerHeight, "rgb(255,255,255)");
+
+          const loupe = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
+          loupe.style.position = "fixed";
+          loupe.style.width = "40px";
+          loupe.style.height = "40px";
+          loupe.style.borderRadius = "50%";
+          loupe.style.border = "2px solid #ffffff";
+          loupe.style.boxShadow = "0 2px 10px rgba(0,0,0,0.5)";
+          loupe.style.pointerEvents = "none";
+          loupe.style.zIndex = "2147483647";
+          loupe.style.display = "none";
+
+          document.documentElement.appendChild(canvas);
+          document.documentElement.appendChild(loupe);
+
+          const cleanup = () => {
+            if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+            if (loupe.parentNode) loupe.parentNode.removeChild(loupe);
+            window.removeEventListener("keydown", onKeyDown);
+          };
+
+          const onKeyDown = (e) => {
+            if (e.key === "Escape") cleanup();
+          };
+          window.addEventListener("keydown", onKeyDown);
+
+          canvas.addEventListener("mousemove", (e) => {
+            loupe.style.display = "block";
+            loupe.style.left = `${e.clientX + 15}px`;
+            loupe.style.top = `${e.clientY + 15}px`;
+            const p = ctx.getImageData(e.clientX, e.clientY, 1, 1).data;
+            const hex = "#" + ((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1);
+            loupe.style.backgroundColor = hex;
+          });
+
+          canvas.addEventListener("click", (e) => {
+            const p = ctx.getImageData(e.clientX, e.clientY, 1, 1).data;
+            const hex = "#" + ((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1);
+            applyColor(hex);
+            cleanup();
+          });
+        } catch (err) {
+          console.error("Eyedropper drawWindow failed:", err);
+        }
+      });
+
+      panel.querySelector("#ztg-input-hex").addEventListener("input", (e) => {
+        const val = e.target.value;
+        if (/^#[0-9A-Fa-f]{6}$/.test(val)) applyColor(val);
+      });
+      panel.querySelector("#ztg-input-rgb").addEventListener("change", (e) => {
+        const parts = e.target.value.split(',').map(s => parseInt(s.trim()));
+        if (parts.length === 3 && parts.every(n => !isNaN(n) && n >= 0 && n <= 255)) {
+           applyColor("#" + parts.map(n => n.toString(16).padStart(2, '0')).join(''));
+        }
+      });
+
+      this.#state.colorPickerPanel = panel;
+      return panel;
+    }
+
+    /**
+     * Attaches custom context menu actions to native Zen folder menus.
+     */
+    addFolderContextMenuItems() {
+      setTimeout(() => {
+        const folderMenu = document.getElementById("zenFolderActions");
+        if (!folderMenu || folderMenu.querySelector("#atg-convert-folder-to-group")) return;
+        
+        if (window.MozXULElement?.parseXULToFragment) {
+          const frag = window.MozXULElement.parseXULToFragment(`<menuseparator id="atg-folder-separator"/><menuitem id="atg-convert-folder-to-group" label="Convert Folder to Group"/>`);
+          const convertToSpaceItem = folderMenu.querySelector("#context_zenFolderToSpace");
+          if (convertToSpaceItem) { convertToSpaceItem.after(frag); } else { folderMenu.appendChild(frag); }
+          
+          folderMenu.addEventListener('command', (event) => {
+            if (event.target.id === 'atg-convert-folder-to-group') {
+              const triggerNode = folderMenu.triggerNode;
+              const folder = triggerNode?.closest('zen-folder');
+              if (folder) this.convertFolderToGroup(folder);
+            }
+          });
+        }
+      }, 1500);
+    }
+
+    /**
+     * Removes or cleans up native tab group context menus if present.
+     */
+    removeBuiltinTabGroupMenu() {
+      try {
+        const builtinMenu = document.getElementById("tabGroupContextMenu");
+        if (builtinMenu) builtinMenu.remove();
+      } catch (_) {}
+    }
 
     /**
      * Enhances native tab context menu (#tabContextMenu) to ensure all existing
@@ -3352,99 +3844,45 @@
      */
     enhanceTabContextMenu() {
       const tabContextMenu = document.getElementById("tabContextMenu");
-      if (!tabContextMenu) return;
+      if (!tabContextMenu || tabContextMenu._zentralEnhanced) return;
+      tabContextMenu._zentralEnhanced = true;
 
       const populateSubMenu = (menuPopup) => {
         if (!menuPopup) return;
-
-        // 1. Remove native "Closed Groups" submenu / items
-        const closedGroupsItems = menuPopup.querySelectorAll(
-          "#context_closedTabGroups, #context_closedTabGroupsSeparator, #context_reopenClosedTabGroup, [id*='closedTabGroup'], [id*='ClosedTabGroup'], [label*='Closed Group'], [label*='Gruppi chiusi']"
-        );
-        closedGroupsItems.forEach(el => el.remove());
-
-        // 2. Remove previously injected Zentral group items
-        menuPopup.querySelectorAll(".zentral-group-menuitem, [zentral-group-id]").forEach(el => el.remove());
-
-        // 3. Locate New Group item to place separator after it
-        const newGroupItem = menuPopup.querySelector("#context_tabToNewGroup, [id*='NewGroup'], [id*='newGroup'], menuitem:first-child");
-        let groupSeparator = menuPopup.querySelector("#context_tabToGroupSeparator, .zentral-group-sep");
-        if (!groupSeparator && newGroupItem) {
-          groupSeparator = document.createXULElement ? document.createXULElement("menuseparator") : document.createElement("menuseparator");
-          groupSeparator.className = "zentral-group-sep";
-          newGroupItem.after(groupSeparator);
-        }
-
         const groups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
-        if (groups.length === 0) {
-          if (groupSeparator) groupSeparator.style.display = "none";
-          return;
-        }
-        if (groupSeparator) groupSeparator.style.display = "";
-
         groups.forEach(group => {
           const label = group.label || group.getAttribute("label");
           if (!group.id || !label) return;
+          if (menuPopup.querySelector(`[zentral-group-id="${group.id}"]`)) return;
 
-          const item = document.createXULElement ? document.createXULElement("menuitem") : document.createElement("menuitem");
+          const item = document.createXULElement("menuitem");
           item.setAttribute("zentral-group-id", group.id);
           item.setAttribute("label", label);
           item.setAttribute("class", "menuitem-iconic zentral-group-menuitem");
           const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color");
           if (color) {
             item.style.setProperty("--menu-icon-color", color);
-            item.style.setProperty("color", color);
           }
-
           item.addEventListener("command", (evt) => {
             evt.stopPropagation();
-            const contextTab = (typeof TabContextMenu !== "undefined" && TabContextMenu.contextTab) ? TabContextMenu.contextTab : gBrowser.selectedTab;
-            const selectedTabs = (gBrowser.selectedTabs && gBrowser.selectedTabs.includes(contextTab)) ? gBrowser.selectedTabs : (contextTab ? [contextTab] : []);
-
+            const selectedTabs = gBrowser.selectedTabs || (gBrowser.selectedTab ? [gBrowser.selectedTab] : []);
             if (selectedTabs.length > 0) {
               if (typeof gBrowser.addTabToGroup === "function") {
                 selectedTabs.forEach(t => gBrowser.addTabToGroup(t, group));
               } else if (typeof group.addTabs === "function") {
                 group.addTabs(selectedTabs);
-              } else {
-                const targetContainer = group.querySelector(".tab-group-container") || group;
-                selectedTabs.forEach(t => {
-                  targetContainer.appendChild(t);
-                  t.group = group;
-                });
               }
-              this.scheduleStateSave();
             }
           });
           menuPopup.appendChild(item);
         });
       };
 
-      // Bind to main tab context menu
-      tabContextMenu.addEventListener("popupshowing", () => {
+      tabContextMenu.addEventListener("popupshowing", (e) => {
         try {
-          const subPopups = document.querySelectorAll(
-            "#context_tabToGroupPopup, #context_moveTabToGroupPopup, #context_zenTabToGroupPopup, #context_tabToGroup menupopup, #context_moveTabToGroup menupopup, .context-tab-to-group menupopup"
-          );
-          subPopups.forEach(popup => {
-            populateSubMenu(popup);
-            if (!popup._zentralPopshowingBound) {
-              popup._zentralPopshowingBound = true;
-              popup.addEventListener("popupshowing", () => populateSubMenu(popup));
-            }
-          });
+          const subPopups = document.querySelectorAll("#context_tabToGroupPopup, #context_moveTabToGroupPopup, #context_zenTabToGroupPopup, .context-tab-to-group menupopup");
+          subPopups.forEach(popup => populateSubMenu(popup));
         } catch (_) {}
-      });
-
-      // Also directly bind all existing subPopups in DOM
-      const subPopups = document.querySelectorAll(
-        "#context_tabToGroupPopup, #context_moveTabToGroupPopup, #context_zenTabToGroupPopup, #context_tabToGroup menupopup, #context_moveTabToGroup menupopup, .context-tab-to-group menupopup"
-      );
-      subPopups.forEach(popup => {
-        if (!popup._zentralPopshowingBound) {
-          popup._zentralPopshowingBound = true;
-          popup.addEventListener("popupshowing", () => populateSubMenu(popup));
-        }
       });
     }
 
@@ -3459,11 +3897,6 @@
         if (!group || group.hasAttribute("split-view-group")) return;
 
         this.removeBuiltinTabGroupMenu();
-        const editor = document.getElementById("tab-group-editor");
-        if (editor && typeof editor.hidePopup === "function") {
-          try { editor.hidePopup(); } catch (_) {}
-        }
-
         if (!group.hasAttribute("data-close-button-added")) this.processGroup(group);
 
         if (!group.label || group.label === '' || ("defaultGroupName" in group && group.label === group.defaultGroupName)) {
@@ -3484,21 +3917,18 @@
       group._contextMenuAdded = true;
 
       const sharedMenu = this.ensureSharedContextMenu();
-      const labelContainer = group.querySelector(".tab-group-label-container") || group;
+      const labelContainer = group.querySelector(".tab-group-label-container");
       if (labelContainer) {
-        labelContainer.setAttribute("context", "advanced-tab-groups-context-menu");
+        labelContainer.removeAttribute("context");
         labelContainer.addEventListener("contextmenu", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
+          event.preventDefault(); event.stopPropagation();
           this.#state.contextMenuCurrentGroup = group;
           this.#state.lastContextMenuX = event.screenX;
           this.#state.lastContextMenuY = event.screenY;
-          if (sharedMenu) {
-            sharedMenu.openPopupAtScreen(event.screenX, event.screenY, true);
-          }
+          sharedMenu?.openPopupAtScreen(event.screenX, event.screenY, false);
         });
       }
-      group.setAttribute("context", "advanced-tab-groups-context-menu");
+      group.removeAttribute("context");
 
       // Bind group specific actions for external callers
       // Color picking is now handled natively via ensureColorPickerPanel
