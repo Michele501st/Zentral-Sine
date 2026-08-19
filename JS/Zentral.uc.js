@@ -3980,24 +3980,21 @@
       if (!tabContextMenu || tabContextMenu._zentralEnhanced) return;
       tabContextMenu._zentralEnhanced = true;
 
-      // Ensure 'Closed Groups' is permanently removed, order matches tabstrip top-to-bottom, and group colors match
+      // Ensure groups order matches tabstrip top-to-bottom and group colors match
+      // Note: We do NOT remove separators or Closed Groups via DOM .remove() because Zen's native
+      // popup builder relies on them as anchor nodes to clear & rebuild items on subsequent openings.
+      // They are cleanly hidden via chrome.css instead.
       const handleGroupSubmenu = (popup) => {
         if (!popup) return;
-        
-        // 1. Remove Closed Groups and lower separator
-        const closedGroups = popup.querySelector("#context_moveTabToSavedGroup, [data-l10n-id='tab-context-move-tab-to-group-saved-groups']");
-        if (closedGroups) closedGroups.remove();
-        const sepLower = popup.querySelector("#open-tab-groups-separator-lower");
-        if (sepLower) sepLower.remove();
 
-        // 2. Query active tab groups in DOM order (top to bottom on tabstrip)
+        // 1. Query active tab groups in DOM order (top to bottom on tabstrip)
         const activeGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
         
-        // 3. Find all group items in the submenu
+        // 2. Find all group items in the submenu
         const menuItems = Array.from(popup.querySelectorAll(".tab-group-icon, menuitem[class*='tab-group']"));
         if (menuItems.length === 0) return;
 
-        // 4. Sort menu items to match tabstrip order (top to bottom)
+        // 3. Sort menu items to match tabstrip order (top to bottom)
         menuItems.sort((a, b) => {
           const labelA = (a.getAttribute("label") || a.label || "").replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
           const labelB = (b.getAttribute("label") || b.label || "").replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
@@ -4006,8 +4003,10 @@
           return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
         });
 
-        // 5. Re-insert sorted items sequentially after upper separator
-        let refNode = popup.querySelector("#open-tab-groups-separator-upper") || popup.querySelector("#context_moveTabToGroupNewGroup")?.nextElementSibling;
+        // 4. Re-insert sorted items sequentially after upper separator
+        const upperSep = popup.querySelector("#open-tab-groups-separator-upper");
+        let refNode = upperSep || popup.querySelector("#context_moveTabToGroupNewGroup")?.nextElementSibling;
+        
         menuItems.forEach(item => {
           if (refNode && refNode.nextSibling) {
             refNode.parentNode.insertBefore(item, refNode.nextSibling);
@@ -4017,7 +4016,7 @@
             refNode = item;
           }
 
-          // 6. Apply matching group color to the item and its icon squircle
+          // 5. Apply matching group color to the item and its icon squircle
           const cleanLabel = (item.getAttribute("label") || item.label || "").replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
           const groupEl = activeGroups.find(g => (g.label || g.getAttribute("label") || "").replace(/[\u200B-\u200D\uFEFF]/g, '').trim() === cleanLabel);
           if (groupEl) {
@@ -4046,7 +4045,6 @@
           if (popup && (popup.id === "context_moveTabToGroupPopupMenu" || popup.id?.includes("TabToGroup") || popup.parentNode?.id === "context_moveTabToGroup")) {
             handleGroupSubmenu(popup);
             setTimeout(() => handleGroupSubmenu(popup), 0);
-            setTimeout(() => handleGroupSubmenu(popup), 50);
           }
         };
         window.addEventListener("popupshowing", this._tabContextSubmenuListener, true);
