@@ -3980,117 +3980,47 @@
       if (!tabContextMenu || tabContextMenu._zentralEnhanced) return;
       tabContextMenu._zentralEnhanced = true;
 
-      const populateSubMenu = (menuPopup) => {
-        if (!menuPopup) return;
-        const groups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
-        groups.forEach(group => {
-          const label = group.label || group.getAttribute("label");
-          if (!group.id || !label) return;
-          if (menuPopup.querySelector(`[zentral-group-id="${group.id}"]`)) return;
+      // Ensure 'Closed Groups' is permanently removed and group colors are styled
+      const handleGroupSubmenu = (popup) => {
+        if (!popup) return;
+        const closedGroups = popup.querySelector("#context_moveTabToSavedGroup, [data-l10n-id='tab-context-move-tab-to-group-saved-groups']");
+        if (closedGroups) closedGroups.remove();
+        const sepLower = popup.querySelector("#open-tab-groups-separator-lower");
+        if (sepLower) sepLower.remove();
 
-          const item = document.createXULElement("menuitem");
-          item.setAttribute("zentral-group-id", group.id);
-          item.setAttribute("label", label);
-          // Set as property too just in case
-          item.label = label;
-          // Avoid menuitem-iconic which might hide the text if DOM structure is strictly enforced by Zen's CSS
-          item.setAttribute("class", "zentral-group-menuitem");
-          const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color");
-          if (color) {
-            item.style.setProperty("--menu-icon-color", color);
-            item.style.setProperty("color", color); // Add color to the text or standard menu item for visibility
-          }
-          item.addEventListener("command", (evt) => {
-            evt.stopPropagation();
-            const selectedTabs = gBrowser.selectedTabs || (gBrowser.selectedTab ? [gBrowser.selectedTab] : []);
-            if (selectedTabs.length > 0) {
-              if (typeof gBrowser.addTabToGroup === "function") {
-                selectedTabs.forEach(t => gBrowser.addTabToGroup(t, group));
-              } else if (typeof group.addTabs === "function") {
-                group.addTabs(selectedTabs);
+        // Apply custom colors to group menuitems if available
+        const items = popup.querySelectorAll(".tab-group-icon, menuitem[class*='tab-group']");
+        items.forEach(item => {
+          const label = item.getAttribute("label") || item.label || "";
+          if (label) {
+            const cleanLabel = label.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+            const groupEl = Array.from(document.querySelectorAll("tab-group:not([split-view-group])")).find(g => {
+              const gLabel = (g.label || g.getAttribute("label") || "").replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+              return gLabel === cleanLabel;
+            });
+            if (groupEl) {
+              const color = groupEl.style.getPropertyValue("--tab-group-color") || groupEl.style.getPropertyValue("--zentral-custom-color");
+              if (color) {
+                item.style.setProperty("--menu-icon-color", color);
+                item.style.setProperty("--tab-group-color", color);
               }
             }
-          });
-          menuPopup.appendChild(item);
+          }
         });
       };
 
-      // Use a global capture-phase listener to reliably catch the sub-menu's own popupshowing event
-      // This is crucial because submenus populate themselves when hovered, long after the main menu opens.
       if (!this._tabContextSubmenuListener) {
         this._tabContextSubmenuListener = (e) => {
           const popup = e.target;
-          if (popup && (popup.id === "context_tabToGroupPopup" || popup.id === "context_moveTabToGroupPopup" || popup.id === "context_zenTabToGroupPopup" || popup.closest(".context-tab-to-group"))) {
-            
-            // Set up a MutationObserver to catch any asynchronous additions by Zen
-            if (!popup._zentralObserver) {
-               popup._zentralObserver = new MutationObserver(() => {
-                  let modified = false;
-                  Array.from(popup.children).forEach(child => {
-                    const id = child.id || "";
-                    const label = child.getAttribute("label") || child.label || "";
-                    const l10nId = child.getAttribute("data-l10n-id") || "";
-                    
-                    if (id === "context_closedTabGroups" || l10nId === "tab-context-closed-groups" || child.classList.contains("context-closed-tab-groups") || label === "Closed Groups" || l10nId.includes("closed-groups")) {
-                      child.remove(); modified = true;
-                    } 
-                    else if (child.tagName && child.tagName.toLowerCase() === "menuitem" && !child.hasAttribute("zentral-group-id")) {
-                      if (!id || (id.includes("tabToGroup") && !id.includes("NewGroup") && !id.includes("SplitView"))) {
-                         child.remove(); modified = true;
-                      } else if (l10nId === "") {
-                         if (!id) { child.remove(); modified = true; }
-                      }
-                    }
-                  });
-                  if (modified || !popup.querySelector('.zentral-group-menuitem')) {
-                     // Pause observer to prevent infinite loops while we populate
-                     popup._zentralObserver.disconnect();
-                     populateSubMenu(popup);
-                     popup._zentralObserver.observe(popup, { childList: true });
-                  }
-               });
-               popup._zentralObserver.observe(popup, { childList: true });
-            }
-
-            // setTimeout ensures we run immediately after Zen's synchronous native population finishes
-            setTimeout(() => {
-              try {
-                Array.from(popup.children).forEach(child => {
-                  const id = child.id || "";
-                  const label = child.getAttribute("label") || child.label || "";
-                  const l10nId = child.getAttribute("data-l10n-id") || "";
-                  
-                  // 1. Remove "Closed Groups" completely
-                  if (id === "context_closedTabGroups" || l10nId === "tab-context-closed-groups" || child.classList.contains("context-closed-tab-groups") || label === "Closed Groups" || l10nId.includes("closed-groups")) {
-                    child.remove();
-                  } 
-                  // 2. Remove Zen's blank native group items (they are menuitems without our custom ID, often following 'New Group')
-                  else if (child.tagName && child.tagName.toLowerCase() === "menuitem" && !child.hasAttribute("zentral-group-id")) {
-                    // We must NOT remove 'New Group' or 'Add split view...'. We only remove items that are actual groups.
-                    // Native groups typically have no ID or an ID ending in 'tabToGroup' (but not 'NewGroup')
-                    if (!id || (id.includes("tabToGroup") && !id.includes("NewGroup") && !id.includes("SplitView"))) {
-                       child.remove();
-                    } else if (l10nId === "") {
-                       // Often native group items have no l10nId whereas static items do
-                       if (!id) child.remove();
-                    }
-                  }
-                });
-
-                // 3. Re-inject our robust custom items
-                populateSubMenu(popup);
-              } catch (_) {}
-            }, 0);
+          if (popup && (popup.id === "context_moveTabToGroupPopupMenu" || popup.id?.includes("TabToGroup") || popup.parentNode?.id === "context_moveTabToGroup")) {
+            handleGroupSubmenu(popup);
+            setTimeout(() => handleGroupSubmenu(popup), 0);
           }
         };
         window.addEventListener("popupshowing", this._tabContextSubmenuListener, true);
       }
     }
 
-    /**
-     * Event listener handler triggered when a new tab group is created in the browser.
-     * @param {CustomEvent} event - TabGroupCreate custom event object.
-     */
     onTabGroupCreate(event) {
       try {
         const target = event.target;

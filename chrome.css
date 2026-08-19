@@ -308,19 +308,24 @@ tab-group[collapsed] .tab-group-icon::before {
   background: none !important;
 }
 
-/* Complete obliteration of native image.group-marker and children inside .tab-group-icon */
+/* Complete obliteration of native image.group-marker and children inside .tab-group-icon on tabstrip ONLY */
 tab-group .group-marker,
 tab-group[collapsed] .group-marker,
 #tabbrowser-tabs tab-group .group-marker,
 #tabbrowser-tabs tab-group[collapsed] .group-marker,
 #tabbrowser-tabs tab-group .tab-group-icon .group-marker,
 #tabbrowser-tabs tab-group[collapsed] .tab-group-icon .group-marker,
-.tab-group-icon image,
-.tab-group-icon img,
-.tab-group-icon svg,
-.tab-group-icon label,
-.tab-group-icon span,
-.tab-group-icon > *,
+#tabbrowser-tabs tab-group .tab-group-icon image,
+#tabbrowser-tabs tab-group .tab-group-icon img,
+#tabbrowser-tabs tab-group .tab-group-icon svg,
+#tabbrowser-tabs tab-group .tab-group-icon label,
+#tabbrowser-tabs tab-group .tab-group-icon span,
+tab-group .tab-group-icon image,
+tab-group .tab-group-icon img,
+tab-group .tab-group-icon svg,
+tab-group .tab-group-icon label,
+tab-group .tab-group-icon span,
+tab-group .tab-group-icon > *,
 #tabbrowser-tabs tab-group .tab-group-icon > *,
 #tabbrowser-tabs tab-group[collapsed] .tab-group-icon > * {
   display: none !important;
@@ -759,4 +764,14 @@ panel[id*="tabgroup-editor"] {
   padding: 0 !important;
   border: none !important;
   box-shadow: none !important;
+}
+
+/* --------------------------------------------------------------------------
+ * Context Menu: Suppress Closed Groups from 'Add Tab to Group' Submenu
+ * -------------------------------------------------------------------------- */
+#context_moveTabToSavedGroup,
+#open-tab-groups-separator-lower,
+#context_moveTabToGroupPopupMenu > #context_moveTabToSavedGroup,
+#context_moveTabToGroupPopupMenu > #open-tab-groups-separator-lower {
+  display: none !important;
 }
