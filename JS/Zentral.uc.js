@@ -2110,9 +2110,16 @@
           if (el) el.remove();
         });
 
-        // 4. Revert all tab-group nodes back to native Zen markup
-        document.querySelectorAll("tab-group").forEach(group => {
+        // 4. Flatten all tab-group nodes: snapshot metadata, tag live tabs, un-nest tabs to root, and remove group containers
+        const groups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
+        groups.forEach(group => {
           try {
+            const groupId = group.id || ("zentral-group-" + Math.random().toString(36).substr(2, 9));
+            const label = group.label || group.getAttribute("label") || "Group";
+            const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || "";
+            const isCollapsed = group.hasAttribute("collapsed") && group.getAttribute("collapsed") === "true";
+            const wsId = group.getAttribute("zen-workspace-id") || "";
+
             // Disconnect group style observer if any
             const obs = this.#groupObservers.get(group);
             if (obs) {
@@ -2120,79 +2127,62 @@
               this.#groupObservers.delete(group);
             }
 
-            // Remove shadow style
+            // Clean shadow style
             if (group.shadowRoot) {
               group.shadowRoot.querySelectorAll('.zentral-shadow-style').forEach(s => s.remove());
             }
 
-            // Remove custom UI components
-            group.querySelectorAll('.zentral-chevron, .zentral-group-initials, .ztg-drag-handle, .zentral-close-btn').forEach(el => el.remove());
+            // Clean custom UI components
+            group.querySelectorAll('.zentral-chevron, .zentral-group-initials, .ztg-drag-handle, .zentral-close-btn, .zentral-tab-title-wrapper').forEach(el => el.remove());
 
-            // Unwrap or restore title wrapper if necessary
-            const titleWrapper = group.querySelector('.zentral-tab-title-wrapper');
-            if (titleWrapper) {
-              const labelContainer = group.querySelector('.tab-group-label-container');
-              const label = titleWrapper.querySelector('.tab-group-label') || group.querySelector('.tab-group-label');
-              if (label && labelContainer && !labelContainer.contains(label)) {
-                labelContainer.appendChild(label);
+            // Gather all member tabs
+            let tabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab"));
+            if (tabs.length === 0 && group.tabs) {
+              tabs = Array.from(group.tabs);
+            }
+            if (tabs.length === 0 && window.gBrowser?.tabs) {
+              tabs = Array.from(gBrowser.tabs).filter(t => t.group === group || t.closest("tab-group") === group);
+            }
+
+            const parentContainer = group.parentNode || document.getElementById("tabbrowser-tabs") || gBrowser?.tabContainer;
+
+            tabs.forEach(tab => {
+              if (!tab) return;
+              // Tag the live tab element with group metadata
+              tab.setAttribute("data-zentral-group-id", groupId);
+              tab.setAttribute("data-zentral-group-label", label);
+              if (color) tab.setAttribute("data-zentral-group-color", color);
+              tab.setAttribute("data-zentral-group-collapsed", isCollapsed ? "true" : "false");
+              if (wsId) tab.setAttribute("data-zentral-group-ws", wsId);
+
+              // Move tab to parent container right before the group element
+              if (parentContainer) {
+                try {
+                  parentContainer.insertBefore(tab, group);
+                } catch (_) {
+                  try { parentContainer.appendChild(tab); } catch (_) {}
+                }
               }
-              titleWrapper.remove();
-            }
 
-            // Unhide native children in .tab-group-icon
-            const iconEl = group.querySelector('.tab-group-icon');
-            if (iconEl) {
-              Array.from(iconEl.children).forEach(child => {
-                child.style.removeProperty('display');
-                child.style.removeProperty('visibility');
-                child.style.removeProperty('width');
-                child.style.removeProperty('height');
-                child.style.removeProperty('min-width');
-                child.style.removeProperty('min-height');
-                child.style.removeProperty('opacity');
-                child.style.removeProperty('list-style-image');
-                child.style.removeProperty('background');
-                child.removeAttribute('hidden');
-              });
-              iconEl.style.removeProperty('border');
-              iconEl.style.removeProperty('outline');
-              iconEl.style.removeProperty('box-shadow');
-              iconEl.style.removeProperty('background');
-              iconEl.style.removeProperty('background-image');
-              iconEl.style.removeProperty('display');
-            }
+              // Disassociate tab from group in JS object model
+              try { if (typeof gBrowser?.addTabToGroup === "function") gBrowser.addTabToGroup(tab, null); } catch (_) {}
+              try { tab.group = null; } catch (_) {}
+              try { tab.removeAttribute("group"); tab.removeAttribute("zen-group"); } catch (_) {}
+            });
 
-            // Remove inline layout styles
-            group.style.removeProperty('border-radius');
-            const labelContainer = group.querySelector('.tab-group-label-container');
-            if (labelContainer) {
-              labelContainer.style.removeProperty('border-radius');
-              labelContainer.style.removeProperty('aspect-ratio');
-              labelContainer.style.removeProperty('align-self');
-              labelContainer.style.removeProperty('width');
-              labelContainer.style.removeProperty('min-width');
-              labelContainer.style.removeProperty('max-width');
-              labelContainer.style.removeProperty('height');
-              labelContainer.style.removeProperty('min-height');
-              labelContainer.style.removeProperty('box-sizing');
-              labelContainer.style.removeProperty('display');
-              labelContainer.style.removeProperty('flex-direction');
-              labelContainer.style.removeProperty('align-items');
-              labelContainer.style.removeProperty('justify-content');
-              labelContainer.style.removeProperty('padding');
+            // Remove the group element
+            try {
+              if (typeof gBrowser?.removeTabGroup === "function") {
+                gBrowser.removeTabGroup(group);
+              } else {
+                group.remove();
+              }
+            } catch (_) {
+              try { group.remove(); } catch (_) {}
             }
-
-            const innerLabel = group.querySelector('.tab-group-label');
-            if (innerLabel) {
-              innerLabel.style.removeProperty('border-radius');
-              innerLabel.style.removeProperty('display');
-              innerLabel.classList.remove('tab-group-label-editing');
-            }
-
-            // Remove custom attributes
-            group.removeAttribute('data-close-button-added');
-            group.removeAttribute('zentral-hover');
-          } catch (_) {}
+          } catch (e) {
+            console.error("[ZentralTabGroups] Error flattening group on destroy:", e);
+          }
         });
 
         // 5. Clean up root attributes
@@ -2236,6 +2226,118 @@
       this.onTabGroupCreate = this.onTabGroupCreate.bind(this);
       this.renameGroupKeydown = this.renameGroupKeydown.bind(this);
       this.renameGroupHalt = this.renameGroupHalt.bind(this);
+    }
+
+    /**
+     * Reconstructs tab-group containers from tabs tagged with data-zentral-group-* attributes.
+     */
+    reconstructSavedGroups() {
+      try {
+        const taggedTabs = Array.from(document.querySelectorAll("tab[data-zentral-group-id]"));
+        if (taggedTabs.length === 0) return;
+
+        if (Core.getPref(Constants.DEBUG_PREF)) console.log(`[ZentralTabGroups] Reconstructing ${taggedTabs.length} grouped tabs...`);
+
+        // Group tabs by group ID
+        const groupMap = new Map();
+        taggedTabs.forEach(tab => {
+          const gId = tab.getAttribute("data-zentral-group-id");
+          if (!groupMap.has(gId)) {
+            groupMap.set(gId, {
+              id: gId,
+              label: tab.getAttribute("data-zentral-group-label") || "Group",
+              color: tab.getAttribute("data-zentral-group-color") || "",
+              collapsed: tab.getAttribute("data-zentral-group-collapsed") === "true",
+              workspaceId: tab.getAttribute("data-zentral-group-ws") || "",
+              tabs: []
+            });
+          }
+          groupMap.get(gId).tabs.push(tab);
+        });
+
+        const tabContainer = document.getElementById("tabbrowser-tabs") || gBrowser?.tabContainer;
+
+        groupMap.forEach(info => {
+          try {
+            if (info.tabs.length === 0) return;
+            const firstTab = info.tabs[0];
+
+            // Create tab-group element
+            let group = document.getElementById(info.id);
+            if (!group) {
+              if (window.MozXULElement?.parseXULToFragment) {
+                const frag = window.MozXULElement.parseXULToFragment(`<tab-group id="${info.id}" label="${info.label}"></tab-group>`);
+                if (firstTab.parentNode) {
+                  firstTab.parentNode.insertBefore(frag, firstTab);
+                  group = document.getElementById(info.id);
+                }
+              }
+              if (!group) {
+                group = document.createXULElement ? document.createXULElement("tab-group") : document.createElement("tab-group");
+                group.id = info.id;
+                group.setAttribute("label", info.label);
+                if (firstTab.parentNode) {
+                  firstTab.parentNode.insertBefore(group, firstTab);
+                } else if (tabContainer) {
+                  tabContainer.appendChild(group);
+                }
+              }
+            }
+
+            if (group) {
+              group.label = info.label;
+              if (info.workspaceId) group.setAttribute("zen-workspace-id", info.workspaceId);
+
+              // Move member tabs into the group
+              info.tabs.forEach(tab => {
+                try {
+                  if (typeof gBrowser?.addTabToGroup === "function") {
+                    gBrowser.addTabToGroup(tab, group);
+                  } else if (typeof group.addTabs === "function") {
+                    group.addTabs([tab]);
+                  } else {
+                    const groupContainer = group.querySelector(".tab-group-container") || group;
+                    groupContainer.appendChild(tab);
+                    tab.group = group;
+                  }
+                } catch (_) {
+                  try {
+                    const groupContainer = group.querySelector(".tab-group-container") || group;
+                    groupContainer.appendChild(tab);
+                    tab.group = group;
+                  } catch (_) {}
+                }
+
+                tab.removeAttribute("data-zentral-group-id");
+                tab.removeAttribute("data-zentral-group-label");
+                tab.removeAttribute("data-zentral-group-color");
+                tab.removeAttribute("data-zentral-group-collapsed");
+                tab.removeAttribute("data-zentral-group-ws");
+              });
+
+              if (info.color) {
+                group.style.setProperty("--tab-group-color", info.color);
+                group.style.setProperty("--tab-group-color-invert", info.color);
+                group.style.setProperty("--zentral-custom-color", info.color);
+              }
+
+              if (info.collapsed) {
+                group.setAttribute("collapsed", "true");
+                group.collapsed = true;
+              } else {
+                group.removeAttribute("collapsed");
+                group.collapsed = false;
+              }
+
+              this.processGroup(group);
+            }
+          } catch (e) {
+            console.error("[ZentralTabGroups] Error reconstructing group:", e);
+          }
+        });
+      } catch (e) {
+        console.error("[ZentralTabGroups] Error in reconstructSavedGroups:", e);
+      }
     }
 
     /* --------------------------------------------------------------------------
@@ -2295,6 +2397,7 @@
       }
       this.clearStoredColorData();
       this.loadSavedColors();
+      this.reconstructSavedGroups();
       this.injectStyles();
       this.setupObserver();
       this.addFolderContextMenuItems();
