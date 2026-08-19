@@ -2,18 +2,21 @@
 // @name         Zentral-Logger
 // @description  Comprehensive diagnostic logger for Zentral (Apps Grid, Tab Groups, Settings & Layout Renderings).
 // @author       Michele Pierini
-// @version      v0.1.6
+// @version      v0.1.7
 // @include      main
 // ==/UserScript==
 
 "use strict";
 
 (function ZentralLoggerModule() {
-  if (window.ZentralLoggerInitialized) return;
-  window.ZentralLoggerInitialized = true;
+  // Clean up any previously attached listeners if reloading
+  if (window._zentralLoggerCleanup && typeof window._zentralLoggerCleanup === "function") {
+    try { window._zentralLoggerCleanup(); } catch (_) {}
+  }
 
-  const MAX_ENTRIES = 5000;
-  const ringBuffer = [];
+  const MAX_ENTRIES = 8000;
+  const ringBuffer = window._zentralLoggerRingBuffer || [];
+  window._zentralLoggerRingBuffer = ringBuffer;
 
   function ts() {
     const d = new Date();
@@ -106,13 +109,14 @@
   console.info  = patchConsoleMethod(_info,  "info");
 
   // Capture uncaught window errors & rejections
-  window.addEventListener("error", (e) => {
+  const onWinError = (e) => {
     record("error", "WindowError", `Uncaught: ${e.message} @ ${e.filename}:${e.lineno}:${e.colno}`);
-  }, true);
-
-  window.addEventListener("unhandledrejection", (e) => {
+  };
+  const onUnhandledRej = (e) => {
     record("error", "UnhandledRejection", `Reason: ${e.reason?.message || e.reason}`);
-  }, true);
+  };
+  window.addEventListener("error", onWinError, true);
+  window.addEventListener("unhandledrejection", onUnhandledRej, true);
 
   // -------------------------------------------------------------------------
   // Layout & DOM Diagnostic Snapshots
@@ -124,7 +128,8 @@
     
     // Root layout attributes
     const root = document.documentElement;
-    const attrs = Array.from(root.attributes).map(a => `${a.name}="${a.value}"`).join(" | "); lines.push(`Root Attributes: ${attrs}`);
+    const attrs = Array.from(root.attributes).map(a => `${a.name}="${a.value}"`).join(" | "); 
+    lines.push(`Root Attributes: ${attrs}`);
     
     // Apps Grid
     const grid = document.getElementById("zen-apps-sidebar-grid");
@@ -153,8 +158,13 @@
       const label = g.label || g.getAttribute("label") || "(no label)";
       const collapsed = g.hasAttribute("collapsed");
       const rect = g.getBoundingClientRect();
-      lines.push(`  Group #${idx + 1} "${label}": collapsed=${collapsed} rect=${Math.round(rect.width)}x${Math.round(rect.height)}`);
+      const childTabs = g.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab").length;
+      lines.push(`  Group #${idx + 1} "${label}" [id="${g.id || 'none'}"]: collapsed=${collapsed} childTabs=${childTabs} rect=${Math.round(rect.width)}x${Math.round(rect.height)}`);
     });
+
+    // Native Context Menus in DOM
+    const tabCtx = document.getElementById("tabContextMenu");
+    lines.push(`Tab Context Menu (#tabContextMenu): ${tabCtx ? `Present in DOM (children: ${tabCtx.children.length})` : "Not found"}`);
 
     // Settings Modal
     const modal = document.getElementById("zentral-settings-modal");
@@ -166,6 +176,8 @@
   // -------------------------------------------------------------------------
   // Real-time Layout & DOM Observers
   // -------------------------------------------------------------------------
+  let cleanupObservers = [];
+
   function setupLayoutObservers() {
     // 1. Root & Sidebar Layout Attribute Observer
     const rootObserver = new MutationObserver((mutations) => {
@@ -177,25 +189,25 @@
       }
     });
     rootObserver.observe(document.documentElement, { attributes: true });
+    cleanupObservers.push(() => rootObserver.disconnect());
 
     // 2. Apps Grid Observer
-    const observeGrid = () => {
-      const grid = document.getElementById("zen-apps-sidebar-grid");
-      if (grid) {
-        const gridObserver = new MutationObserver((mutations) => {
-          for (const m of mutations) {
-            if (m.type === "attributes" && m.attributeName === "class") {
-              const isHoriz = grid.classList.contains("zen-apps-horizontal");
-              ZentralLogger.layout("AppsGrid", `Class modified. Horizontal layout: ${isHoriz}`);
-            } else if (m.type === "childList") {
-              ZentralLogger.layout("AppsGrid", `Grid tiles updated (+${m.addedNodes.length}, -${m.removedNodes.length})`);
-            }
+    const grid = document.getElementById("zen-apps-sidebar-grid");
+    if (grid) {
+      const gridObserver = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          if (m.type === "attributes" && m.attributeName === "class") {
+            const isHoriz = grid.classList.contains("zen-apps-horizontal");
+            ZentralLogger.layout("AppsGrid", `Class modified. Horizontal layout: ${isHoriz}`);
+          } else if (m.type === "childList") {
+            ZentralLogger.layout("AppsGrid", `Grid tiles updated (+${m.addedNodes.length}, -${m.removedNodes.length})`);
           }
-        });
-        gridObserver.observe(grid, { attributes: true, childList: true, subtree: false });
-        ZentralLogger.layout("AppsGrid", "Apps Grid observer attached.");
-      }
-    };
+        }
+      });
+      gridObserver.observe(grid, { attributes: true, childList: true, subtree: false });
+      cleanupObservers.push(() => gridObserver.disconnect());
+      ZentralLogger.layout("AppsGrid", "Apps Grid observer attached.");
+    }
 
     // 3. Tab Groups Observer
     const tabContainer = document.getElementById("tabbrowser-tabs") || document.body;
@@ -216,18 +228,7 @@
       }
     });
     tabGroupObserver.observe(tabContainer, { childList: true, subtree: true, attributes: true, attributeFilter: ["collapsed", "label", "style", "class"] });
-
-    // Initial check
-    observeGrid();
-    window.addEventListener("resize", () => {
-      ZentralLogger.layout("WindowResize", `Resized to ${window.innerWidth}x${window.innerHeight}`);
-    }, { passive: true });
-  }
-
-  if (document.readyState === "complete") {
-    setupLayoutObservers();
-  } else {
-    window.addEventListener("DOMContentLoaded", setupLayoutObservers, { once: true });
+    cleanupObservers.push(() => tabGroupObserver.disconnect());
   }
 
   // -------------------------------------------------------------------------
@@ -235,36 +236,36 @@
   // -------------------------------------------------------------------------
   function setupTabContextMenuTracer() {
     function dumpMenuChildren(popup, prefix) {
-      prefix = prefix || '  ';
-      if (!popup || !popup.children) return ['[Empty Popup]'];
+      prefix = prefix || "  ";
+      if (!popup || !popup.children) return ["[Empty Popup]"];
       const lines = [];
       const children = Array.from(popup.children);
-      lines.push(prefix + 'Total items: ' + children.length);
+      lines.push(`${prefix}Total items: ${children.length}`);
       children.forEach((el, i) => {
         const tag = el.tagName.toLowerCase();
-        const id = el.id ? ('#' + el.id) : '';
-        const cls = el.className ? ('.' + el.className.trim().replace(/\s+/g, '.')) : '';
-        const label = el.getAttribute('label') || el.label || '';
-        const text = el.textContent ? el.textContent.trim().replace(/\s+/g, ' ') : '';
-        const l10n = el.getAttribute('data-l10n-id') ? ('[data-l10n-id="' + el.getAttribute('data-l10n-id') + '"]') : '';
-        const hidden = el.hidden || el.hasAttribute('hidden') || el.getAttribute('collapsed') === 'true';
-        const disabled = el.disabled || el.getAttribute('disabled') === 'true';
-        const zGroupId = el.getAttribute('zentral-group-id') ? ('[zentral-group-id="' + el.getAttribute('zentral-group-id') + '"]') : '';
-        const colorVar = el.style.getPropertyValue('--tab-group-color') || el.style.getPropertyValue('--menu-icon-color') || '';
+        const id = el.id ? `#${el.id}` : "";
+        const cls = el.className ? `.${el.className.trim().replace(/\s+/g, ".")}` : "";
+        const label = el.getAttribute("label") || el.label || "";
+        const text = el.textContent ? el.textContent.trim().replace(/\s+/g, " ") : "";
+        const l10n = el.getAttribute("data-l10n-id") ? `[data-l10n-id="${el.getAttribute("data-l10n-id")}"]` : "";
+        const hidden = el.hidden || el.hasAttribute("hidden") || el.getAttribute("collapsed") === "true";
+        const disabled = el.disabled || el.getAttribute("disabled") === "true";
+        const zGroupId = el.getAttribute("zentral-group-id") ? `[zentral-group-id="${el.getAttribute("zentral-group-id")}"]` : "";
+        const colorVar = el.style.getPropertyValue("--tab-group-color") || el.style.getPropertyValue("--menu-icon-color") || "";
 
-        let details = prefix + '[' + i + '] <' + tag + id + cls + zGroupId + l10n + '>';
-        if (label) details += ' label="' + label + '"';
-        if (text && text !== label) details += ' textContent="' + text + '"';
-        if (colorVar) details += ' color="' + colorVar + '"';
-        if (hidden) details += ' (HIDDEN)';
-        if (disabled) details += ' (DISABLED)';
+        let details = `${prefix}[${i}] <${tag}${id}${cls}${zGroupId}${l10n}>`;
+        if (label) details += ` label="${label}"`;
+        if (text && text !== label) details += ` textContent="${text}"`;
+        if (colorVar) details += ` color="${colorVar}"`;
+        if (hidden) details += " (HIDDEN)";
+        if (disabled) details += " (DISABLED)";
 
         lines.push(details);
 
-        if (tag === 'menu') {
-          const sub = el.querySelector('menupopup');
+        if (tag === "menu") {
+          const sub = el.querySelector("menupopup");
           if (sub) {
-            lines.push(prefix + '  -> Submenu <menupopup id="' + sub.id + '"> (' + sub.children.length + ' items)');
+            lines.push(`${prefix}  -> Submenu <menupopup id="${sub.id || 'no-id'}"> (${sub.children.length} items)`);
           }
         }
       });
@@ -272,50 +273,41 @@
     }
 
     // 1. Capture Right-Clicks on Tabs and Tabstrip
-    window.addEventListener('contextmenu', (e) => {
+    const onContextMenu = (e) => {
       const target = e.target;
-      const tab = target && target.closest ? target.closest('tab, tabbrowser-tab, .tabbrowser-tab') : null;
-      const group = target && target.closest ? target.closest('tab-group:not([split-view-group])') : null;
-      const tabStrip = target && target.closest ? target.closest('#tabbrowser-tabs, .tabbrowser-tabs') : null;
+      const tab = target?.closest ? target.closest("tab, tabbrowser-tab, .tabbrowser-tab") : null;
+      const group = target?.closest ? target.closest("tab-group:not([split-view-group])") : null;
+      const tabStrip = target?.closest ? target.closest("#tabbrowser-tabs, .tabbrowser-tabs") : null;
 
-      if (tab || group || tabStrip) {
-        const tabInfo = tab ? {
-          label: tab.label || tab.getAttribute('label') || '(unnamed tab)',
-          selected: tab.selected || tab.hasAttribute('selected'),
-          pinned: tab.pinned || tab.hasAttribute('pinned'),
-          group: tab.group ? tab.group.id : (tab.getAttribute('group') || (tab.closest('tab-group') ? tab.closest('tab-group').getAttribute('label') : 'none')),
-          userContextId: tab.getAttribute('usercontextid') || 0,
-          index: tab._tPos !== undefined ? tab._tPos : (tab.parentElement ? Array.from(tab.parentElement.children).indexOf(tab) : -1)
-        } : null;
+      const tabInfo = tab ? {
+        label: tab.label || tab.getAttribute("label") || "(unnamed tab)",
+        selected: tab.selected || tab.hasAttribute("selected"),
+        pinned: tab.pinned || tab.hasAttribute("pinned"),
+        group: tab.group?.id || tab.getAttribute("group") || (tab.closest("tab-group")?.getAttribute("label") || "none"),
+        userContextId: tab.getAttribute("usercontextid") || 0,
+        index: tab._tPos !== undefined ? tab._tPos : (tab.parentElement ? Array.from(tab.parentElement.children).indexOf(tab) : -1)
+      } : null;
 
-        const groupInfo = group ? {
-          id: group.id || '(no-id)',
-          label: group.label || group.getAttribute('label') || '(no-label)',
-          collapsed: group.hasAttribute('collapsed')
-        } : null;
+      const groupInfo = group ? {
+        id: group.id || "(no-id)",
+        label: group.label || group.getAttribute("label") || "(no-label)",
+        collapsed: group.hasAttribute("collapsed")
+      } : null;
 
-        ZentralLogger.log('TabContextMenu:RightClick', {
-          targetTag: target.tagName,
-          targetClass: target.className,
-          targetId: target.id,
-          coords: { clientX: e.clientX, clientY: e.clientY, screenX: e.screenX, screenY: e.screenY },
-          tab: tabInfo,
-          group: groupInfo
-        });
-      }
-    }, true);
+      ZentralLogger.log("TabContextMenu:RightClick", {
+        targetTag: target.tagName,
+        targetClass: target.className,
+        targetId: target.id,
+        coords: { clientX: e.clientX, clientY: e.clientY, screenX: e.screenX, screenY: e.screenY },
+        tab: tabInfo,
+        group: groupInfo,
+        onTabStrip: !!tabStrip
+      });
+    };
+    window.addEventListener("contextmenu", onContextMenu, true);
+    cleanupObservers.push(() => window.removeEventListener("contextmenu", onContextMenu, true));
 
-    // 2. Lifecycle listeners for Context Menus and Submenus
-    function isTabRelatedPopup(popup) {
-      if (!popup || !popup.tagName) return false;
-      const tag = popup.tagName.toLowerCase();
-      if (tag !== 'menupopup' && tag !== 'menu') return false;
-      if (popup.id === 'tabContextMenu' || (popup.closest && popup.closest('#tabContextMenu'))) return true;
-      if ((popup.id && popup.id.indexOf('tabToGroup') !== -1) || (popup.id && popup.id.indexOf('TabToGroup') !== -1) || (popup.id && popup.id.indexOf('zentral-tabgroup') !== -1)) return true;
-      if ((popup.classList && popup.classList.contains('context-tab-to-group')) || (popup.closest && popup.closest('.context-tab-to-group'))) return true;
-      return false;
-    }
-
+    // 2. Lifecycle listeners for all Context Menus and Submenus
     const observedPopups = new WeakSet();
 
     function attachPopupObserver(popup) {
@@ -324,68 +316,78 @@
 
       const observer = new MutationObserver((mutations) => {
         for (const m of mutations) {
-          if (m.type === 'childList') {
-            const added = Array.from(m.addedNodes).filter(n => n.nodeType === 1).map(n => '<' + n.tagName.toLowerCase() + ' id="' + (n.id || '') + '" label="' + (n.getAttribute('label') || n.label || '') + '">').join(', ');
-            const removed = Array.from(m.removedNodes).filter(n => n.nodeType === 1).map(n => '<' + n.tagName.toLowerCase() + ' id="' + (n.id || '') + '" label="' + (n.getAttribute('label') || n.label || '') + '">').join(', ');
-            ZentralLogger.log('TabContextMenu:Mutation', 'Popup <' + popup.tagName.toLowerCase() + ' id="' + popup.id + '"> children changed: +[' + added + '] -[' + removed + ']');
-          } else if (m.type === 'attributes') {
-            ZentralLogger.log('TabContextMenu:Mutation', 'Popup item <' + m.target.tagName.toLowerCase() + ' id="' + m.target.id + '"> attr "' + m.attributeName + '" -> "' + m.target.getAttribute(m.attributeName) + '"');
+          if (m.type === "childList") {
+            const added = Array.from(m.addedNodes).filter(n => n.nodeType === 1).map(n => `<${n.tagName.toLowerCase()} id="${n.id || ''}" label="${n.getAttribute('label') || n.label || ''}">`).join(", ");
+            const removed = Array.from(m.removedNodes).filter(n => n.nodeType === 1).map(n => `<${n.tagName.toLowerCase()} id="${n.id || ''}" label="${n.getAttribute('label') || n.label || ''}">`).join(", ");
+            ZentralLogger.log("TabContextMenu:Mutation", `Popup <${popup.tagName.toLowerCase()} id="${popup.id || 'no-id'}"> children changed: +[${added}] -[${removed}]`);
+          } else if (m.type === "attributes") {
+            ZentralLogger.log("TabContextMenu:Mutation", `Popup item <${m.target.tagName.toLowerCase()} id="${m.target.id || 'no-id'}"> attr "${m.attributeName}" -> "${m.target.getAttribute(m.attributeName)}"`);
           }
         }
       });
-      observer.observe(popup, { childList: true, subtree: true, attributes: true, attributeFilter: ['label', 'hidden', 'disabled', 'class'] });
+      observer.observe(popup, { childList: true, subtree: true, attributes: true, attributeFilter: ["label", "hidden", "disabled", "class"] });
+      cleanupObservers.push(() => observer.disconnect());
     }
 
-    window.addEventListener('popupshowing', (e) => {
+    const onPopupShowing = (e) => {
       const popup = e.target;
-      if (isTabRelatedPopup(popup)) {
-        attachPopupObserver(popup);
-        const triggerNode = popup.triggerNode ? ('<' + popup.triggerNode.tagName.toLowerCase() + ' class="' + (popup.triggerNode.className || '') + '">') : '(none)';
-        ZentralLogger.log('TabContextMenu:PopupShowing', '[Showing] <' + popup.tagName.toLowerCase() + ' id="' + popup.id + '" class="' + (popup.className || '') + '"> TriggerNode: ' + triggerNode);
-        
-        const dump = dumpMenuChildren(popup, '  ');
-        ZentralLogger.log('TabContextMenu:Structure', 'DOM State for <' + (popup.id || popup.tagName) + '> at popupshowing:\n' + dump.join('\n'));
-      }
-    }, true);
+      if (!popup || !popup.tagName) return;
+      const tag = popup.tagName.toLowerCase();
+      if (tag !== "menupopup" && tag !== "panel") return;
 
-    window.addEventListener('popupshown', (e) => {
-      const popup = e.target;
-      if (isTabRelatedPopup(popup)) {
-        const dump = dumpMenuChildren(popup, '  ');
-        ZentralLogger.log('TabContextMenu:PopupShown', '[Shown] <' + popup.tagName.toLowerCase() + ' id="' + popup.id + '"> Visible State:\n' + dump.join('\n'));
-      }
-    }, true);
+      attachPopupObserver(popup);
+      const parentMenu = popup.parentNode ? `<${popup.parentNode.tagName.toLowerCase()} id="${popup.parentNode.id || ''}" label="${popup.parentNode.getAttribute?.('label') || ''}">` : "(none)";
+      const triggerNode = popup.triggerNode ? `<${popup.triggerNode.tagName.toLowerCase()} class="${popup.triggerNode.className || ''}">` : "(none)";
+      
+      ZentralLogger.log("TabContextMenu:PopupShowing", `[Showing] <${tag} id="${popup.id || 'no-id'}" class="${popup.className || ''}"> | Parent: ${parentMenu} | TriggerNode: ${triggerNode}`);
+      
+      const dump = dumpMenuChildren(popup, "  ");
+      ZentralLogger.log("TabContextMenu:Structure", `DOM State for <${popup.id || popup.tagName}> at popupshowing:\n${dump.join("\n")}`);
+    };
+    window.addEventListener("popupshowing", onPopupShowing, true);
+    cleanupObservers.push(() => window.removeEventListener("popupshowing", onPopupShowing, true));
 
-    window.addEventListener('popuphiding', (e) => {
+    const onPopupShown = (e) => {
       const popup = e.target;
-      if (isTabRelatedPopup(popup)) {
-        ZentralLogger.log('TabContextMenu:PopupHiding', '[Hiding] <' + popup.tagName.toLowerCase() + ' id="' + popup.id + '">');
-      }
-    }, true);
+      if (!popup || !popup.tagName) return;
+      const tag = popup.tagName.toLowerCase();
+      if (tag !== "menupopup" && tag !== "panel") return;
+
+      const dump = dumpMenuChildren(popup, "  ");
+      ZentralLogger.log("TabContextMenu:PopupShown", `[Shown] <${tag} id="${popup.id || 'no-id'}"> Visible State:\n${dump.join("\n")}`);
+    };
+    window.addEventListener("popupshown", onPopupShown, true);
+    cleanupObservers.push(() => window.removeEventListener("popupshown", onPopupShown, true));
+
+    const onPopupHiding = (e) => {
+      const popup = e.target;
+      if (!popup || !popup.tagName) return;
+      const tag = popup.tagName.toLowerCase();
+      if (tag !== "menupopup" && tag !== "panel") return;
+      ZentralLogger.log("TabContextMenu:PopupHiding", `[Hiding] <${tag} id="${popup.id || 'no-id'}">`);
+    };
+    window.addEventListener("popuphiding", onPopupHiding, true);
+    cleanupObservers.push(() => window.removeEventListener("popuphiding", onPopupHiding, true));
 
     // 3. Command execution within tab context menus
-    window.addEventListener('command', (e) => {
+    const onCommand = (e) => {
       const target = e.target;
-      if (target && target.closest && (target.closest('#tabContextMenu') || target.closest('#zentral-tabgroup-context-menu') || target.closest('[id*="TabToGroup"]'))) {
-        const id = target.id || '(no-id)';
-        const label = target.getAttribute('label') || target.label || '(no-label)';
-        const parentPopup = (target.closest('menupopup') && target.closest('menupopup').id) ? target.closest('menupopup').id : '(no-popup-id)';
-        const zGroupId = target.getAttribute('zentral-group-id') || '';
-        ZentralLogger.log('TabContextMenu:CommandExecuted', 'Executed command on <' + target.tagName.toLowerCase() + ' id="' + id + '" label="' + label + '"> in popup #' + parentPopup + ' (zentralGroupId="' + zGroupId + '")');
+      if (target && target.closest && (target.closest("#tabContextMenu") || target.closest("#zentral-tabgroup-context-menu") || target.closest("[id*='TabToGroup']") || target.closest("menupopup"))) {
+        const id = target.id || "(no-id)";
+        const label = target.getAttribute("label") || target.label || "(no-label)";
+        const parentPopup = target.closest("menupopup")?.id || "(no-popup-id)";
+        const zGroupId = target.getAttribute("zentral-group-id") || "";
+        ZentralLogger.log("TabContextMenu:CommandExecuted", `Executed command on <${target.tagName.toLowerCase()} id="${id}" label="${label}"> in popup #${parentPopup} (zentralGroupId="${zGroupId}")`);
       }
-    }, true);
-  }
-
-  if (document.readyState === 'complete') {
-    setupTabContextMenuTracer();
-  } else {
-    window.addEventListener('DOMContentLoaded', setupTabContextMenuTracer, { once: true });
+    };
+    window.addEventListener("command", onCommand, true);
+    cleanupObservers.push(() => window.removeEventListener("command", onCommand, true));
   }
 
   // -------------------------------------------------------------------------
   // User Interactions & Hit-Test Logger (Clicks, Buttons, Modals)
   // -------------------------------------------------------------------------
-  document.addEventListener("click", (e) => {
+  const onClick = (e) => {
     const t = e.target;
     if (!t) return;
     
@@ -418,17 +420,21 @@
       ZentralLogger.log("UserInteraction", `Settings Modal interaction on <${t.tagName.toLowerCase()} id="${t.id}" class="${t.className}">`);
       return;
     }
-  }, true);
+  };
+  document.addEventListener("click", onClick, true);
+  cleanupObservers.push(() => document.removeEventListener("click", onClick, true));
 
   // -------------------------------------------------------------------------
   // Shortcut Exporter: Alt + L
   // -------------------------------------------------------------------------
-  document.addEventListener("keydown", (e) => {
+  const onKeyDown = (e) => {
     if (!e.altKey || (e.key !== "l" && e.key !== "L")) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     exportLog();
-  }, true);
+  };
+  document.addEventListener("keydown", onKeyDown, true);
+  cleanupObservers.push(() => document.removeEventListener("keydown", onKeyDown, true));
 
   /**
    * Export diagnostic logs to file in workspace logs folder
@@ -491,6 +497,23 @@
     }
   }
 
-  ZentralLogger.log("Zentral-Logger", "Overhauled Zentral-Logger v0.1.6 initialized. Active & logging all layout renderings — Press Alt+L to export logs to logs/ folder.");
+  // Register cleanup handler on window for hot-reloading
+  window._zentralLoggerCleanup = () => {
+    cleanupObservers.forEach(fn => { try { fn(); } catch (_) {} });
+    cleanupObservers = [];
+  };
+
+  // Run observers & tracers
+  if (document.readyState === "complete") {
+    setupLayoutObservers();
+    setupTabContextMenuTracer();
+  } else {
+    window.addEventListener("DOMContentLoaded", () => {
+      setupLayoutObservers();
+      setupTabContextMenuTracer();
+    }, { once: true });
+  }
+
+  ZentralLogger.log("Zentral-Logger", "Overhauled Zentral-Logger v0.1.7 initialized. Tab Context Menu diagnostic tracing active. Press Alt+L to export logs.");
 
 })();
