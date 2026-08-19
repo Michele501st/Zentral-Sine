@@ -2058,6 +2058,24 @@
   class ZentralTabGroups {
     /** @private Tabstrip MutationObserver */
     #tabStripObserver = null;
+
+    /**
+     * Safely retrieves Firefox SessionStore service for persistent tab metadata across restarts.
+     * @private
+     */
+    #getSessionStore() {
+      try {
+        if (typeof SessionStore !== "undefined" && SessionStore) return SessionStore;
+        if (window.SessionStore) return window.SessionStore;
+        return ChromeUtils.importESModule("resource:///modules/sessionstore/SessionStore.sys.mjs").SessionStore;
+      } catch (_) {
+        try {
+          return ChromeUtils.import("resource:///modules/sessionstore/SessionStore.jsm").SessionStore;
+        } catch (_) {
+          return null;
+        }
+      }
+    }
     /** @private Root attribute MutationObserver */
     #rootAttrObs = null;
     /** @private Sidebar attr update listener for prefs */
@@ -2110,52 +2128,105 @@
           if (el) el.remove();
         });
 
-        // 4. Flatten all tab-group nodes: snapshot metadata, tag live tabs, un-nest tabs to root, and remove group containers
-        const groups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
-        groups.forEach(group => {
-          try {
-            const groupId = group.id || ("zentral-group-" + Math.random().toString(36).substr(2, 9));
-            const label = group.label || group.getAttribute("label") || "Group";
-            const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || "";
-            const isCollapsed = group.hasAttribute("collapsed") && group.getAttribute("collapsed") === "true";
-            const wsId = group.getAttribute("zen-workspace-id") || "";
+        // 4. Secure state persistence across restarts: capture full hierarchy and tab assignments
+        const ss = this.#getSessionStore();
+        const allGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
+        const stateToSave = {
+          groups: {},
+          tabMapping: {}
+        };
 
-            // Disconnect group style observer if any
+        allGroups.forEach(group => {
+          if (!group.id) group.id = "zentral-group-" + Math.random().toString(36).substr(2, 9);
+          const parentGroup = group.parentElement?.closest("tab-group:not([split-view-group])");
+          const parentId = parentGroup?.id || null;
+          const label = group.label || group.getAttribute("label") || "Group";
+          const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || "";
+          const isCollapsed = group.hasAttribute("collapsed") && group.getAttribute("collapsed") === "true";
+          const wsId = group.getAttribute("zen-workspace-id") || "";
+
+          const posContainer = parentGroup || group.parentElement;
+          const groupSiblings = posContainer
+            ? Array.from(posContainer.children).filter(el => el.tagName?.toLowerCase() === "tab-group" && !el.hasAttribute("split-view-group"))
+            : [];
+          const index = groupSiblings.indexOf(group);
+
+          stateToSave.groups[group.id] = {
+            id: group.id,
+            label,
+            color,
+            collapsed: isCollapsed,
+            parentId,
+            workspaceId: wsId,
+            index: index >= 0 ? index : 0
+          };
+
+          // Collect direct tabs of this group
+          let directTabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
+          if (directTabs.length === 0 && group.tabs) {
+            directTabs = Array.from(group.tabs);
+          }
+
+          stateToSave.tabMapping[group.id] = directTabs.map(tab => ({
+            url: tab.linkedBrowser?.currentURI?.spec || "",
+            label: tab.label || "",
+            zenTabId: tab.getAttribute("zen-tab-id") || tab.id || ""
+          }));
+
+          directTabs.forEach(tab => {
+            if (!tab) return;
+            tab.setAttribute("data-zentral-group-id", group.id);
+            tab.setAttribute("data-zentral-group-label", label);
+            if (color) tab.setAttribute("data-zentral-group-color", color);
+            tab.setAttribute("data-zentral-group-collapsed", isCollapsed ? "true" : "false");
+            if (wsId) tab.setAttribute("data-zentral-group-ws", wsId);
+            if (parentId) tab.setAttribute("data-zentral-parent-id", parentId);
+
+            // Persist into Firefox SessionStore so metadata survives browser restarts & cache clears
+            if (ss && typeof ss.setCustomTabValue === "function") {
+              try {
+                ss.setCustomTabValue(tab, "zentral-group-id", group.id);
+                ss.setCustomTabValue(tab, "zentral-group-label", label);
+                if (color) ss.setCustomTabValue(tab, "zentral-group-color", color);
+                if (parentId) ss.setCustomTabValue(tab, "zentral-parent-id", parentId);
+                ss.setCustomTabValue(tab, "zentral-group-collapsed", isCollapsed ? "true" : "false");
+                if (wsId) ss.setCustomTabValue(tab, "zentral-group-ws", wsId);
+              } catch (_) {}
+            }
+          });
+        });
+
+        // Persist full state to preferences
+        Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify(stateToSave));
+
+        // 5. Flatten groups in deepest-first order to safely un-nest child groups and tabs
+        const sortedGroups = allGroups.slice().sort((a, b) => {
+          let depthA = 0, currA = a;
+          while ((currA = currA.parentElement?.closest("tab-group"))) depthA++;
+          let depthB = 0, currB = b;
+          while ((currB = currB.parentElement?.closest("tab-group"))) depthB++;
+          return depthB - depthA;
+        });
+
+        const rootTabContainer = document.getElementById("tabbrowser-tabs") || gBrowser?.tabContainer;
+
+        sortedGroups.forEach(group => {
+          try {
             const obs = this.#groupObservers.get(group);
             if (obs) {
               obs.disconnect();
               this.#groupObservers.delete(group);
             }
 
-            // Clean shadow style
             if (group.shadowRoot) {
               group.shadowRoot.querySelectorAll('.zentral-shadow-style').forEach(s => s.remove());
             }
-
-            // Clean custom UI components
             group.querySelectorAll('.zentral-chevron, .zentral-group-initials, .ztg-drag-handle, .zentral-close-btn, .zentral-tab-title-wrapper').forEach(el => el.remove());
 
-            // Gather all member tabs
-            let tabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab"));
-            if (tabs.length === 0 && group.tabs) {
-              tabs = Array.from(group.tabs);
-            }
-            if (tabs.length === 0 && window.gBrowser?.tabs) {
-              tabs = Array.from(gBrowser.tabs).filter(t => t.group === group || t.closest("tab-group") === group);
-            }
-
-            const parentContainer = group.parentNode || document.getElementById("tabbrowser-tabs") || gBrowser?.tabContainer;
+            const parentContainer = group.parentNode || rootTabContainer;
+            const tabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
 
             tabs.forEach(tab => {
-              if (!tab) return;
-              // Tag the live tab element with group metadata
-              tab.setAttribute("data-zentral-group-id", groupId);
-              tab.setAttribute("data-zentral-group-label", label);
-              if (color) tab.setAttribute("data-zentral-group-color", color);
-              tab.setAttribute("data-zentral-group-collapsed", isCollapsed ? "true" : "false");
-              if (wsId) tab.setAttribute("data-zentral-group-ws", wsId);
-
-              // Move tab to parent container right before the group element
               if (parentContainer) {
                 try {
                   parentContainer.insertBefore(tab, group);
@@ -2163,14 +2234,18 @@
                   try { parentContainer.appendChild(tab); } catch (_) {}
                 }
               }
-
-              // Disassociate tab from group in JS object model
               try { if (typeof gBrowser?.addTabToGroup === "function") gBrowser.addTabToGroup(tab, null); } catch (_) {}
               try { tab.group = null; } catch (_) {}
               try { tab.removeAttribute("group"); tab.removeAttribute("zen-group"); } catch (_) {}
             });
 
-            // Remove the group element
+            if (group.parentElement && group.parentElement.closest("tab-group")) {
+              const outerGroup = group.parentElement.closest("tab-group");
+              if (outerGroup.parentNode) {
+                try { outerGroup.parentNode.insertBefore(group, outerGroup); } catch (_) {}
+              }
+            }
+
             try {
               if (typeof gBrowser?.removeTabGroup === "function") {
                 gBrowser.removeTabGroup(group);
@@ -2185,7 +2260,7 @@
           }
         });
 
-        // 5. Clean up root attributes
+        // 6. Clean up root attributes
         document.documentElement.removeAttribute("zentral-sidebar-collapsed");
         document.documentElement.removeAttribute("zentral-show-chevron");
         document.documentElement.removeAttribute("zentral-label-opacity-below-85");
@@ -2229,110 +2304,224 @@
     }
 
     /**
-     * Reconstructs tab-group containers from tabs tagged with data-zentral-group-* attributes.
+     * Reconstructs tab-group containers from tabs tagged with data-zentral-group-* attributes, SessionStore values, or saved state.
      */
     reconstructSavedGroups() {
       try {
-        const taggedTabs = Array.from(document.querySelectorAll("tab[data-zentral-group-id]"));
-        if (taggedTabs.length === 0) return;
-
-        if (Core.getPref(Constants.DEBUG_PREF)) console.log(`[ZentralTabGroups] Reconstructing ${taggedTabs.length} grouped tabs...`);
-
-        // Group tabs by group ID
-        const groupMap = new Map();
-        taggedTabs.forEach(tab => {
-          const gId = tab.getAttribute("data-zentral-group-id");
-          if (!groupMap.has(gId)) {
-            groupMap.set(gId, {
-              id: gId,
-              label: tab.getAttribute("data-zentral-group-label") || "Group",
-              color: tab.getAttribute("data-zentral-group-color") || "",
-              collapsed: tab.getAttribute("data-zentral-group-collapsed") === "true",
-              workspaceId: tab.getAttribute("data-zentral-group-ws") || "",
-              tabs: []
-            });
+        const ss = this.#getSessionStore();
+        let savedState = null;
+        try {
+          const stateStr = Core.getPref(Constants.TabGroups.PREF_STATE);
+          if (stateStr && stateStr !== "{}") {
+            savedState = JSON.parse(stateStr);
           }
-          groupMap.get(gId).tabs.push(tab);
+        } catch (_) {}
+
+        const savedGroupsMap = (savedState && savedState.groups) ? savedState.groups : (savedState || {});
+        const savedTabMapping = (savedState && savedState.tabMapping) ? savedState.tabMapping : {};
+
+        const allTabs = Array.from(gBrowser?.tabs || document.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab"));
+        const groupsToReconstruct = new Map();
+
+        // 1. Match tabs to groups using DOM attributes, SessionStore, or URL fallback
+        allTabs.forEach(tab => {
+          let groupId = tab.getAttribute("data-zentral-group-id");
+          if (!groupId && ss && typeof ss.getCustomTabValue === "function") {
+            groupId = ss.getCustomTabValue(tab, "zentral-group-id");
+          }
+
+          // Fallback: match by URL from tabMapping
+          if (!groupId && savedTabMapping) {
+            const tabUrl = tab.linkedBrowser?.currentURI?.spec;
+            if (tabUrl && tabUrl !== "about:blank") {
+              for (const [gId, tabList] of Object.entries(savedTabMapping)) {
+                if (Array.isArray(tabList) && tabList.some(item => item.url === tabUrl)) {
+                  groupId = gId;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (groupId) {
+            if (!groupsToReconstruct.has(groupId)) {
+              const savedMeta = savedGroupsMap[groupId] || {};
+              const label = tab.getAttribute("data-zentral-group-label") ||
+                            (ss?.getCustomTabValue?.(tab, "zentral-group-label")) ||
+                            savedMeta.label ||
+                            "Group";
+              const color = tab.getAttribute("data-zentral-group-color") ||
+                            (ss?.getCustomTabValue?.(tab, "zentral-group-color")) ||
+                            savedMeta.color ||
+                            "";
+              const parentId = tab.getAttribute("data-zentral-parent-id") ||
+                               (ss?.getCustomTabValue?.(tab, "zentral-parent-id")) ||
+                               savedMeta.parentId ||
+                               null;
+              const collapsed = tab.getAttribute("data-zentral-group-collapsed") === "true" ||
+                                (ss?.getCustomTabValue?.(tab, "zentral-group-collapsed") === "true") ||
+                                savedMeta.collapsed === true;
+              const wsId = tab.getAttribute("data-zentral-group-ws") ||
+                           (ss?.getCustomTabValue?.(tab, "zentral-group-ws")) ||
+                           savedMeta.workspaceId ||
+                           "";
+              const index = savedMeta.index ?? 0;
+
+              groupsToReconstruct.set(groupId, {
+                id: groupId,
+                label,
+                color,
+                parentId,
+                collapsed,
+                workspaceId: wsId,
+                index,
+                tabs: []
+              });
+            }
+            groupsToReconstruct.get(groupId).tabs.push(tab);
+          }
         });
 
-        const tabContainer = document.getElementById("tabbrowser-tabs") || gBrowser?.tabContainer;
-
-        groupMap.forEach(info => {
-          try {
-            if (info.tabs.length === 0) return;
-            const firstTab = info.tabs[0];
-
-            // Create tab-group element
-            let group = document.getElementById(info.id);
-            if (!group) {
-              if (window.MozXULElement?.parseXULToFragment) {
-                const frag = window.MozXULElement.parseXULToFragment(`<tab-group id="${info.id}" label="${info.label}"></tab-group>`);
-                if (firstTab.parentNode) {
-                  firstTab.parentNode.insertBefore(frag, firstTab);
-                  group = document.getElementById(info.id);
-                }
-              }
-              if (!group) {
-                group = document.createXULElement ? document.createXULElement("tab-group") : document.createElement("tab-group");
-                group.id = info.id;
-                group.setAttribute("label", info.label);
-                if (firstTab.parentNode) {
-                  firstTab.parentNode.insertBefore(group, firstTab);
-                } else if (tabContainer) {
-                  tabContainer.appendChild(group);
-                }
-              }
-            }
-
-            if (group) {
-              group.label = info.label;
-              if (info.workspaceId) group.setAttribute("zen-workspace-id", info.workspaceId);
-
-              // Move member tabs into the group
-              info.tabs.forEach(tab => {
-                try {
-                  if (typeof gBrowser?.addTabToGroup === "function") {
-                    gBrowser.addTabToGroup(tab, group);
-                  } else if (typeof group.addTabs === "function") {
-                    group.addTabs([tab]);
-                  } else {
-                    const groupContainer = group.querySelector(".tab-group-container") || group;
-                    groupContainer.appendChild(tab);
-                    tab.group = group;
-                  }
-                } catch (_) {
-                  try {
-                    const groupContainer = group.querySelector(".tab-group-container") || group;
-                    groupContainer.appendChild(tab);
-                    tab.group = group;
-                  } catch (_) {}
-                }
-
-                tab.removeAttribute("data-zentral-group-id");
-                tab.removeAttribute("data-zentral-group-label");
-                tab.removeAttribute("data-zentral-group-color");
-                tab.removeAttribute("data-zentral-group-collapsed");
-                tab.removeAttribute("data-zentral-group-ws");
+        // Also add any saved empty groups that had child groups or metadata
+        if (savedGroupsMap) {
+          Object.entries(savedGroupsMap).forEach(([gId, meta]) => {
+            if (!groupsToReconstruct.has(gId) && meta && meta.id) {
+              groupsToReconstruct.set(gId, {
+                id: meta.id,
+                label: meta.label || "Group",
+                color: meta.color || "",
+                parentId: meta.parentId || null,
+                collapsed: meta.collapsed === true,
+                workspaceId: meta.workspaceId || "",
+                index: meta.index ?? 0,
+                tabs: []
               });
-
-              if (info.color) {
-                group.style.setProperty("--tab-group-color", info.color);
-                group.style.setProperty("--tab-group-color-invert", info.color);
-                group.style.setProperty("--zentral-custom-color", info.color);
-              }
-
-              if (info.collapsed) {
-                group.setAttribute("collapsed", "true");
-                group.collapsed = true;
-              } else {
-                group.removeAttribute("collapsed");
-                group.collapsed = false;
-              }
-
-              this.processGroup(group);
             }
-          } catch (e) {
-            console.error("[ZentralTabGroups] Error reconstructing group:", e);
+          });
+        }
+
+        if (groupsToReconstruct.size === 0) return;
+
+        if (Core.getPref(Constants.DEBUG_PREF)) {
+          console.log(`[ZentralTabGroups] Reconstructing ${groupsToReconstruct.size} groups...`);
+        }
+
+        const rootTabContainer = document.getElementById("tabbrowser-tabs") || gBrowser?.tabContainer;
+
+        // 2. Sort groups in topological order (parents first, then nested child groups by depth)
+        const getGroupDepth = (id, visited = new Set()) => {
+          if (visited.has(id)) return 0;
+          visited.add(id);
+          const pId = groupsToReconstruct.get(id)?.parentId;
+          if (!pId || !groupsToReconstruct.has(pId)) return 0;
+          return 1 + getGroupDepth(pId, visited);
+        };
+
+        const sortedGroupIds = Array.from(groupsToReconstruct.keys()).sort((a, b) => {
+          const depthA = getGroupDepth(a);
+          const depthB = getGroupDepth(b);
+          if (depthA !== depthB) return depthA - depthB;
+          const idxA = groupsToReconstruct.get(a).index ?? 0;
+          const idxB = groupsToReconstruct.get(b).index ?? 0;
+          return idxA - idxB;
+        });
+
+        // Helper to instantiate a tab-group DOM element
+        const createGroupElement = (info) => {
+          let group = document.getElementById(info.id);
+          if (!group) {
+            if (window.MozXULElement?.parseXULToFragment) {
+              const frag = window.MozXULElement.parseXULToFragment(`<tab-group id="${info.id}" label="${info.label}"></tab-group>`);
+              const parsed = frag.querySelector ? frag.querySelector("tab-group") : null;
+              if (parsed) group = parsed;
+            }
+            if (!group) {
+              group = document.createXULElement ? document.createXULElement("tab-group") : document.createElement("tab-group");
+              group.id = info.id;
+              group.setAttribute("label", info.label);
+            }
+          }
+          group.label = info.label;
+          if (info.workspaceId) group.setAttribute("zen-workspace-id", info.workspaceId);
+          return group;
+        };
+
+        // 3. Create and place each group in DOM, preserving parent-child nesting
+        sortedGroupIds.forEach(gId => {
+          try {
+            const info = groupsToReconstruct.get(gId);
+            const group = createGroupElement(info);
+
+            // Determine correct insertion parent: nested inside parentGroup or at rootTabContainer
+            let parentEl = null;
+            if (info.parentId && groupsToReconstruct.has(info.parentId)) {
+              const parentGroup = document.getElementById(info.parentId);
+              if (parentGroup && !group.contains(parentGroup)) {
+                parentEl = parentGroup.querySelector(".tab-group-container") || parentGroup;
+              }
+            }
+
+            if (!parentEl) {
+              parentEl = rootTabContainer;
+            }
+
+            if (!group.isConnected) {
+              if (info.tabs.length > 0 && info.tabs[0].parentNode === parentEl) {
+                parentEl.insertBefore(group, info.tabs[0]);
+              } else {
+                parentEl.appendChild(group);
+              }
+            }
+
+            // Move member tabs into this group
+            const targetTabContainer = group.querySelector(".tab-group-container") || group;
+            info.tabs.forEach(tab => {
+              try {
+                if (typeof gBrowser?.addTabToGroup === "function") {
+                  gBrowser.addTabToGroup(tab, group);
+                } else if (typeof group.addTabs === "function") {
+                  group.addTabs([tab]);
+                } else {
+                  targetTabContainer.appendChild(tab);
+                  tab.group = group;
+                }
+              } catch (_) {
+                try {
+                  targetTabContainer.appendChild(tab);
+                  tab.group = group;
+                } catch (_) {}
+              }
+
+              // Cleanup temporary attributes
+              tab.removeAttribute("data-zentral-group-id");
+              tab.removeAttribute("data-zentral-group-label");
+              tab.removeAttribute("data-zentral-group-color");
+              tab.removeAttribute("data-zentral-group-collapsed");
+              tab.removeAttribute("data-zentral-group-ws");
+              tab.removeAttribute("data-zentral-parent-id");
+            });
+
+            // Restore colors
+            if (info.color) {
+              group.style.setProperty("--tab-group-color", info.color);
+              group.style.setProperty("--tab-group-color-invert", info.color);
+              group.style.setProperty("--zentral-custom-color", info.color);
+              group.style.setProperty("--zentral-tabgroup-contrast-color", this.getContrastColor(info.color));
+              group.style.setProperty("--atg-contrast-color", this.getContrastColor(info.color));
+            }
+
+            // Restore collapsed state
+            if (info.collapsed) {
+              group.setAttribute("collapsed", "true");
+              group.collapsed = true;
+            } else {
+              group.removeAttribute("collapsed");
+              group.collapsed = false;
+            }
+
+            this.processGroup(group);
+          } catch (err) {
+            console.error(`[ZentralTabGroups] Error reconstructing group ${gId}:`, err);
           }
         });
       } catch (e) {
@@ -3983,31 +4172,62 @@
      */
     saveTabGroupState() {
       try {
-        const state = {};
+        const ss = this.#getSessionStore();
+        const state = {
+          groups: {},
+          tabMapping: {}
+        };
+
         document.querySelectorAll("tab-group:not([split-view-group])").forEach(group => {
           if (!group.id) return;
 
-          // Nearest tab-group or zen-folder ancestor (null = top-level)
           const parent = group.parentElement?.closest("tab-group, zen-folder") ?? null;
-
-          // Count ONLY tab-group siblings (not tabs or other elements) for a stable,
-          // platform-independent index. This is the key fix for H-01:
-          // previously Array.from(parent.children).indexOf(group) included tab nodes,
-          // making indices unstable across restarts.
           const posContainer = parent || group.parentElement;
           const groupSiblings = posContainer
             ? Array.from(posContainer.children).filter(
                 el => el.tagName?.toLowerCase() === "tab-group" && !el.hasAttribute("split-view-group")
               )
             : [];
-          const index = groupSiblings.indexOf(group); // -1 should never occur for an existing child
+          const index = groupSiblings.indexOf(group);
 
-          state[group.id] = {
+          const label = group.label || group.getAttribute("label") || "Group";
+          const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || "";
+          const wsId = group.getAttribute("zen-workspace-id") || "";
+
+          state.groups[group.id] = {
+            id: group.id,
+            label,
+            color,
             collapsed: group.hasAttribute("collapsed"),
             parentId: parent?.id ?? null,
+            workspaceId: wsId,
             index,
           };
+
+          let directTabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
+          if (directTabs.length === 0 && group.tabs) {
+            directTabs = Array.from(group.tabs);
+          }
+
+          state.tabMapping[group.id] = directTabs.map(tab => ({
+            url: tab.linkedBrowser?.currentURI?.spec || "",
+            label: tab.label || "",
+            zenTabId: tab.getAttribute("zen-tab-id") || tab.id || ""
+          }));
+
+          // Synchronize SessionStore with live state
+          if (ss && typeof ss.setCustomTabValue === "function") {
+            directTabs.forEach(tab => {
+              try {
+                ss.setCustomTabValue(tab, "zentral-group-id", group.id);
+                ss.setCustomTabValue(tab, "zentral-group-label", label);
+                if (color) ss.setCustomTabValue(tab, "zentral-group-color", color);
+                if (parent?.id) ss.setCustomTabValue(tab, "zentral-parent-id", parent.id);
+              } catch (_) {}
+            });
+          }
         });
+
         Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify(state));
       } catch (e) {
         console.warn("[ZentralTabGroups] Error saving state", e);
@@ -4022,11 +4242,10 @@
         const stateStr = Core.getPref(Constants.TabGroups.PREF_STATE);
         const forceCollapse = Core.getPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH);
         if (!stateStr || stateStr === "{}") return;
-        const state = JSON.parse(stateStr);
+        const parsed = JSON.parse(stateStr);
+        const state = parsed.groups || parsed;
 
-        // Sort ascending by saved index. Use Infinity (not || 0) for unknown/new groups
-        // so they go to the end rather than collapsing to position 0 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â this was the
-        // root cause of H-04: || 0 made index -1 and undefined indistinguishable.
+        // Sort ascending by saved index
         const groupsToProcess = Array.from(
           document.querySelectorAll("tab-group:not([split-view-group])")
         ).sort((a, b) => {
@@ -4036,8 +4255,6 @@
         });
 
         // Pass 1: Reconstruct the DOM nesting for groups that have a saved parentId.
-        // We only touch nested groups here; top-level order is handled by the native
-        // session-restore which Zentral cannot and should not override.
         groupsToProcess
           .filter(g => state[g.id]?.parentId)
           .forEach(group => {
@@ -4045,9 +4262,9 @@
             const parent = document.getElementById(groupState.parentId);
             if (!parent || group.contains(parent)) return; // Guard: avoid circular nesting
 
-            // Build the reference sibling list from tab-group children ONLY (not tabs).
-            // Exclude the group itself from the list so the target index is stable.
-            const freshGroupChildren = Array.from(parent.children).filter(
+            const targetParentContainer = parent.querySelector(".tab-group-container") || parent;
+
+            const freshGroupChildren = Array.from(targetParentContainer.children).filter(
               el =>
                 el.tagName?.toLowerCase() === "tab-group" &&
                 !el.hasAttribute("split-view-group") &&
@@ -4056,10 +4273,9 @@
 
             const targetIndex = groupState.index ?? freshGroupChildren.length;
 
-            // Skip if already nested at the correct position
-            const alreadyInParent = group.parentElement === parent;
+            const alreadyInParent = group.parentElement === targetParentContainer || group.parentElement === parent;
             if (alreadyInParent) {
-              const currentIdx = Array.from(parent.children)
+              const currentIdx = Array.from(targetParentContainer.children)
                 .filter(
                   el => el.tagName?.toLowerCase() === "tab-group" && !el.hasAttribute("split-view-group")
                 )
@@ -4067,32 +4283,24 @@
               if (currentIdx === targetIndex) return;
             }
 
-            // Insert before the target sibling, or append if at the end
             const refSibling = freshGroupChildren[targetIndex] ?? null;
             if (refSibling) {
-              parent.insertBefore(group, refSibling);
+              targetParentContainer.insertBefore(group, refSibling);
             } else {
-              parent.appendChild(group);
+              targetParentContainer.appendChild(group);
             }
           });
 
         // Pass 2: Restore collapsed states.
         groupsToProcess.forEach(group => {
           if (!group.id) return;
-          const groupState = state[group.id];
-          if (!groupState) return;
-
-          if (forceCollapse) {
-            if (!group.hasAttribute("collapsed")) {
-              group.setAttribute("collapsed", "true");
-            }
+          const isCollapsed = forceCollapse || state[group.id]?.collapsed === true;
+          if (isCollapsed) {
+            group.setAttribute("collapsed", "true");
           } else {
-            if (groupState.collapsed && !group.hasAttribute("collapsed")) {
-              group.setAttribute("collapsed", "true");
-            } else if (!groupState.collapsed && group.hasAttribute("collapsed")) {
-              group.removeAttribute("collapsed");
-            }
+            group.removeAttribute("collapsed");
           }
+          group.collapsed = isCollapsed;
         });
       } catch (e) {
         console.warn("[ZentralTabGroups] Failed to load state", e);
