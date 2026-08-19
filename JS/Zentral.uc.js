@@ -2060,6 +2060,8 @@
     #tabStripObserver = null;
     /** @private Native popup suppression listener */
     #popupShowingListener = null;
+    /** @private Global group context menu event listener */
+    #groupContextMenuHandler = null;
 
     /**
      * Safely retrieves Firefox SessionStore service for persistent tab metadata across restarts.
@@ -2117,6 +2119,10 @@
         if (this.#popupShowingListener) {
           try { window.removeEventListener("popupshowing", this.#popupShowingListener, true); } catch (_) {}
           this.#popupShowingListener = null;
+        }
+        if (this.#groupContextMenuHandler) {
+          try { window.removeEventListener("contextmenu", this.#groupContextMenuHandler, true); } catch (_) {}
+          this.#groupContextMenuHandler = null;
         }
 
         // 3. Remove injected DOM elements
@@ -3024,6 +3030,46 @@
       const tabContainer = document.getElementById("tabbrowser-tabs") || document.body;
       observer.observe(tabContainer, { childList: true, subtree: true, attributes: true, attributeFilter: ["collapsed"] });
       this.#tabStripObserver = observer;
+
+      // Global capture-phase contextmenu listener to guarantee right-click triggers custom menu on any group header
+      if (!this.#groupContextMenuHandler) {
+        this.#groupContextMenuHandler = (event) => {
+          const target = event.target;
+          if (target.closest("#tab-label-input")) return;
+          // Check if right click was on a tab-group header / pill
+          const group = target.closest("tab-group:not([split-view-group])");
+          if (!group) return;
+
+          const isHeader = target.closest(".tab-group-label-container") ||
+                           target.closest(".zentral-tab-title-wrapper") ||
+                           target.classList.contains("tab-group-label") ||
+                           target.classList.contains("zentral-group-initials") ||
+                           target.classList.contains("tab-group-icon") ||
+                           target.tagName?.toLowerCase() === "tab-group";
+
+          // If clicked directly on a tab inside the group, let native tab context menu handle it
+          if (target.closest("tab, tabbrowser-tab, .tabbrowser-tab") && !isHeader) return;
+
+          if (isHeader) {
+            event.preventDefault();
+            event.stopPropagation();
+            const menu = this.ensureSharedContextMenu();
+            if (menu) {
+              this.#state.contextMenuCurrentGroup = group;
+              this.#state.lastContextMenuX = event.screenX;
+              this.#state.lastContextMenuY = event.screenY;
+              try {
+                menu.openPopupAtScreen(event.screenX, event.screenY, true);
+              } catch (_) {
+                try {
+                  menu.openPopup(target, "after_start", 0, 0, true, false, event);
+                } catch (_) {}
+              }
+            }
+          }
+        };
+        window.addEventListener("contextmenu", this.#groupContextMenuHandler, true);
+      }
     }
 
     /* --------------------------------------------------------------------------
@@ -3524,74 +3570,127 @@
      * @returns {Element} XUL menupopup element.
      */
     ensureSharedContextMenu() {
-      if (this.#state.sharedContextMenu && this.#state.sharedContextMenu.isConnected) {
-        return this.#state.sharedContextMenu;
-      }
-
       const popupSet = document.getElementById("mainPopupSet") || document.documentElement || document.body;
-      let existing = document.getElementById("zentral-tabgroup-context-menu") || document.getElementById("advanced-tab-groups-context-menu");
-      if (existing && existing.isConnected) {
-        this.#state.sharedContextMenu = existing;
-        return existing;
-      }
+      let contextMenu = document.getElementById("zentral-tabgroup-context-menu") || document.getElementById("advanced-tab-groups-context-menu");
+      
+      if (!contextMenu || !contextMenu.isConnected) {
+        if (contextMenu) contextMenu.remove();
+        
+        if (window.MozXULElement?.parseXULToFragment) {
+          const frag = window.MozXULElement.parseXULToFragment(`
+            <menupopup id="zentral-tabgroup-context-menu">
+              <menu id="ztg-menu-color" label="Change Group Color">
+                <menupopup id="ztg-menu-color-popup">
+                  <menuitem id="ztg-item-set-color" label="Set Custom Color"/>
+                  <menuitem id="ztg-item-auto-color" label="Average Group's Color"/>
+                </menupopup>
+              </menu>
+              <menuitem id="ztg-item-rename" label="Rename Group"/>
+              <menuseparator/>
+              <menuitem id="ztg-item-ungroup" label="Ungroup Tabs"/>
+            </menupopup>
+          `);
+          popupSet.appendChild(frag);
+          contextMenu = document.getElementById("zentral-tabgroup-context-menu");
+        } else {
+          contextMenu = document.createXULElement("menupopup");
+          contextMenu.id = "zentral-tabgroup-context-menu";
 
-      if (window.MozXULElement?.parseXULToFragment) {
-        const frag = window.MozXULElement.parseXULToFragment(`
-          <menupopup id="zentral-tabgroup-context-menu">
-            <menu class="change-group-color" label="Change Group Color">
-              <menupopup>
-                <menuitem class="set-group-color" label="Set Group Color"/>
-                <menuitem class="use-favicon-color" label="Average Group's Color"/>
-              </menupopup>
-            </menu>
-            <menuitem class="rename-group" label="Rename Group"/>
-            <menuseparator/>
-            <menuitem class="ungroup-tabs" label="Ungroup Tabs"/>
-          </menupopup>
-        `);
-        const contextMenu = frag.firstElementChild;
-        popupSet.appendChild(contextMenu);
+          const colorMenu = document.createXULElement("menu");
+          colorMenu.setAttribute("label", "Change Group Color");
+          const colorPopup = document.createXULElement("menupopup");
 
-        contextMenu.addEventListener("popupshowing", (e) => {
-          const trigger = contextMenu.triggerNode;
-          const grp = trigger?.closest?.("tab-group") || this.#state.contextMenuCurrentGroup;
-          if (grp) this.#state.contextMenuCurrentGroup = grp;
-        });
+          const setColorItem = document.createXULElement("menuitem");
+          setColorItem.id = "ztg-item-set-color";
+          setColorItem.setAttribute("label", "Set Custom Color");
 
-        contextMenu.querySelector(".set-group-color")?.addEventListener("command", (e) => {
-          if (this.#state.contextMenuCurrentGroup) {
-             const picker = this.ensureColorPickerPanel();
-             if (picker) {
+          const autoColorItem = document.createXULElement("menuitem");
+          autoColorItem.id = "ztg-item-auto-color";
+          autoColorItem.setAttribute("label", "Average Group's Color");
+
+          colorPopup.appendChild(setColorItem);
+          colorPopup.appendChild(autoColorItem);
+          colorMenu.appendChild(colorPopup);
+          contextMenu.appendChild(colorMenu);
+
+          const renameItem = document.createXULElement("menuitem");
+          renameItem.id = "ztg-item-rename";
+          renameItem.setAttribute("label", "Rename Group");
+          contextMenu.appendChild(renameItem);
+
+          const sep = document.createXULElement("menuseparator");
+          contextMenu.appendChild(sep);
+
+          const ungroupItem = document.createXULElement("menuitem");
+          ungroupItem.id = "ztg-item-ungroup";
+          ungroupItem.setAttribute("label", "Ungroup Tabs");
+          contextMenu.appendChild(ungroupItem);
+
+          popupSet.appendChild(contextMenu);
+        }
+
+        if (contextMenu) {
+          contextMenu.addEventListener("popupshowing", (e) => {
+            const trigger = contextMenu.triggerNode;
+            const grp = trigger?.closest?.("tab-group:not([split-view-group])") || this.#state.contextMenuCurrentGroup;
+            if (grp) this.#state.contextMenuCurrentGroup = grp;
+          });
+
+          const openColorPicker = () => {
+            const grp = this.#state.contextMenuCurrentGroup;
+            if (!grp) return;
+            const picker = this.ensureColorPickerPanel();
+            if (picker) {
+              picker._currentGroup = grp;
+              const currentColor = grp.style.getPropertyValue("--tab-group-color").trim() || "#2b2b2b";
+              const hex = currentColor.startsWith("#") && currentColor.length >= 7 ? currentColor.substring(0, 7) : "#2b2b2b";
+              const hexInput = picker.querySelector("#ztg-input-hex");
+              if (hexInput) hexInput.value = hex;
+              const bigint = parseInt(hex.slice(1), 16);
+              const rgbInput = picker.querySelector("#ztg-input-rgb");
+              if (rgbInput && !isNaN(bigint)) rgbInput.value = `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
+              const nativeColorInput = picker.querySelector("#ztg-native-color");
+              if (nativeColorInput) nativeColorInput.value = hex;
+              
+              if (typeof picker.openPopupAtScreen === "function") {
                 picker.openPopupAtScreen(this.#state.lastContextMenuX || 0, this.#state.lastContextMenuY || 0, false);
-                picker._currentGroup = this.#state.contextMenuCurrentGroup;
-                const currentColor = picker._currentGroup.style.getPropertyValue("--tab-group-color").trim() || "#2b2b2b";
-                const hex = currentColor.startsWith("#") && currentColor.length >= 7 ? currentColor.substring(0,7) : "#2b2b2b";
-                const hexInput = picker.querySelector("#ztg-input-hex");
-                if (hexInput) hexInput.value = hex;
-                const bigint = parseInt(hex.slice(1), 16);
-                const rgbInput = picker.querySelector("#ztg-input-rgb");
-                if (rgbInput && !isNaN(bigint)) rgbInput.value = `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
-                const nativeColorInput = picker.querySelector("#ztg-native-color");
-                if (nativeColorInput) nativeColorInput.value = hex;
-             }
-          }
-        });
-        contextMenu.querySelector(".use-favicon-color")?.addEventListener("command", () => {
-          if (this.#state.contextMenuCurrentGroup?._useFaviconColor) this.#state.contextMenuCurrentGroup._useFaviconColor();
-        });
-        contextMenu.querySelector(".rename-group")?.addEventListener("command", () => {
-          if (this.#state.contextMenuCurrentGroup) this.renameGroupStart(this.#state.contextMenuCurrentGroup);
-        });
-        contextMenu.querySelector(".ungroup-tabs")?.addEventListener("command", () => {
-          if (this.#state.contextMenuCurrentGroup?.ungroupTabs) this.#state.contextMenuCurrentGroup.ungroupTabs();
-        });
+              } else if (typeof picker.openPopup === "function") {
+                picker.openPopup(grp, "after_start", 0, 0, false, false);
+              }
+            }
+          };
 
-        this.#state.sharedContextMenu = contextMenu;
-        return contextMenu;
+          contextMenu.querySelector("#ztg-item-set-color")?.addEventListener("command", (e) => {
+            e.stopPropagation();
+            openColorPicker();
+          });
+
+          contextMenu.querySelector("#ztg-item-auto-color")?.addEventListener("command", (e) => {
+            e.stopPropagation();
+            if (this.#state.contextMenuCurrentGroup?._useFaviconColor) {
+              this.#state.contextMenuCurrentGroup._useFaviconColor();
+            }
+          });
+
+          contextMenu.querySelector("#ztg-item-rename")?.addEventListener("command", (e) => {
+            e.stopPropagation();
+            if (this.#state.contextMenuCurrentGroup) {
+              this.renameGroupStart(this.#state.contextMenuCurrentGroup, true);
+            }
+          });
+
+          contextMenu.querySelector("#ztg-item-ungroup")?.addEventListener("command", (e) => {
+            e.stopPropagation();
+            if (this.#state.contextMenuCurrentGroup?.ungroupTabs) {
+              this.#state.contextMenuCurrentGroup.ungroupTabs();
+            }
+          });
+        }
       }
-      return null;
-    }
 
+      this.#state.sharedContextMenu = contextMenu;
+      return contextMenu;
+    }
     /* --------------------------------------------------------------------------
      * 4.4 Color Picker & Theme Processing
      * --------------------------------------------------------------------------
@@ -3651,8 +3750,8 @@
         </panel>
       `);
 
-      const panel = frag.firstElementChild;
-      popupSet.appendChild(panel);
+      popupSet.appendChild(frag);
+      const panel = document.getElementById("zentral-group-color-picker");
 
       const applyColor = (color) => {
         if (panel._currentGroup) {
