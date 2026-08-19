@@ -4796,50 +4796,59 @@
         console.error("[Zentral] Settings destroy error:", e);
       }
     }
-    
-    /* --------------------------------------------------------------------------
-     * 5.2 Form Data Binding & Persistence
-     * --------------------------------------------------------------------------
-     */
 
     /**
-     * Opens the Zentral settings modal dialog and populates form fields with current preferences.
+     * Dynamically positions the modal dialog to fit the content area, excluding the sidebar.
      */
     updatePosition() {
       if (!this.modal) return;
       try {
-        const sidebar = document.getElementById("navigator-toolbox") || 
-                        document.getElementById("zen-sidebar-box") || 
-                        document.getElementById("tabbrowser-tabs")?.closest("#navigator-toolbox, #sidebar-box, .zen-sidebar");
-        if (sidebar) {
-          const rect = sidebar.getBoundingClientRect();
+        const sidebar = document.getElementById("sidebar-box") || 
+                        document.getElementById("sidebar-container") || 
+                        document.getElementById("vertical-tabs") ||
+                        document.getElementById("tabbrowser-tabs")?.closest("#sidebar-box, #sidebar-container, #vertical-tabs, .zen-sidebar") ||
+                        document.getElementById("tabbrowser-tabs");
+        
+        const isSidebarCollapsed = document.documentElement.getAttribute("zen-sidebar-collapsed") === "true" ||
+                                   document.documentElement.getAttribute("zentral-sidebar-collapsed") === "true";
+
+        if (sidebar && !isSidebarCollapsed) {
+          const sRect = sidebar.getBoundingClientRect();
           const isRight = document.documentElement.getAttribute("zen-sidebar-right") === "true" || 
                           document.documentElement.getAttribute("zen-right-side") === "true" ||
-                          rect.left > (window.innerWidth / 2);
-          const width = Math.round(rect.width);
-          if (width > 40 && width < window.innerWidth) {
+                          (sRect.left > window.innerWidth / 2);
+
+          if (sRect.width > 20 && sRect.width < window.innerWidth) {
             if (isRight) {
               this.modal.style.left = "0px";
-              this.modal.style.right = width + "px";
-              this.modal.style.width = "calc(100vw - " + width + "px)";
+              this.modal.style.top = "0px";
+              this.modal.style.bottom = "0px";
+              this.modal.style.right = (window.innerWidth - Math.round(sRect.left)) + "px";
+              this.modal.style.width = Math.round(sRect.left) + "px";
             } else {
-              this.modal.style.left = width + "px";
+              this.modal.style.left = Math.round(sRect.right) + "px";
+              this.modal.style.top = "0px";
+              this.modal.style.bottom = "0px";
               this.modal.style.right = "0px";
-              this.modal.style.width = "calc(100vw - " + width + "px)";
+              this.modal.style.width = (window.innerWidth - Math.round(sRect.right)) + "px";
             }
             this.modal.style.height = "100vh";
-            this.modal.style.top = "0px";
-            this.modal.style.bottom = "0px";
             return;
           }
         }
       } catch (_) {}
+
       this.modal.style.left = "0px";
+      this.modal.style.top = "0px";
       this.modal.style.right = "0px";
+      this.modal.style.bottom = "0px";
       this.modal.style.width = "100vw";
       this.modal.style.height = "100vh";
     }
 
+    /**
+     * Opens the settings modal dialog.
+     */
     open() {
       if (!this.modal) {
         this.createModal();
@@ -4848,12 +4857,87 @@
         this.populate();
       }
       this.updatePosition();
+
+      if (!this._resizeHandler) {
+        this._resizeHandler = () => this.updatePosition();
+        window.addEventListener("resize", this._resizeHandler, { passive: true });
+      }
     }
 
+    /**
+     * Closes the settings modal dialog.
+     */
     close() {
       if (this.modal) this.modal.style.display = "none";
+      if (this._resizeHandler) {
+        window.removeEventListener("resize", this._resizeHandler);
+        this._resizeHandler = null;
+      }
     }
-    
+
+    /**
+     * Opens the native OS directory picker dialog to select an export folder.
+     * @returns {Promise<string|null>} Selected directory path or null if cancelled.
+     */
+    async pickExportFolder() {
+      return new Promise((resolve) => {
+        try {
+          const nsIFilePicker = Ci?.nsIFilePicker || Components.interfaces.nsIFilePicker;
+          const fp = (Cc?.["@mozilla.org/filepicker;1"] || Components.classes["@mozilla.org/filepicker;1"]).createInstance(nsIFilePicker);
+          
+          const parentWin = window.browsingContext ? window : (window.ownerGlobal || window);
+          fp.init(parentWin.browsingContext || parentWin, "Select Diagnostic Log Export Directory", nsIFilePicker.modeGetFolder);
+          
+          let resolved = false;
+          const onDone = (result) => {
+            if (resolved) return;
+            resolved = true;
+            if (result === nsIFilePicker.returnOK && fp.file) {
+              resolve(fp.file.path);
+            } else {
+              resolve(null);
+            }
+          };
+
+          const openRes = fp.open(res => onDone(res));
+          if (openRes && typeof openRes.then === "function") {
+            openRes.then(res => onDone(res)).catch(() => onDone(null));
+          }
+        } catch (err) {
+          console.error("[ZentralSettings] Error opening folder picker:", err);
+          resolve(null);
+        }
+      });
+    }
+
+    /**
+     * Updates the folder button label and description based on current export path.
+     * @param {string} path - Directory path.
+     */
+    updatePathUI(path) {
+      if (!this.modal) return;
+      const label = this.modal.querySelector("#zs-btn-choose-path-label");
+      const btn = this.modal.querySelector("#zs-btn-choose-path");
+      const clearBtn = this.modal.querySelector("#zs-btn-clear-path");
+      const desc = this.modal.querySelector("#zs-pref-logger-path-desc");
+      if (!label || !btn) return;
+
+      if (path && path.trim() !== "") {
+        const cleanPath = path.trim();
+        const parts = cleanPath.split(/[\\/]/).filter(Boolean);
+        const folderName = parts.pop() || cleanPath;
+        label.textContent = folderName;
+        btn.title = cleanPath;
+        if (clearBtn) clearBtn.style.display = "flex";
+        if (desc) desc.textContent = `Saving to: ${cleanPath}`;
+      } else {
+        label.textContent = "Default Folder";
+        btn.title = "Logs will be saved in profile chrome/logs directory. Click to change folder.";
+        if (clearBtn) clearBtn.style.display = "none";
+        if (desc) desc.textContent = "Directory where diagnostic logs are saved";
+      }
+    }
+
     /**
      * Reads preferences from ZentralCore and populates modal input fields and switches.
      */
@@ -4861,18 +4945,23 @@
       if (!this.modal) return;
       const get = (id) => this.modal.querySelector("#" + id);
       if (!get("zs-anim-speed")) return;
-      get("zs-ag-enabled").checked = Core.getPref(Constants.Apps.PREF_ENABLED);
-      if (get("zs-ag-compact-drawer")) get("zs-ag-compact-drawer").checked = Core.getPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, false) === true;
-      get("zs-anim-type").value = Core.getPref(Constants.Apps.PREF_ANIMATION_TYPE);
-      get("zs-anim-speed").value = Core.getPref(Constants.Apps.PREF_ANIMATION_SPEED);
-      get("zs-max-apps").value = Core.getPref(Constants.Apps.PREF_MAX_APPS);
-      get("zs-apps-row").value = Core.getPref(Constants.Apps.PREF_APPS_PER_ROW);
-      get("zs-max-rows").value = Core.getPref(Constants.Apps.PREF_MAX_ROWS);
-      get("zs-tg-enabled").checked = Core.getPref(Constants.TabGroups.PREF_ENABLED);
-      get("zs-tg-collapse").checked = Core.getPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH);
-      get("zs-tg-thumbnails").checked = Core.getPref(Constants.TabGroups.PREF_THUMBNAILS);
-      get("zs-tg-chevron").checked = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON) !== false;
-      const opacity = Core.getPref(Constants.TabGroups.PREF_LABEL_OPACITY);
+      
+      get("zs-ag-enabled").checked = Core.getPref(Constants.Apps.PREF_ENABLED, true) !== false;
+      if (get("zs-ag-compact-drawer")) {
+        get("zs-ag-compact-drawer").checked = Core.getPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, false) === true;
+      }
+      get("zs-anim-type").value = Core.getPref(Constants.Apps.PREF_ANIMATION_TYPE, "slide") || "slide";
+      get("zs-anim-speed").value = Core.getPref(Constants.Apps.PREF_ANIMATION_SPEED, 450) || 450;
+      get("zs-max-apps").value = Core.getPref(Constants.Apps.PREF_MAX_APPS, 21) || 21;
+      get("zs-apps-row").value = Core.getPref(Constants.Apps.PREF_APPS_PER_ROW, 7) || 7;
+      get("zs-max-rows").value = Core.getPref(Constants.Apps.PREF_MAX_ROWS, 3) || 3;
+
+      get("zs-tg-enabled").checked = Core.getPref(Constants.TabGroups.PREF_ENABLED, true) !== false;
+      get("zs-tg-collapse").checked = Core.getPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH, false) === true;
+      get("zs-tg-thumbnails").checked = Core.getPref(Constants.TabGroups.PREF_THUMBNAILS, true) !== false;
+      get("zs-tg-chevron").checked = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON, true) !== false;
+      
+      const opacity = Core.getPref(Constants.TabGroups.PREF_LABEL_OPACITY, 85) || 85;
       if (get("zs-tg-opacity")) {
         get("zs-tg-opacity").value = opacity;
         if (get("zs-tg-opacity-val")) get("zs-tg-opacity-val").textContent = opacity + "%";
@@ -4887,27 +4976,29 @@
         this.updatePathUI(savedPath);
       }
     }
-    
+
     /**
-     * Reads form fields from modal UI, saves settings via ZentralCore, and triggers grid re-renders.
+     * Reads form fields from modal UI, saves settings via ZentralCore, and triggers UI re-renders.
      */
     save() {
       if (!this.modal) return;
       const get = (id) => this.modal.querySelector("#" + id);
       Core.setPref(Constants.Apps.PREF_ENABLED, get("zs-ag-enabled").checked);
-      if (get("zs-ag-compact-drawer")) Core.setPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, get("zs-ag-compact-drawer").checked);
-      if (window.zentralApps) window.zentralApps.updateCompactDrawerState();
+      if (get("zs-ag-compact-drawer")) {
+        Core.setPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, get("zs-ag-compact-drawer").checked);
+      }
       Core.setPref(Constants.Apps.PREF_ANIMATION_TYPE, get("zs-anim-type").value);
-      Core.setPref(Constants.Apps.PREF_ANIMATION_SPEED, parseInt(get("zs-anim-speed").value));
-      Core.setPref(Constants.Apps.PREF_MAX_APPS, parseInt(get("zs-max-apps").value));
-      Core.setPref(Constants.Apps.PREF_APPS_PER_ROW, parseInt(get("zs-apps-row").value));
-      Core.setPref(Constants.Apps.PREF_MAX_ROWS, parseInt(get("zs-max-rows").value));
+      Core.setPref(Constants.Apps.PREF_ANIMATION_SPEED, parseInt(get("zs-anim-speed").value) || 450);
+      Core.setPref(Constants.Apps.PREF_MAX_APPS, parseInt(get("zs-max-apps").value) || 21);
+      Core.setPref(Constants.Apps.PREF_APPS_PER_ROW, parseInt(get("zs-apps-row").value) || 7);
+      Core.setPref(Constants.Apps.PREF_MAX_ROWS, parseInt(get("zs-max-rows").value) || 3);
+
       Core.setPref(Constants.TabGroups.PREF_ENABLED, get("zs-tg-enabled").checked);
       Core.setPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH, get("zs-tg-collapse").checked);
       Core.setPref(Constants.TabGroups.PREF_THUMBNAILS, get("zs-tg-thumbnails").checked);
       Core.setPref(Constants.TabGroups.PREF_SHOW_CHEVRON, get("zs-tg-chevron").checked);
       if (get("zs-tg-opacity")) {
-        Core.setPref(Constants.TabGroups.PREF_LABEL_OPACITY, parseInt(get("zs-tg-opacity").value));
+        Core.setPref(Constants.TabGroups.PREF_LABEL_OPACITY, parseInt(get("zs-tg-opacity").value) || 85);
       }
 
       if (get("zs-pref-logger-enabled")) {
@@ -4918,22 +5009,13 @@
       }
       
       this.close();
-      // Apply immediate UI updates
       if (window.Zentral?.Apps) window.Zentral.Apps.renderGrid();
       if (window.Zentral?.TabGroups) {
         window.Zentral.TabGroups.applyChevronPref();
         window.Zentral.TabGroups.applyLabelOpacityPref();
       }
     }
-    
-    /* --------------------------------------------------------------------------
-     * 5.1 Modal UI Structure & Injection
-     * --------------------------------------------------------------------------
-     */
 
-    /**
-     * Injects CSS styles for settings modal, backdrop filters, toggles, and form controls.
-     */
     injectStyles() {
       const existing = document.getElementById("zentral-settings-styles");
       if (existing) existing.remove();
@@ -5718,140 +5800,6 @@
       }
       
       this.populate();
-    }
-
-    updatePosition() {
-      if (!this.modal) return;
-      try {
-        const sidebar = document.getElementById("sidebar-box") || 
-                        document.getElementById("sidebar-container") || 
-                        document.getElementById("vertical-tabs") ||
-                        document.getElementById("tabbrowser-tabs")?.closest("#sidebar-box, #sidebar-container, #vertical-tabs, .zen-sidebar") ||
-                        document.getElementById("tabbrowser-tabs");
-        
-        const isSidebarCollapsed = document.documentElement.getAttribute("zen-sidebar-collapsed") === "true" ||
-                                   document.documentElement.getAttribute("zentral-sidebar-collapsed") === "true";
-
-        if (sidebar && !isSidebarCollapsed) {
-          const sRect = sidebar.getBoundingClientRect();
-          const isRight = document.documentElement.getAttribute("zen-sidebar-right") === "true" || 
-                          document.documentElement.getAttribute("zen-right-side") === "true" ||
-                          (sRect.left > window.innerWidth / 2);
-
-          if (sRect.width > 20 && sRect.width < window.innerWidth) {
-            if (isRight) {
-              this.modal.style.left = "0px";
-              this.modal.style.top = "0px";
-              this.modal.style.bottom = "0px";
-              this.modal.style.right = (window.innerWidth - Math.round(sRect.left)) + "px";
-              this.modal.style.width = Math.round(sRect.left) + "px";
-            } else {
-              this.modal.style.left = Math.round(sRect.right) + "px";
-              this.modal.style.top = "0px";
-              this.modal.style.bottom = "0px";
-              this.modal.style.right = "0px";
-              this.modal.style.width = (window.innerWidth - Math.round(sRect.right)) + "px";
-            }
-            this.modal.style.height = "100vh";
-            return;
-          }
-        }
-      } catch (_) {}
-
-      this.modal.style.left = "0px";
-      this.modal.style.top = "0px";
-      this.modal.style.right = "0px";
-      this.modal.style.bottom = "0px";
-      this.modal.style.width = "100vw";
-      this.modal.style.height = "100vh";
-    }
-
-    open() {
-      if (!this.modal) {
-        this.createModal();
-      } else {
-        this.modal.style.display = "flex";
-        this.populate();
-      }
-      this.updatePosition();
-
-      if (!this._resizeHandler) {
-        this._resizeHandler = () => this.updatePosition();
-        window.addEventListener("resize", this._resizeHandler, { passive: true });
-      }
-    }
-
-    close() {
-      if (this.modal) this.modal.style.display = "none";
-      if (this._resizeHandler) {
-        window.removeEventListener("resize", this._resizeHandler);
-        this._resizeHandler = null;
-      }
-    }
-
-    populate() {
-      if (!this.modal) return;
-      const get = (id) => this.modal.querySelector("#" + id);
-      if (!get("zs-anim-speed")) return;
-      
-      get("zs-ag-enabled").checked = Core.getPref(Constants.Apps.PREF_ENABLED, true) !== false;
-      if (get("zs-ag-compact-drawer")) {
-        get("zs-ag-compact-drawer").checked = Core.getPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, false) === true;
-      }
-      get("zs-anim-type").value = Core.getPref(Constants.Apps.PREF_ANIMATION_TYPE, "slide") || "slide";
-      get("zs-anim-speed").value = Core.getPref(Constants.Apps.PREF_ANIMATION_SPEED, 450) || 450;
-      get("zs-max-apps").value = Core.getPref(Constants.Apps.PREF_MAX_APPS, 21) || 21;
-      get("zs-apps-row").value = Core.getPref(Constants.Apps.PREF_APPS_PER_ROW, 7) || 7;
-      get("zs-max-rows").value = Core.getPref(Constants.Apps.PREF_MAX_ROWS, 3) || 3;
-
-      get("zs-tg-enabled").checked = Core.getPref(Constants.TabGroups.PREF_ENABLED, true) !== false;
-      get("zs-tg-collapse").checked = Core.getPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH, false) === true;
-      get("zs-tg-thumbnails").checked = Core.getPref(Constants.TabGroups.PREF_THUMBNAILS, true) !== false;
-      get("zs-tg-chevron").checked = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON, true) !== false;
-      
-      const opacity = Core.getPref(Constants.TabGroups.PREF_LABEL_OPACITY, 85) || 85;
-      if (get("zs-tg-opacity")) {
-        get("zs-tg-opacity").value = opacity;
-        if (get("zs-tg-opacity-val")) get("zs-tg-opacity-val").textContent = opacity + "%";
-      }
-      
-      if (get("zs-pref-logger-enabled")) {
-        get("zs-pref-logger-enabled").checked = Core.getPref(Constants.Diagnostics.PREF_LOGGER_ENABLED, false);
-      }
-      if (get("zs-pref-logger-path")) {
-        const savedPath = Core.getPref(Constants.Diagnostics.PREF_LOGGER_PATH, "");
-        get("zs-pref-logger-path").value = savedPath;
-        this.updatePathUI(savedPath);
-      }
-    }
-
-    save() {
-      if (!this.modal) return;
-      const get = (id) => this.modal.querySelector("#" + id);
-      Core.setPref(Constants.Apps.PREF_ENABLED, get("zs-ag-enabled").checked);
-      if (get("zs-ag-compact-drawer")) {
-        Core.setPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, get("zs-ag-compact-drawer").checked);
-      }
-      Core.setPref(Constants.Apps.PREF_ANIMATION_TYPE, get("zs-anim-type").value);
-      Core.setPref(Constants.Apps.PREF_ANIMATION_SPEED, parseInt(get("zs-anim-speed").value) || 450);
-      Core.setPref(Constants.Apps.PREF_MAX_APPS, parseInt(get("zs-max-apps").value) || 21);
-      Core.setPref(Constants.Apps.PREF_APPS_PER_ROW, parseInt(get("zs-apps-row").value) || 7);
-      Core.setPref(Constants.Apps.PREF_MAX_ROWS, parseInt(get("zs-max-rows").value) || 3);
-
-      Core.setPref(Constants.TabGroups.PREF_ENABLED, get("zs-tg-enabled").checked);
-      Core.setPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH, get("zs-tg-collapse").checked);
-      Core.setPref(Constants.TabGroups.PREF_THUMBNAILS, get("zs-tg-thumbnails").checked);
-      Core.setPref(Constants.TabGroups.PREF_SHOW_CHEVRON, get("zs-tg-chevron").checked);
-      if (get("zs-tg-opacity")) {
-        Core.setPref(Constants.TabGroups.PREF_LABEL_OPACITY, parseInt(get("zs-tg-opacity").value) || 85);
-      }
-      
-      this.close();
-      if (window.Zentral?.Apps) window.Zentral.Apps.renderGrid();
-      if (window.Zentral?.TabGroups) {
-        window.Zentral.TabGroups.applyChevronPref();
-        window.Zentral.TabGroups.applyLabelOpacityPref();
-      }
     }
   }
 
