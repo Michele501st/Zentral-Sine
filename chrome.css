@@ -1,4 +1,4 @@
-/* ============================================================================ */
+﻿/* ============================================================================ */
 /*               ZENTRAL TAB GROUPS & UI STYLESHEET (v0.1.5a)                  */
 /* ============================================================================ */
 /*  Part of the Zentral userChrome.js suite for Zen Browser.                   */
@@ -706,17 +706,17 @@ html[zen-sidebar-collapsed="true"] #tabbrowser-tabs tab-group > .tab-group-label
    =========================================================================== */
 
 /* Allow sidebar to grow up to 50vw - ONLY when NOT in collapsed mode */
-:root:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #navigator-toolbox,
-:root:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-box,
-:root:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-container,
-:root:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) .sidebar-panel {
+:root:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([zen-compact-mode="true"]):not([uidensity="compact"]):not([mod-sameerasw_zen_compact_sidebar_type]) #navigator-toolbox,
+:root:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([zen-compact-mode="true"]):not([uidensity="compact"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-box,
+:root:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([zen-compact-mode="true"]):not([uidensity="compact"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-container,
+:root:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([zen-compact-mode="true"]):not([uidensity="compact"]):not([mod-sameerasw_zen_compact_sidebar_type]) .sidebar-panel {
   max-width: 50vw !important;
 }
 
 /* Enforce minimum width for Sidebar ONLY when explicitly expanded */
-:root:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #navigator-toolbox,
-:root:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-box,
-:root:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-container {
+:root:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([zen-compact-mode="true"]):not([uidensity="compact"]):not([mod-sameerasw_zen_compact_sidebar_type]) #navigator-toolbox,
+:root:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([zen-compact-mode="true"]):not([uidensity="compact"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-box,
+:root:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([zen-compact-mode="true"]):not([uidensity="compact"]):not([mod-sameerasw_zen_compact_sidebar_type]) #sidebar-container {
   min-width: var(--zentral-sidebar-min-width, 240px) !important;
 }
 
@@ -729,4 +729,6 @@ html[zen-sidebar-collapsed="true"] #tabbrowser-tabs tab-group > .tab-group-label
 :root[zen-sidebar-collapsed="true"] #sidebar-container {
   min-width: 0 !important;
 }
+
+
 
