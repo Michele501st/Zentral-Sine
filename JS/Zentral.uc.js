@@ -4263,93 +4263,101 @@
       this.#tabDragGuardInitialized = true;
 
       let prevSelectedTab = null;
-      let targetTab = null;
+      let candidateTab = null;
       let isDragging = false;
-      let wasPending = false;
+      let dragStarted = false;
+      let startX = 0;
+      let startY = 0;
 
-      // 1. Intercept mousedown on tabs in capture phase
+      // 1. Intercept mousedown on unselected tabs in capture phase
       const onMouseDown = (e) => {
         if (e.button !== 0) return;
         const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab");
         if (!tab) return;
-        // Do not intercept special action buttons (close button, audio mute, pin icon)
+        
+        // Never intercept tab controls (close button, sound icon, pin icon)
         if (e.target.closest(".tab-close-button, .tab-icon-sound, .tab-audio-button, .tab-pin-icon")) return;
 
-        prevSelectedTab = gBrowser.selectedTab;
-        targetTab = tab;
-        isDragging = false;
-        wasPending = tab.hasAttribute("pending") || tab.getAttribute("pending") === "true";
+        // If the tab is NOT currently selected, stop synchronous selection on mousedown so sleeping tabs do not wake up
+        if (tab !== gBrowser.selectedTab) {
+          prevSelectedTab = gBrowser.selectedTab;
+          candidateTab = tab;
+          isDragging = false;
+          dragStarted = false;
+          startX = e.clientX;
+          startY = e.clientY;
+          e.stopImmediatePropagation();
+        }
       };
 
-      // 2. Detect drag initiation
+      // 2. Select on clean click (mouseup without dragging)
+      const onMouseUp = (e) => {
+        if (e.button !== 0) return;
+        if (candidateTab && !dragStarted && !isDragging) {
+          const moveDist = Math.hypot(e.clientX - startX, e.clientY - startY);
+          if (moveDist < 6 && candidateTab.isConnected) {
+            try {
+              gBrowser.selectedTab = candidateTab;
+            } catch (_) {}
+          }
+        }
+        if (!dragStarted) {
+          candidateTab = null;
+          prevSelectedTab = null;
+        }
+      };
+
+      // 3. Detect drag initiation
       const onDragStart = (e) => {
-        const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab") || targetTab;
+        const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab") || candidateTab;
         if (!tab) return;
 
         isDragging = true;
-        targetTab = tab;
+        dragStarted = true;
 
-        // If dragging a tab that was not already active before mousedown:
-        if (prevSelectedTab && prevSelectedTab.isConnected && prevSelectedTab !== tab) {
-          // Immediately revert selection so the dragged tab does NOT activate or load
-          if (gBrowser.selectedTab !== prevSelectedTab) {
-            try {
-              gBrowser.selectedTab = prevSelectedTab;
-            } catch (_) {}
-          }
-          // Preserve pending / discarded state on the dragged tab so it does not wake up
-          if (wasPending && !tab.hasAttribute("pending")) {
-            try { tab.setAttribute("pending", "true"); } catch (_) {}
-          }
+        // Preserve previous active tab selection throughout drag
+        if (prevSelectedTab && prevSelectedTab.isConnected && gBrowser.selectedTab !== prevSelectedTab) {
+          try {
+            gBrowser.selectedTab = prevSelectedTab;
+          } catch (_) {}
         }
       };
 
-      // 3. Keep previous tab selected throughout drag duration
+      // 4. Guard against selection during dragover
       const onDragOver = (e) => {
-        if (isDragging && prevSelectedTab && prevSelectedTab.isConnected && targetTab && targetTab !== prevSelectedTab) {
-          if (gBrowser.selectedTab !== prevSelectedTab) {
-            try { gBrowser.selectedTab = prevSelectedTab; } catch (_) {}
-          }
+        if (dragStarted && prevSelectedTab && prevSelectedTab.isConnected && gBrowser.selectedTab !== prevSelectedTab) {
+          try { gBrowser.selectedTab = prevSelectedTab; } catch (_) {}
         }
       };
 
-      // 4. Conclude drag: ensure previous tab remains selected and clean up
+      // 5. Conclude drag: preserve active tab and clean up
       const onDragEnd = (e) => {
-        if (isDragging && prevSelectedTab && prevSelectedTab.isConnected && targetTab && targetTab !== prevSelectedTab) {
-          if (gBrowser.selectedTab !== prevSelectedTab) {
-            try { gBrowser.selectedTab = prevSelectedTab; } catch (_) {}
-          }
-          if (wasPending && targetTab && !targetTab.hasAttribute("pending")) {
-            try { targetTab.setAttribute("pending", "true"); } catch (_) {}
-          }
+        if (prevSelectedTab && prevSelectedTab.isConnected && gBrowser.selectedTab !== prevSelectedTab) {
+          try { gBrowser.selectedTab = prevSelectedTab; } catch (_) {}
         }
         setTimeout(() => {
-          if (isDragging && prevSelectedTab && prevSelectedTab.isConnected && targetTab && targetTab !== prevSelectedTab) {
-            if (gBrowser.selectedTab !== prevSelectedTab) {
-              try { gBrowser.selectedTab = prevSelectedTab; } catch (_) {}
-            }
+          if (prevSelectedTab && prevSelectedTab.isConnected && gBrowser.selectedTab !== prevSelectedTab) {
+            try { gBrowser.selectedTab = prevSelectedTab; } catch (_) {}
           }
           isDragging = false;
-          targetTab = null;
+          dragStarted = false;
+          candidateTab = null;
           prevSelectedTab = null;
-          wasPending = false;
-        }, 60);
+        }, 50);
       };
 
       const onDrop = (e) => {
-        if (isDragging && prevSelectedTab && prevSelectedTab.isConnected && targetTab && targetTab !== prevSelectedTab) {
+        if (prevSelectedTab && prevSelectedTab.isConnected && gBrowser.selectedTab !== prevSelectedTab) {
           setTimeout(() => {
             if (prevSelectedTab && prevSelectedTab.isConnected && gBrowser.selectedTab !== prevSelectedTab) {
               try { gBrowser.selectedTab = prevSelectedTab; } catch (_) {}
-            }
-            if (wasPending && targetTab && !targetTab.hasAttribute("pending")) {
-              try { targetTab.setAttribute("pending", "true"); } catch (_) {}
             }
           }, 0);
         }
       };
 
-      tabContainer.addEventListener("mousedown", onMouseDown, { capture: true, passive: true });
+      tabContainer.addEventListener("mousedown", onMouseDown, { capture: true });
+      window.addEventListener("mouseup", onMouseUp, { capture: true });
       tabContainer.addEventListener("dragstart", onDragStart, { capture: true });
       tabContainer.addEventListener("dragover", onDragOver, { capture: true });
       tabContainer.addEventListener("dragend", onDragEnd, { capture: true });
@@ -4357,6 +4365,7 @@
 
       this.#dragGuardCleanup = () => {
         tabContainer.removeEventListener("mousedown", onMouseDown, { capture: true });
+        window.removeEventListener("mouseup", onMouseUp, { capture: true });
         tabContainer.removeEventListener("dragstart", onDragStart, { capture: true });
         tabContainer.removeEventListener("dragover", onDragOver, { capture: true });
         tabContainer.removeEventListener("dragend", onDragEnd, { capture: true });
