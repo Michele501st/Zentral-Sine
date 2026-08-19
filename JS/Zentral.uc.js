@@ -2128,92 +2128,12 @@
           if (el) el.remove();
         });
 
-        // 4. Secure state persistence across restarts: capture full hierarchy and tab assignments
-        const ss = this.#getSessionStore();
+        // 4. Save state before teardown
+        this.saveTabGroupState();
+
+        // 5. Cleanly un-decorate all tab-group DOM elements without destroying them
         const allGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
-        const stateToSave = {
-          groups: {},
-          tabMapping: {}
-        };
-
         allGroups.forEach(group => {
-          if (!group.id) group.id = "zentral-group-" + Math.random().toString(36).substr(2, 9);
-          const parentGroup = group.parentElement?.closest("tab-group:not([split-view-group])");
-          const parentId = parentGroup?.id || null;
-          const label = group.label || group.getAttribute("label") || "Group";
-          const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || "";
-          const isCollapsed = group.hasAttribute("collapsed") && group.getAttribute("collapsed") === "true";
-          const wsId = group.getAttribute("zen-workspace-id") || "";
-
-          const posContainer = parentGroup || group.parentElement;
-          const groupSiblings = posContainer
-            ? Array.from(posContainer.children).filter(el => el.tagName?.toLowerCase() === "tab-group" && !el.hasAttribute("split-view-group"))
-            : [];
-          const index = groupSiblings.indexOf(group);
-
-          stateToSave.groups[group.id] = {
-            id: group.id,
-            label,
-            color,
-            collapsed: isCollapsed,
-            parentId,
-            workspaceId: wsId,
-            index: index >= 0 ? index : 0
-          };
-
-          // Collect direct tabs of this group
-          let directTabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
-          if (directTabs.length === 0 && group.tabs) {
-            directTabs = Array.from(group.tabs);
-          }
-
-          stateToSave.tabMapping[group.id] = directTabs.map(tab => ({
-            url: tab.linkedBrowser?.currentURI?.spec || "",
-            label: tab.label || "",
-            zenTabId: tab.getAttribute("zen-tab-id") || tab.id || ""
-          }));
-
-          directTabs.forEach(tab => {
-            if (!tab) return;
-            tab.setAttribute("data-zentral-group-id", group.id);
-            tab.setAttribute("data-zentral-group-label", label);
-            if (color) tab.setAttribute("data-zentral-group-color", color);
-            tab.setAttribute("data-zentral-group-collapsed", isCollapsed ? "true" : "false");
-            if (wsId) tab.setAttribute("data-zentral-group-ws", wsId);
-            if (parentId) tab.setAttribute("data-zentral-parent-id", parentId);
-
-            // Persist into Firefox SessionStore so metadata survives browser restarts & cache clears
-            if (ss && typeof ss.setCustomTabValue === "function") {
-              try {
-                ss.setCustomTabValue(tab, "zentral-group-id", group.id);
-                ss.setCustomTabValue(tab, "zentral-group-label", label);
-                if (color) ss.setCustomTabValue(tab, "zentral-group-color", color);
-                if (parentId) ss.setCustomTabValue(tab, "zentral-parent-id", parentId);
-                ss.setCustomTabValue(tab, "zentral-group-collapsed", isCollapsed ? "true" : "false");
-                if (wsId) ss.setCustomTabValue(tab, "zentral-group-ws", wsId);
-              } catch (_) {}
-            }
-          });
-        });
-
-        // Persist full state to preferences
-        Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify(stateToSave));
-
-        // 5. Flatten groups cleanly without leaving gaps in the root strip
-        const rootTabContainer = (typeof gZenWorkspaces !== "undefined" && gZenWorkspaces.activeWorkspaceStrip) ||
-                                 gBrowser?.tabContainer?.arrowscrollbox ||
-                                 gBrowser?.tabContainer ||
-                                 document.getElementById("tabbrowser-tabs");
-
-        const sortedGroups = allGroups.slice().sort((a, b) => {
-          let depthA = 0, currA = a;
-          while ((currA = currA.parentElement?.closest("tab-group"))) depthA++;
-          let depthB = 0, currB = b;
-          while ((currB = currB.parentElement?.closest("tab-group"))) depthB++;
-          return depthB - depthA;
-        });
-
-        sortedGroups.forEach(group => {
           try {
             const obs = this.#groupObservers.get(group);
             if (obs) {
@@ -2224,32 +2144,58 @@
             if (group.shadowRoot) {
               group.shadowRoot.querySelectorAll('.zentral-shadow-style').forEach(s => s.remove());
             }
+
+            // Restore .tab-group-label back into .tab-group-label-container if wrapped
+            const labelContainer = group.querySelector(".tab-group-label-container");
+            const titleWrapper = group.querySelector(".zentral-tab-title-wrapper");
+            const innerLabel = group.querySelector(".tab-group-label");
+            if (titleWrapper && innerLabel && labelContainer) {
+              labelContainer.insertBefore(innerLabel, titleWrapper);
+            }
+
             group.querySelectorAll('.zentral-chevron, .zentral-group-initials, .ztg-drag-handle, .zentral-close-btn, .zentral-tab-title-wrapper').forEach(el => el.remove());
 
-            const tabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
+            // Unhide native icon children
+            const iconEl = group.querySelector('.tab-group-icon');
+            if (iconEl) {
+              Array.from(iconEl.children).forEach(child => {
+                child.style.removeProperty('display');
+                child.style.removeProperty('visibility');
+                child.style.removeProperty('width');
+                child.style.removeProperty('height');
+                child.style.removeProperty('opacity');
+                child.removeAttribute('hidden');
+              });
+              iconEl.style.removeProperty('border');
+              iconEl.style.removeProperty('outline');
+              iconEl.style.removeProperty('box-shadow');
+              iconEl.style.removeProperty('background');
+              iconEl.style.removeProperty('background-image');
+            }
 
-            // Move tabs directly before the group container
-            tabs.forEach(tab => {
-              if (group.parentNode) {
-                try {
-                  group.parentNode.insertBefore(tab, group);
-                } catch (_) {
-                  try { rootTabContainer.appendChild(tab); } catch (_) {}
-                }
-              } else if (rootTabContainer) {
-                try { rootTabContainer.appendChild(tab); } catch (_) {}
-              }
-              try { if (typeof gBrowser?.addTabToGroup === "function") gBrowser.addTabToGroup(tab, null); } catch (_) {}
-              try { tab.group = null; } catch (_) {}
-              try { tab.removeAttribute("group"); tab.removeAttribute("zen-group"); } catch (_) {}
-            });
+            // Reset labelContainer styles
+            if (labelContainer) {
+              labelContainer.style.removeProperty("border-radius");
+              labelContainer.style.removeProperty("aspect-ratio");
+              labelContainer.style.removeProperty("align-self");
+              labelContainer.style.removeProperty("width");
+              labelContainer.style.removeProperty("min-width");
+              labelContainer.style.removeProperty("max-width");
+              labelContainer.style.removeProperty("height");
+              labelContainer.style.removeProperty("min-height");
+              labelContainer.style.removeProperty("box-sizing");
+              labelContainer.style.removeProperty("display");
+              labelContainer.style.removeProperty("flex-direction");
+              labelContainer.style.removeProperty("align-items");
+              labelContainer.style.removeProperty("justify-content");
+              labelContainer.style.removeProperty("padding");
+            }
 
-            // Cleanly remove the tab-group element directly
-            try {
-              group.remove();
-            } catch (_) {}
+            group.style.removeProperty("border-radius");
+            group.removeAttribute("data-close-button-added");
+            delete group._contextMenuAdded;
           } catch (e) {
-            console.error("[ZentralTabGroups] Error flattening group on destroy:", e);
+            console.error("[ZentralTabGroups] Error cleaning group on destroy:", e);
           }
         });
 
@@ -2595,99 +2541,50 @@
       }
       this.clearStoredColorData();
       this.loadSavedColors();
-      this.reconstructSavedGroups();
       this.injectStyles();
       this.setupObserver();
       this.addFolderContextMenuItems();
       this.removeBuiltinTabGroupMenu();
       this.enhanceTabContextMenu();
       this.processExistingGroups();
-      
-      // Retry group scan after 1s to catch groups added after sessionrestore.
-      // Note: processGroup() is guarded by #processedGroups WeakSet — already-processed groups are skipped.
-      // loadTabGroupState() intentionally NOT repeated here — state is already loaded above. (C-03)
-      setTimeout(() => { document.querySelectorAll("tab-group:not([split-view-group])").forEach(g => this.processGroup(g)); }, 1000);
+
+      // Ensure groups discovered slightly later by sessionrestore are processed
+      setTimeout(() => {
+        document.querySelectorAll("tab-group:not([split-view-group])").forEach(g => this.processGroup(g));
+        this.loadTabGroupState();
+      }, 500);
 
       // Collapsed Sidebar observer for Tab Groups
       const updateSidebarAttr = () => {
         try {
-          const sidebarExpanded = Core.getNativePref("zen.view.sidebar-expanded", true);
-          const singleToolbar = Core.getNativePref("zen.view.use-single-toolbar", true);
-          const isCollapsed = !sidebarExpanded || 
-                              document.documentElement.getAttribute("zen-sidebar-collapsed") === "true" ||
-                              (document.getElementById("sidebar-box")?.getAttribute("collapsed") === "true");
-          const tabContainer = document.getElementById("tabbrowser-tabs");
-          if (tabContainer) {
-            tabContainer.setAttribute("zentral-sidebar-collapsed", isCollapsed ? "true" : "false");
-          }
+          const isCollapsed = Apps.isCollapsedLayoutMode();
           document.documentElement.setAttribute("zentral-sidebar-collapsed", isCollapsed ? "true" : "false");
-        } catch (e) {}
+          const tabTabs = document.getElementById("tabbrowser-tabs");
+          if (tabTabs) {
+            tabTabs.setAttribute("zentral-sidebar-collapsed", isCollapsed ? "true" : "false");
+          }
+        } catch (_) {}
       };
       updateSidebarAttr();
       this.#updateSidebarAttr = updateSidebarAttr;
-      Services.prefs.addObserver("zen.view.sidebar-expanded", updateSidebarAttr, false);
-      Services.prefs.addObserver("zen.view.use-single-toolbar", updateSidebarAttr, false);
-      
-      this.#rootAttrObs = new MutationObserver((mutations) => {
-        for (const m of mutations) {
-          if (m.attributeName === "zen-sidebar-collapsed" || m.attributeName === "zen-right-side") {
-            updateSidebarAttr();
-          }
-        }
+      try {
+        Services.prefs.addObserver("zen.view.sidebar-expanded", updateSidebarAttr);
+        Services.prefs.addObserver("zen.view.use-single-toolbar", updateSidebarAttr);
+      } catch (_) {}
+
+      // Observe root attribute changes that might affect collapsed sidebar
+      const rootAttrObs = new MutationObserver(() => updateSidebarAttr());
+      rootAttrObs.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["zen-sidebar-collapsed", "zen-compact-mode", "uidensity"]
       });
-      this.#rootAttrObs.observe(document.documentElement, { attributes: true, attributeFilter: ["zen-sidebar-collapsed", "zen-right-side"] });
+      this.#rootAttrObs = rootAttrObs;
 
-      // Clean up pref observer on window close to prevent ghost observers (H-03)
-      window.addEventListener("unload", () => {
-        try { 
-          Services.prefs.removeObserver("zen.view.sidebar-expanded", updateSidebarAttr);
-          Services.prefs.removeObserver("zen.view.use-single-toolbar", updateSidebarAttr);
-          rootAttrObs.disconnect();
-        } catch (_) {}
-      }, { once: true });
-
-      // Tooltip injection (XUL panel with noautohide=true to avoid stealing click events)
-      if (!document.getElementById("zentral-tabgroup-tooltip")) {
-        const panel = document.createXULElement("panel");
-        panel.id = "zentral-tabgroup-tooltip";
-        panel.setAttribute("noautofocus", "true");
-        panel.setAttribute("noautohide", "true");
-        panel.setAttribute("type", "arrow");
-        panel.setAttribute("role", "tooltip");
-
-        const cancelHideTimer = () => {
-          if (window.zentralTooltipHideTimer) {
-            clearTimeout(window.zentralTooltipHideTimer);
-            window.zentralTooltipHideTimer = null;
-          }
-        };
-
-        panel.addEventListener("mouseenter", cancelHideTimer);
-        panel.addEventListener("mouseleave", () => this.safeHideTooltip(350));
-        panel.addEventListener("mouseover", cancelHideTimer);
-
-        const container = document.createElement("div");
-        container.id = "zentral-tabgroup-tooltip-container";
-        container.style.display = "flex";
-        container.style.flexDirection = "column";
-        container.style.overflowY = "auto";
-        container.addEventListener("mouseenter", cancelHideTimer);
-        container.addEventListener("mouseleave", () => this.safeHideTooltip(350));
-        container.addEventListener("mouseover", cancelHideTimer);
-        panel.appendChild(container);
-
-        const popupset = document.getElementById("mainPopupSet") || document.documentElement;
-        popupset.appendChild(panel);
-      }
-      
       this.applyChevronPref();
       this.applyLabelOpacityPref();
       Core.emit("tabGroupsInitComplete", this);
     }
 
-    /**
-     * Reads show_chevron preference and sets zentral-show-chevron attribute on root.
-     */
     applyChevronPref() {
       const showChevron = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON);
       document.documentElement.setAttribute("zentral-show-chevron", showChevron !== false ? "true" : "false");
@@ -3181,6 +3078,8 @@
       if (!labelContainer._zentralToggleBound) {
         labelContainer._zentralToggleBound = true;
         labelContainer.addEventListener("click", (e) => {
+          // ONLY trigger on primary LEFT click (e.button === 0) so right click opens context menu
+          if (e.button !== 0) return;
           if (e.target.closest(".tab-close-button") || e.target.closest("#tab-label-input") || e.target.closest(".ztg-drag-handle")) return;
           e.preventDefault();
           e.stopPropagation();
@@ -3585,18 +3484,21 @@
       group._contextMenuAdded = true;
 
       const sharedMenu = this.ensureSharedContextMenu();
-      const labelContainer = group.querySelector(".tab-group-label-container");
+      const labelContainer = group.querySelector(".tab-group-label-container") || group;
       if (labelContainer) {
-        labelContainer.removeAttribute("context");
+        labelContainer.setAttribute("context", "advanced-tab-groups-context-menu");
         labelContainer.addEventListener("contextmenu", (event) => {
-          event.preventDefault(); event.stopPropagation();
+          event.preventDefault();
+          event.stopPropagation();
           this.#state.contextMenuCurrentGroup = group;
           this.#state.lastContextMenuX = event.screenX;
           this.#state.lastContextMenuY = event.screenY;
-          sharedMenu?.openPopupAtScreen(event.screenX, event.screenY, false);
+          if (sharedMenu) {
+            sharedMenu.openPopupAtScreen(event.screenX, event.screenY, true);
+          }
         });
       }
-      group.removeAttribute("context");
+      group.setAttribute("context", "advanced-tab-groups-context-menu");
 
       // Bind group specific actions for external callers
       // Color picking is now handled natively via ensureColorPickerPanel
