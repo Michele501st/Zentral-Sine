@@ -2199,7 +2199,12 @@
         // Persist full state to preferences
         Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify(stateToSave));
 
-        // 5. Flatten groups in deepest-first order to safely un-nest child groups and tabs
+        // 5. Flatten groups cleanly without leaving gaps in the root strip
+        const rootTabContainer = (typeof gZenWorkspaces !== "undefined" && gZenWorkspaces.activeWorkspaceStrip) ||
+                                 gBrowser?.tabContainer?.arrowscrollbox ||
+                                 gBrowser?.tabContainer ||
+                                 document.getElementById("tabbrowser-tabs");
+
         const sortedGroups = allGroups.slice().sort((a, b) => {
           let depthA = 0, currA = a;
           while ((currA = currA.parentElement?.closest("tab-group"))) depthA++;
@@ -2207,8 +2212,6 @@
           while ((currB = currB.parentElement?.closest("tab-group"))) depthB++;
           return depthB - depthA;
         });
-
-        const rootTabContainer = document.getElementById("tabbrowser-tabs") || gBrowser?.tabContainer;
 
         sortedGroups.forEach(group => {
           try {
@@ -2223,38 +2226,28 @@
             }
             group.querySelectorAll('.zentral-chevron, .zentral-group-initials, .ztg-drag-handle, .zentral-close-btn, .zentral-tab-title-wrapper').forEach(el => el.remove());
 
-            const parentContainer = group.parentNode || rootTabContainer;
             const tabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
 
+            // Move tabs directly before the group container
             tabs.forEach(tab => {
-              if (parentContainer) {
+              if (group.parentNode) {
                 try {
-                  parentContainer.insertBefore(tab, group);
+                  group.parentNode.insertBefore(tab, group);
                 } catch (_) {
-                  try { parentContainer.appendChild(tab); } catch (_) {}
+                  try { rootTabContainer.appendChild(tab); } catch (_) {}
                 }
+              } else if (rootTabContainer) {
+                try { rootTabContainer.appendChild(tab); } catch (_) {}
               }
               try { if (typeof gBrowser?.addTabToGroup === "function") gBrowser.addTabToGroup(tab, null); } catch (_) {}
               try { tab.group = null; } catch (_) {}
               try { tab.removeAttribute("group"); tab.removeAttribute("zen-group"); } catch (_) {}
             });
 
-            if (group.parentElement && group.parentElement.closest("tab-group")) {
-              const outerGroup = group.parentElement.closest("tab-group");
-              if (outerGroup.parentNode) {
-                try { outerGroup.parentNode.insertBefore(group, outerGroup); } catch (_) {}
-              }
-            }
-
+            // Cleanly remove the tab-group element directly
             try {
-              if (typeof gBrowser?.removeTabGroup === "function") {
-                gBrowser.removeTabGroup(group);
-              } else {
-                group.remove();
-              }
-            } catch (_) {
-              try { group.remove(); } catch (_) {}
-            }
+              group.remove();
+            } catch (_) {}
           } catch (e) {
             console.error("[ZentralTabGroups] Error flattening group on destroy:", e);
           }
@@ -2406,7 +2399,10 @@
           console.log(`[ZentralTabGroups] Reconstructing ${groupsToReconstruct.size} groups...`);
         }
 
-        const rootTabContainer = document.getElementById("tabbrowser-tabs") || gBrowser?.tabContainer;
+        const rootTabContainer = (typeof gZenWorkspaces !== "undefined" && gZenWorkspaces.activeWorkspaceStrip) ||
+                                 gBrowser?.tabContainer?.arrowscrollbox ||
+                                 gBrowser?.tabContainer ||
+                                 document.getElementById("tabbrowser-tabs");
 
         // 2. Sort groups in topological order (parents first, then nested child groups by depth)
         const getGroupDepth = (id, visited = new Set()) => {
@@ -2426,23 +2422,36 @@
           return idxA - idxB;
         });
 
-        // Helper to instantiate a tab-group DOM element
+        // Helper to instantiate a fully-structured tab-group DOM element
         const createGroupElement = (info) => {
           let group = document.getElementById(info.id);
           if (!group) {
-            if (window.MozXULElement?.parseXULToFragment) {
-              const frag = window.MozXULElement.parseXULToFragment(`<tab-group id="${info.id}" label="${info.label}"></tab-group>`);
-              const parsed = frag.querySelector ? frag.querySelector("tab-group") : null;
-              if (parsed) group = parsed;
-            }
-            if (!group) {
-              group = document.createXULElement ? document.createXULElement("tab-group") : document.createElement("tab-group");
-              group.id = info.id;
-              group.setAttribute("label", info.label);
-            }
+            group = document.createXULElement ? document.createXULElement("tab-group") : document.createElement("tab-group");
+            group.id = info.id;
+            group.setAttribute("label", info.label);
           }
           group.label = info.label;
           if (info.workspaceId) group.setAttribute("zen-workspace-id", info.workspaceId);
+
+          // Guarantee full internal structure exists
+          let labelContainer = group.querySelector(".tab-group-label-container");
+          if (!labelContainer) {
+            labelContainer = document.createElement("div");
+            labelContainer.className = "tab-group-label-container";
+            const innerLabel = document.createElement("label");
+            innerLabel.className = "tab-group-label";
+            innerLabel.textContent = info.label || "Group";
+            labelContainer.appendChild(innerLabel);
+            group.insertBefore(labelContainer, group.firstChild);
+          }
+
+          let groupTabContainer = group.querySelector(".tab-group-container");
+          if (!groupTabContainer) {
+            groupTabContainer = document.createElement("div");
+            groupTabContainer.className = "tab-group-container";
+            group.appendChild(groupTabContainer);
+          }
+
           return group;
         };
 
@@ -2473,7 +2482,7 @@
               }
             }
 
-            // Move member tabs into this group
+            // Move member tabs into this group container
             const targetTabContainer = group.querySelector(".tab-group-container") || group;
             info.tabs.forEach(tab => {
               try {
@@ -3124,6 +3133,49 @@
       }
       group.style.setProperty("border-radius", "6px", "important");
 
+      // Ensure full internal structure exists
+      let labelContainer = group.querySelector(".tab-group-label-container");
+      if (!labelContainer) {
+        labelContainer = document.createElement("div");
+        labelContainer.className = "tab-group-label-container";
+        const innerLabel = document.createElement("label");
+        innerLabel.className = "tab-group-label";
+        innerLabel.textContent = group.label || group.getAttribute("label") || "Group";
+        labelContainer.appendChild(innerLabel);
+        group.insertBefore(labelContainer, group.firstChild);
+      }
+
+      let groupTabContainer = group.querySelector(".tab-group-container");
+      if (!groupTabContainer) {
+        groupTabContainer = document.createElement("div");
+        groupTabContainer.className = "tab-group-container";
+        group.appendChild(groupTabContainer);
+      }
+
+      // Bind click collapse toggle to ensure all groups (top-level and nested) collapse/expand on click
+      if (!labelContainer._zentralToggleBound) {
+        labelContainer._zentralToggleBound = true;
+        labelContainer.addEventListener("click", (e) => {
+          if (e.target.closest(".tab-close-button") || e.target.closest("#tab-label-input") || e.target.closest(".ztg-drag-handle")) return;
+          e.preventDefault();
+          e.stopPropagation();
+
+          if (typeof group.toggleCollapse === "function") {
+            group.toggleCollapse();
+          } else {
+            const isColl = group.hasAttribute("collapsed") && group.getAttribute("collapsed") === "true";
+            if (isColl) {
+              group.removeAttribute("collapsed");
+              group.collapsed = false;
+            } else {
+              group.setAttribute("collapsed", "true");
+              group.collapsed = true;
+            }
+          }
+          this.scheduleStateSave();
+        });
+      }
+
       if (group.shadowRoot && !group.shadowRoot.querySelector('.zentral-shadow-style')) {
         const style = document.createElement('style');
         style.className = 'zentral-shadow-style';
@@ -3165,7 +3217,6 @@
         iconEl.style.setProperty('background', 'transparent', 'important');
         iconEl.style.setProperty('background-image', 'none', 'important');
       }
-      const labelContainer = group.querySelector(".tab-group-label-container");
       if (labelContainer) {
         // Track hover state so we don't collapse during a hover
         let _isHovered = false;
