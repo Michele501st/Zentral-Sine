@@ -732,3 +732,31 @@ html[zen-sidebar-collapsed="true"] #tabbrowser-tabs tab-group > .tab-group-label
 
 
 
+
+/* --------------------------------------------------------------------------
+ * Suppress Native Firefox/Zen Tab Group Editor Popups
+ * -------------------------------------------------------------------------- */
+#tab-group-editor,
+#tabgroup-editor-panel,
+#tabGroupEditor,
+tabgroup-editor-panel,
+.tab-group-editor,
+#tabGroupContextMenu,
+tabgroup-meu,
+panel[id*="tab-group-editor"],
+panel[id*="tabgroup-editor"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  max-height: 0 !important;
+  max-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}

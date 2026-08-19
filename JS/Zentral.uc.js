@@ -2058,6 +2058,8 @@
   class ZentralTabGroups {
     /** @private Tabstrip MutationObserver */
     #tabStripObserver = null;
+    /** @private Native popup suppression listener */
+    #popupShowingListener = null;
 
     /**
      * Safely retrieves Firefox SessionStore service for persistent tab metadata across restarts.
@@ -2111,6 +2113,10 @@
           try { Services.prefs.removeObserver("zen.view.sidebar-expanded", this.#updateSidebarAttr); } catch (_) {}
           try { Services.prefs.removeObserver("zen.view.use-single-toolbar", this.#updateSidebarAttr); } catch (_) {}
           this.#updateSidebarAttr = null;
+        }
+        if (this.#popupShowingListener) {
+          try { window.removeEventListener("popupshowing", this.#popupShowingListener, true); } catch (_) {}
+          this.#popupShowingListener = null;
         }
 
         // 3. Remove injected DOM elements
@@ -2598,6 +2604,7 @@
       this.reconstructSavedGroups();
       this.injectStyles();
       this.setupObserver();
+      this.setupPopupSuppression();
       this.addFolderContextMenuItems();
       this.removeBuiltinTabGroupMenu();
       this.enhanceTabContextMenu();
@@ -2708,6 +2715,24 @@
      */
     injectStyles() {
       const css = `
+
+        /* Suppress Native Firefox/Zen Tab Group Editor Popups */
+        #tab-group-editor,
+        #tabgroup-editor-panel,
+        #tabGroupEditor,
+        tabgroup-editor-panel,
+        .tab-group-editor,
+        #tabGroupContextMenu,
+        tabgroup-meu,
+        panel[id*="tab-group-editor"],
+        panel[id*="tabgroup-editor"] {
+          display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          height: 0 !important;
+          width: 0 !important;
+        }
 
         /* Zentral Tooltip Styling (Matched to native Zen tab previews) */
         #zentral-tabgroup-tooltip {
@@ -3003,14 +3028,71 @@
      * Removes builtin native tab group context menus to prevent UI redundancy.
      * @param {Element|Document} [root=document] - Container scope to scan.
      */
+    /**
+     * Installs capture-phase listener on window to block native Firefox tab group editor panels.
+     */
+    setupPopupSuppression() {
+      if (this.#popupShowingListener) return;
+      this.#popupShowingListener = (e) => {
+        const target = e.target;
+        const id = target?.id || "";
+        const tag = target?.tagName?.toLowerCase() || "";
+        if (
+          id.includes("tab-group-editor") ||
+          id.includes("tabgroup-editor") ||
+          id === "tabGroupEditor" ||
+          id === "tabGroupContextMenu" ||
+          tag === "tabgroup-editor-panel" ||
+          target?.classList?.contains("tab-group-editor")
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof target.hidePopup === "function") {
+            try { target.hidePopup(); } catch (_) {}
+          }
+          try { target.remove(); } catch (_) {}
+        }
+      };
+      window.addEventListener("popupshowing", this.#popupShowingListener, true);
+      this.removeBuiltinTabGroupMenu();
+    }
+
+    /**
+     * Removes builtin native tab group context menus and editor panels to prevent UI redundancy.
+     * @param {Element|Document} [root=document] - Container scope to scan.
+     */
     removeBuiltinTabGroupMenu(root = document) {
       try {
-        const list = root.querySelectorAll ? root.querySelectorAll("#tab-group-editor, tabgroup-meu") : [];
-        list.forEach(el => el.remove());
+        const selectors = [
+          "#tab-group-editor",
+          "#tabgroup-editor-panel",
+          "#tabGroupEditor",
+          "tabgroup-editor-panel",
+          ".tab-group-editor",
+          "#tabGroupContextMenu",
+          "tabgroup-meu",
+          'panel[id*="tab-group-editor"]',
+          'panel[id*="tabgroup-editor"]'
+        ];
+        selectors.forEach(sel => {
+          try {
+            const list = root.querySelectorAll ? root.querySelectorAll(sel) : [];
+            list.forEach(el => {
+              if (typeof el.hidePopup === "function") el.hidePopup();
+              try { el.remove(); } catch (_) {}
+            });
+            const el = document.getElementById(sel.replace("#", ""));
+            if (el) {
+              if (typeof el.hidePopup === "function") el.hidePopup();
+              try { el.remove(); } catch (_) {}
+            }
+          } catch (_) {}
+        });
       } catch (e) {
         console.error("[ZentralTabGroups] Error removing built-in menu:", e);
       }
     }
+
 
     /**
      * Scans and processes all existing tab group DOM elements in the workspace.
@@ -3828,15 +3910,7 @@
       }, 1500);
     }
 
-    /**
-     * Removes or cleans up native tab group context menus if present.
-     */
-    removeBuiltinTabGroupMenu() {
-      try {
-        const builtinMenu = document.getElementById("tabGroupContextMenu");
-        if (builtinMenu) builtinMenu.remove();
-      } catch (_) {}
-    }
+
 
     /**
      * Enhances native tab context menu (#tabContextMenu) to ensure all existing
