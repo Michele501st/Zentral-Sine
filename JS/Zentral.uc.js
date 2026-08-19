@@ -3040,6 +3040,414 @@
     }
 
     /**
+     * Scans and processes all existing tab group DOM elements in the workspace.
+     */
+    processExistingGroups() {
+      const groups = document.querySelectorAll("tab-group:not([split-view-group])");
+      groups.forEach(group => this.processGroup(group));
+      this.loadTabGroupState();
+    }
+
+    /**
+     * Handles keyboard events when editing tab group titles (Enter to confirm, Escape to cancel).
+     * @param {KeyboardEvent} event - Keydown event object.
+     */
+    renameGroupKeydown(event) {
+      event.stopPropagation();
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const label = this.#state.groupEdited;
+        const input = document.getElementById('tab-label-input');
+        if (!input || !label) return;
+
+        const newName = input.value.trim();
+        const group = label.closest('tab-group');
+
+        document.documentElement.removeAttribute('zen-renaming-group');
+        input.remove();
+        label.classList.remove('tab-group-label-editing');
+        label.style.display = '';
+
+        if (group && newName) {
+          group.label = newName;
+          try { group.setAttribute('label', newName); } catch (_) {}
+          label.textContent = newName;
+          const labelContainer = group.querySelector('.tab-group-label-container');
+          if (labelContainer) {
+            const initialsEl = labelContainer.querySelector('.zentral-group-initials');
+            if (initialsEl) initialsEl.textContent = this.getGroupInitials(newName);
+          }
+          this.scheduleStateSave();
+        }
+        this.#state.groupEdited = null;
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        this.renameGroupHalt(event, true);
+      }
+    }
+
+    /**
+     * Replaces tab group text label with an inline text input to begin group renaming.
+     * @param {Element} group - Tab group DOM element.
+     * @param {boolean} [selectAll=true] - Whether to select full text in input.
+     */
+    renameGroupStart(group, selectAll = true) {
+      if (!group || this.#state.groupEdited) return;
+      const labelElement = group.querySelector('.tab-group-label');
+      if (!labelElement) return;
+
+      this.#state.groupEdited = labelElement;
+      this.#state.isStartingRename = true;
+      setTimeout(() => { this.#state.isStartingRename = false; }, 350);
+
+      document.documentElement.setAttribute('zen-renaming-group', 'true');
+      labelElement.classList.add('tab-group-label-editing');
+      labelElement.style.display = 'none';
+
+      const input = document.createElement('input');
+      input.id = 'tab-label-input';
+      input.className = 'tab-group-label-input';
+      input.type = 'text';
+      input.value = group.label || labelElement.textContent || '';
+      input.setAttribute('autocomplete', 'off');
+
+      labelElement.after(input);
+      setTimeout(() => {
+        try {
+          input.focus();
+          if (selectAll) input.select();
+          else {
+            const len = input.value.length;
+            input.setSelectionRange(len, len);
+          }
+        } catch (_) {}
+      }, 50);
+
+      input.addEventListener('keydown', (e) => this.renameGroupKeydown(e));
+      input.addEventListener('blur', (e) => this.renameGroupHalt(e));
+    }
+
+    /**
+     * Halts tab group title rename operation and restores original text label.
+     * @param {FocusEvent} event - Blur event on text input.
+     * @param {boolean} [force=false] - Force halt regardless of active state.
+     */
+    renameGroupHalt(event, force = false) {
+      if (this.#state.isStartingRename && !force) return;
+      if (!this.#state.groupEdited) return;
+
+      const input = document.getElementById('tab-label-input');
+      if (input && document.activeElement === input && !force) return;
+
+      document.documentElement.removeAttribute('zen-renaming-group');
+      if (input) input.remove();
+      if (this.#state.groupEdited) {
+        this.#state.groupEdited.classList.remove('tab-group-label-editing');
+        this.#state.groupEdited.style.display = '';
+        this.#state.groupEdited = null;
+      }
+    }
+
+    /**
+     * Enhances a tab group DOM node with custom icons, close buttons, tooltips, and context menus.
+     * @param {Element} group - Tab group DOM element.
+     */
+    processGroup(group) {
+      if (this.#processedGroups.has(group) || group.classList.contains("zen-folder") || group.hasAttribute("zen-folder") || group.hasAttribute("split-view-group")) {
+        return;
+      }
+      group.style.setProperty("border-radius", "6px", "important");
+
+      // Ensure full internal structure exists
+      let labelContainer = group.querySelector(".tab-group-label-container");
+      if (!labelContainer) {
+        labelContainer = document.createElement("div");
+        labelContainer.className = "tab-group-label-container";
+        const innerLabel = document.createElement("label");
+        innerLabel.className = "tab-group-label";
+        innerLabel.textContent = group.label || group.getAttribute("label") || "Group";
+        labelContainer.appendChild(innerLabel);
+        group.insertBefore(labelContainer, group.firstChild);
+      }
+
+      let groupTabContainer = group.querySelector(".tab-group-container");
+      if (!groupTabContainer) {
+        groupTabContainer = document.createElement("div");
+        groupTabContainer.className = "tab-group-container";
+        group.appendChild(groupTabContainer);
+      }
+
+      // Bind click collapse toggle to ensure all groups (top-level and nested) collapse/expand on click
+      if (!labelContainer._zentralToggleBound) {
+        labelContainer._zentralToggleBound = true;
+        labelContainer.addEventListener("click", (e) => {
+          if (e.target.closest(".tab-close-button") || e.target.closest("#tab-label-input") || e.target.closest(".ztg-drag-handle")) return;
+          e.preventDefault();
+          e.stopPropagation();
+
+          if (typeof group.toggleCollapse === "function") {
+            group.toggleCollapse();
+          } else {
+            const isColl = group.hasAttribute("collapsed") && group.getAttribute("collapsed") === "true";
+            if (isColl) {
+              group.removeAttribute("collapsed");
+              group.collapsed = false;
+            } else {
+              group.setAttribute("collapsed", "true");
+              group.collapsed = true;
+            }
+          }
+          this.scheduleStateSave();
+        });
+      }
+
+      if (group.shadowRoot && !group.shadowRoot.querySelector('.zentral-shadow-style')) {
+        const style = document.createElement('style');
+        style.className = 'zentral-shadow-style';
+        style.textContent = `
+          * { border-radius: 6px !important; outline: none !important; }
+          .group-marker, .group-marker *, .tab-group-icon > image, .tab-group-icon > img, .tab-group-icon > svg:not(.zentral-chevron) {
+            display: none !important; visibility: hidden !important; width: 0 !important; height: 0 !important; opacity: 0 !important; list-style-image: none !important; background: none !important;
+          }
+          .tab-group-icon, .tab-group-icon * { border: none !important; outline: none !important; box-shadow: none !important; background: transparent !important; }
+          .tab-group-icon::before { display: none !important; content: none !important; }
+          :host([collapsed]) .tab-group-icon,
+          :host([collapsed]) .tab-group-icon * { border: none !important; outline: none !important; box-shadow: none !important; background: transparent !important; }
+          :host([collapsed]) .tab-group-icon::before { display: none !important; content: none !important; }
+          :host([collapsed]) .tab-group-container::after,
+          :host([collapsed]) .tab-group-container::before { display: none !important; content: none !important; }
+        `;
+        group.shadowRoot.appendChild(style);
+      }
+
+      // Clear and hide any native children (like image.group-marker) inside .tab-group-icon
+      const iconEl = group.querySelector('.tab-group-icon');
+      if (iconEl) {
+        Array.from(iconEl.children).forEach(child => {
+          if (!child.classList.contains('zentral-chevron')) {
+            child.style.setProperty('display', 'none', 'important');
+            child.style.setProperty('visibility', 'hidden', 'important');
+            child.style.setProperty('width', '0', 'important');
+            child.style.setProperty('height', '0', 'important');
+            child.style.setProperty('min-width', '0', 'important');
+            child.style.setProperty('min-height', '0', 'important');
+            child.style.setProperty('opacity', '0', 'important');
+            child.style.setProperty('list-style-image', 'none', 'important');
+            child.style.setProperty('background', 'none', 'important');
+            child.setAttribute('hidden', 'true');
+          }
+        });
+        iconEl.style.setProperty('border', 'none', 'important');
+        iconEl.style.setProperty('outline', 'none', 'important');
+        iconEl.style.setProperty('box-shadow', 'none', 'important');
+        iconEl.style.setProperty('background', 'transparent', 'important');
+        iconEl.style.setProperty('background-image', 'none', 'important');
+      }
+
+      if (labelContainer) {
+        let _isHovered = false;
+
+        const enforceRestingStyles = () => {
+          labelContainer.style.setProperty("border-radius", "14px", "important");
+          labelContainer.style.setProperty("aspect-ratio", "auto", "important");
+          labelContainer.style.setProperty("align-self", "stretch", "important");
+          labelContainer.style.setProperty("width", "100%", "important");
+          labelContainer.style.setProperty("min-width", "100%", "important");
+          labelContainer.style.setProperty("max-width", "100%", "important");
+          labelContainer.style.setProperty("height", "28px", "important");
+          labelContainer.style.setProperty("min-height", "28px", "important");
+          labelContainer.style.setProperty("box-sizing", "border-box", "important");
+          labelContainer.style.setProperty("display", "flex", "important");
+          labelContainer.style.setProperty("flex-direction", "row", "important");
+          labelContainer.style.setProperty("align-items", "center", "important");
+          labelContainer.style.setProperty("justify-content", "center", "important");
+          labelContainer.style.setProperty("padding", "0 10px", "important");
+
+          const icon = labelContainer.querySelector(".tab-group-icon");
+          if (icon) {
+            const showChevron = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON) !== false;
+            icon.style.setProperty("display", showChevron ? "inline-flex" : "none", "important");
+          }
+        };
+
+        enforceRestingStyles();
+
+        const innerLabel = labelContainer.querySelector(".tab-group-label");
+        if (innerLabel) {
+          innerLabel.style.setProperty("border-radius", "12px", "important");
+          innerLabel.style.setProperty("width", "auto", "important");
+          innerLabel.style.setProperty("flex", "0 1 auto", "important");
+          innerLabel.style.setProperty("overflow", "hidden", "important");
+          innerLabel.style.setProperty("text-overflow", "ellipsis", "important");
+        }
+
+        let _styleGuard = false;
+        const styleWatcher = new MutationObserver(() => {
+          if (_styleGuard || _isHovered) return;
+          _styleGuard = true;
+          enforceRestingStyles();
+          _styleGuard = false;
+        });
+        styleWatcher.observe(labelContainer, { attributes: true, attributeFilter: ["style"] });
+        this.#groupObservers.set(group, styleWatcher);
+
+        let hoverTimer = null;
+        labelContainer.addEventListener("mouseenter", () => {
+          if (!Core.getPref(Constants.TabGroups.PREF_THUMBNAILS)) return;
+          labelContainer.setAttribute("zentral-hover", "true");
+          hoverTimer = setTimeout(() => {
+            const panel = document.getElementById("zentral-tabgroup-tooltip");
+            const container = document.getElementById("zentral-tabgroup-tooltip-container");
+            if (panel && container && group) {
+              let tabs = group.tabs ? Array.from(group.tabs) : [];
+              container.replaceChildren();
+              if (tabs.length === 0) {
+                const div = document.createElement("div");
+                div.textContent = "No tabs";
+                div.style.color = "var(--text-color, inherit)";
+                container.appendChild(div);
+              } else {
+                tabs.forEach(tab => {
+                  const row = document.createElement("div");
+                  row.className = "zentral-tooltip-row";
+                  
+                  row.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    if (gBrowser && tab) gBrowser.selectedTab = tab;
+                    if (panel.hidePopup) panel.hidePopup();
+                  });
+                  
+                  const icon = document.createElement("img");
+                  const imgSrc = tab.getAttribute("image") || tab.image || "chrome://global/skin/icons/defaultFavicon.svg";
+                  icon.src = imgSrc;
+                  icon.style.width = "16px";
+                  icon.style.height = "16px";
+                  icon.style.borderRadius = "3px";
+                  icon.style.flexShrink = "0";
+                  
+                  let cleanTitle = tab.label || "New Tab";
+                  let prev;
+                  do {
+                    prev = cleanTitle;
+                    cleanTitle = cleanTitle.replace(/^\s*[\(\[]\d+[\)\]]\s*/g, "");
+                    cleanTitle = cleanTitle.replace(/^[\p{Extended_Pictographic}\s\u200d\u2600-\u27BF]+/gu, "");
+                  } while (cleanTitle !== prev);
+                  cleanTitle = cleanTitle.trim() || (tab.label || "New Tab");
+
+                  let domain = "";
+                  try {
+                    const uri = tab.linkedBrowser?.currentURI;
+                    if (uri && uri.host) {
+                      domain = uri.host.replace(/^www\./, "");
+                    }
+                  } catch (_) {}
+
+                  const textCol = document.createElement("div");
+                  textCol.className = "zentral-tooltip-text-col";
+
+                  const titleEl = document.createElement("div");
+                  titleEl.className = "zentral-tooltip-title";
+                  titleEl.textContent = cleanTitle;
+                  textCol.appendChild(titleEl);
+
+                  if (domain) {
+                    const domainEl = document.createElement("div");
+                    domainEl.className = "zentral-tooltip-domain";
+                    domainEl.textContent = domain;
+                    textCol.appendChild(domainEl);
+                  }
+                  
+                  row.appendChild(icon);
+                  row.appendChild(textCol);
+                  container.appendChild(row);
+                });
+              }
+              if (panel.openPopup) panel.openPopup(labelContainer, "end_before", -4, 0, false, false);
+            }
+          }, 350);
+        });
+        labelContainer.addEventListener("mouseleave", () => {
+          labelContainer.removeAttribute("zentral-hover");
+          if (hoverTimer) clearTimeout(hoverTimer);
+          this.safeHideTooltip(350);
+        });
+        labelContainer.addEventListener("mousedown", () => {
+          if (hoverTimer) clearTimeout(hoverTimer);
+          const panel = document.getElementById("zentral-tabgroup-tooltip");
+          if (panel && panel.hidePopup) panel.hidePopup();
+        });
+        labelContainer.addEventListener("dblclick", (e) => {
+          if (e.target.closest(".tab-close-button") || e.target.closest(".tab-group-icon")) return;
+          e.preventDefault();
+          e.stopPropagation();
+          this.renameGroupStart(group, true);
+        });
+
+        const labelValue = group.label || (innerLabel ? innerLabel.textContent : '');
+        let initialsEl = labelContainer.querySelector(".zentral-group-initials");
+        if (!initialsEl) {
+          initialsEl = document.createElement("label");
+          initialsEl.className = "zentral-group-initials";
+          labelContainer.appendChild(initialsEl);
+        }
+        initialsEl.textContent = this.getGroupInitials(labelValue);
+      }
+
+      if (!labelContainer || labelContainer.querySelector(".tab-close-button")) return;
+
+      if (window.MozXULElement?.parseXULToFragment) {
+        const frag = window.MozXULElement.parseXULToFragment(`
+          <div class="tab-group-icon-container"><div class="tab-group-icon"><image class="group-marker" role="button" keyNav="false" tooltiptext="Toggle Group"/></div></div>
+          <image class="tab-close-button close-icon" role="button" keyNav="false" tooltiptext="Close Group"/>
+        `);
+        const iconContainer = frag.children[0];
+        const closeButton = frag.children[1];
+
+        labelContainer.insertBefore(iconContainer, labelContainer.firstChild);
+        labelContainer.appendChild(closeButton);
+
+        closeButton.addEventListener("click", (event) => {
+          event.stopPropagation();
+          event.preventDefault();
+          try {
+            this.removeSavedColor(group.id);
+            gBrowser.removeTabGroup(group);
+          } catch (error) { console.error("[ZentralTabGroups] Error removing tab group:", error); }
+        });
+      }
+
+      if (!labelContainer.querySelector(".zentral-tab-title-wrapper")) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "zentral-tab-title-wrapper";
+        const iconContainer = labelContainer.querySelector(".tab-group-icon-container");
+        const innerLabel = labelContainer.querySelector(".tab-group-label");
+        const initialsEl = labelContainer.querySelector(".zentral-group-initials");
+        const closeBtn = labelContainer.querySelector(".tab-close-button");
+
+        if (iconContainer) wrapper.appendChild(iconContainer);
+        if (innerLabel) wrapper.appendChild(innerLabel);
+        if (initialsEl) wrapper.appendChild(initialsEl);
+
+        labelContainer.insertBefore(wrapper, closeBtn || labelContainer.firstChild);
+      }
+
+      group.classList.remove('tab-group-editor-mode-create');
+      this.#processedGroups.add(group);
+      group.setAttribute("data-close-button-added", "true");
+
+      this.addContextMenu(group);
+
+      if (typeof group._useFaviconColor === 'function') {
+        group._useFaviconColor();
+      }
+
+      if (!group.label || group.label === '' || ("defaultGroupName" in group && group.label === group.defaultGroupName)) {
+        this.renameGroupStart(group, false);
+      }
+    }
+
+
+    /**
      * Enhances native tab context menu (#tabContextMenu) to ensure all existing
      * tab groups are populated and selectable when right-clicking tabs to add/move to group.
      */
