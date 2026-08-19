@@ -3980,29 +3980,60 @@
       if (!tabContextMenu || tabContextMenu._zentralEnhanced) return;
       tabContextMenu._zentralEnhanced = true;
 
-      // Ensure 'Closed Groups' is permanently removed and group colors are styled
+      // Ensure 'Closed Groups' is permanently removed, order matches tabstrip top-to-bottom, and group colors match
       const handleGroupSubmenu = (popup) => {
         if (!popup) return;
+        
+        // 1. Remove Closed Groups and lower separator
         const closedGroups = popup.querySelector("#context_moveTabToSavedGroup, [data-l10n-id='tab-context-move-tab-to-group-saved-groups']");
         if (closedGroups) closedGroups.remove();
         const sepLower = popup.querySelector("#open-tab-groups-separator-lower");
         if (sepLower) sepLower.remove();
 
-        // Apply custom colors to group menuitems if available
-        const items = popup.querySelectorAll(".tab-group-icon, menuitem[class*='tab-group']");
-        items.forEach(item => {
-          const label = item.getAttribute("label") || item.label || "";
-          if (label) {
-            const cleanLabel = label.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
-            const groupEl = Array.from(document.querySelectorAll("tab-group:not([split-view-group])")).find(g => {
-              const gLabel = (g.label || g.getAttribute("label") || "").replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
-              return gLabel === cleanLabel;
-            });
-            if (groupEl) {
-              const color = groupEl.style.getPropertyValue("--tab-group-color") || groupEl.style.getPropertyValue("--zentral-custom-color");
-              if (color) {
-                item.style.setProperty("--menu-icon-color", color);
-                item.style.setProperty("--tab-group-color", color);
+        // 2. Query active tab groups in DOM order (top to bottom on tabstrip)
+        const activeGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
+        
+        // 3. Find all group items in the submenu
+        const menuItems = Array.from(popup.querySelectorAll(".tab-group-icon, menuitem[class*='tab-group']"));
+        if (menuItems.length === 0) return;
+
+        // 4. Sort menu items to match tabstrip order (top to bottom)
+        menuItems.sort((a, b) => {
+          const labelA = (a.getAttribute("label") || a.label || "").replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+          const labelB = (b.getAttribute("label") || b.label || "").replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+          const idxA = activeGroups.findIndex(g => (g.label || g.getAttribute("label") || "").replace(/[\u200B-\u200D\uFEFF]/g, '').trim() === labelA);
+          const idxB = activeGroups.findIndex(g => (g.label || g.getAttribute("label") || "").replace(/[\u200B-\u200D\uFEFF]/g, '').trim() === labelB);
+          return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+        });
+
+        // 5. Re-insert sorted items sequentially after upper separator
+        let refNode = popup.querySelector("#open-tab-groups-separator-upper") || popup.querySelector("#context_moveTabToGroupNewGroup")?.nextElementSibling;
+        menuItems.forEach(item => {
+          if (refNode && refNode.nextSibling) {
+            refNode.parentNode.insertBefore(item, refNode.nextSibling);
+            refNode = item;
+          } else {
+            popup.appendChild(item);
+            refNode = item;
+          }
+
+          // 6. Apply matching group color to the item and its icon squircle
+          const cleanLabel = (item.getAttribute("label") || item.label || "").replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+          const groupEl = activeGroups.find(g => (g.label || g.getAttribute("label") || "").replace(/[\u200B-\u200D\uFEFF]/g, '').trim() === cleanLabel);
+          if (groupEl) {
+            const color = groupEl.style.getPropertyValue("--zentral-custom-color") ||
+                          groupEl.style.getPropertyValue("--tab-group-color") ||
+                          groupEl.getAttribute("data-tab-group-color") ||
+                          "";
+            if (color) {
+              item.style.setProperty("--tab-group-color", color, "important");
+              item.style.setProperty("--tab-group-color-undefined", color, "important");
+              item.style.setProperty("--menu-icon-color", color, "important");
+              const img = item.querySelector("img, image, .menu-iconic-icon, html\\:img");
+              if (img) {
+                img.style.setProperty("background-color", color, "important");
+                img.style.setProperty("fill", color, "important");
+                img.style.setProperty("color", color, "important");
               }
             }
           }
@@ -4015,9 +4046,11 @@
           if (popup && (popup.id === "context_moveTabToGroupPopupMenu" || popup.id?.includes("TabToGroup") || popup.parentNode?.id === "context_moveTabToGroup")) {
             handleGroupSubmenu(popup);
             setTimeout(() => handleGroupSubmenu(popup), 0);
+            setTimeout(() => handleGroupSubmenu(popup), 50);
           }
         };
         window.addEventListener("popupshowing", this._tabContextSubmenuListener, true);
+        window.addEventListener("popupshown", this._tabContextSubmenuListener, true);
       }
     }
 

@@ -775,3 +775,20 @@ panel[id*="tabgroup-editor"] {
 #context_moveTabToGroupPopupMenu > #open-tab-groups-separator-lower {
   display: none !important;
 }
+
+/* --------------------------------------------------------------------------
+ * Context Menu: Tab Group Icon Colors & Squircles in Submenu
+ * -------------------------------------------------------------------------- */
+#context_moveTabToGroupPopupMenu menuitem.tab-group-icon,
+#context_moveTabToGroupPopupMenu .menuitem-iconic.tab-group-icon {
+  --tab-group-color-undefined: #777777;
+}
+
+#context_moveTabToGroupPopupMenu menuitem.tab-group-icon .menu-iconic-icon,
+#context_moveTabToGroupPopupMenu menuitem.tab-group-icon image,
+#context_moveTabToGroupPopupMenu menuitem.tab-group-icon img,
+#context_moveTabToGroupPopupMenu .menuitem-iconic.tab-group-icon .menu-iconic-icon {
+  background-color: var(--tab-group-color, var(--zentral-custom-color, #777777)) !important;
+  fill: var(--tab-group-color, var(--zentral-custom-color, #777777)) !important;
+  border-radius: 4px !important;
+}
