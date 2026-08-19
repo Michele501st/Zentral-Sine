@@ -2064,6 +2064,8 @@
     #groupContextMenuHandler = null;
     /** @private Global blocker for group toggle on right click */
     #groupRightClickBlocker = null;
+    /** @private Global listener for submenu popups */
+    _tabContextSubmenuListener = null;
 
     /**
      * Safely retrieves Firefox SessionStore service for persistent tab metadata across restarts.
@@ -2131,6 +2133,10 @@
           try { window.removeEventListener("mouseup", this.#groupRightClickBlocker, true); } catch (_) {}
           try { window.removeEventListener("click", this.#groupRightClickBlocker, true); } catch (_) {}
           this.#groupRightClickBlocker = null;
+        }
+        if (this._tabContextSubmenuListener) {
+          try { window.removeEventListener("popupshowing", this._tabContextSubmenuListener, true); } catch (_) {}
+          this._tabContextSubmenuListener = null;
         }
 
         // 3. Remove injected DOM elements
@@ -4009,39 +4015,76 @@
         });
       };
 
-      tabContextMenu.addEventListener("popupshowing", (e) => {
-        // Use requestAnimationFrame to run AFTER Zen's native popup population
-        requestAnimationFrame(() => {
-          try {
-            const subPopups = document.querySelectorAll("#context_tabToGroupPopup, #context_moveTabToGroupPopup, #context_zenTabToGroupPopup, .context-tab-to-group menupopup");
-            subPopups.forEach(popup => {
-              if (!popup) return;
-              
-              // 1. Remove Zen's native group items (they are often blank due to DOM manipulation)
-              // We identify them because they lack our custom 'zentral-group-id' but are menuitems.
-              // We also want to remove "Closed Groups" per user request.
-              Array.from(popup.children).forEach(child => {
-                const label = child.getAttribute("label");
-                // Remove Closed Groups
-                if (label === "Closed Groups" || child.id === "context_closedTabGroups" || child.getAttribute("data-l10n-id") === "tab-context-closed-groups" || child.classList.contains("context-closed-tab-groups")) {
-                  child.remove();
-                } else if (child.tagName.toLowerCase() === "menuitem" && !child.hasAttribute("zentral-group-id")) {
-                  // If it's a native group item (typically follows 'New Group' separator), remove it
-                  // We only remove items that don't have special ids like "context_addTabToNewGroup"
-                  if (!child.id || child.id.includes("tabToGroup")) {
-                     child.remove();
-                  } else if (!child.id) {
-                     child.remove(); // Native group items often have no ID
+      // Use a global capture-phase listener to reliably catch the sub-menu's own popupshowing event
+      // This is crucial because submenus populate themselves when hovered, long after the main menu opens.
+      if (!this._tabContextSubmenuListener) {
+        this._tabContextSubmenuListener = (e) => {
+          const popup = e.target;
+          if (popup && (popup.id === "context_tabToGroupPopup" || popup.id === "context_moveTabToGroupPopup" || popup.id === "context_zenTabToGroupPopup" || popup.closest(".context-tab-to-group"))) {
+            
+            // Set up a MutationObserver to catch any asynchronous additions by Zen
+            if (!popup._zentralObserver) {
+               popup._zentralObserver = new MutationObserver(() => {
+                  let modified = false;
+                  Array.from(popup.children).forEach(child => {
+                    const id = child.id || "";
+                    const label = child.getAttribute("label") || child.label || "";
+                    const l10nId = child.getAttribute("data-l10n-id") || "";
+                    
+                    if (id === "context_closedTabGroups" || l10nId === "tab-context-closed-groups" || child.classList.contains("context-closed-tab-groups") || label === "Closed Groups" || l10nId.includes("closed-groups")) {
+                      child.remove(); modified = true;
+                    } 
+                    else if (child.tagName && child.tagName.toLowerCase() === "menuitem" && !child.hasAttribute("zentral-group-id")) {
+                      if (!id || (id.includes("tabToGroup") && !id.includes("NewGroup") && !id.includes("SplitView"))) {
+                         child.remove(); modified = true;
+                      } else if (l10nId === "") {
+                         if (!id) { child.remove(); modified = true; }
+                      }
+                    }
+                  });
+                  if (modified || !popup.querySelector('.zentral-group-menuitem')) {
+                     // Pause observer to prevent infinite loops while we populate
+                     popup._zentralObserver.disconnect();
+                     populateSubMenu(popup);
+                     popup._zentralObserver.observe(popup, { childList: true });
                   }
-                }
-              });
+               });
+               popup._zentralObserver.observe(popup, { childList: true });
+            }
 
-              // 2. Populate our custom items
-              populateSubMenu(popup);
-            });
-          } catch (_) {}
-        });
-      });
+            // setTimeout ensures we run immediately after Zen's synchronous native population finishes
+            setTimeout(() => {
+              try {
+                Array.from(popup.children).forEach(child => {
+                  const id = child.id || "";
+                  const label = child.getAttribute("label") || child.label || "";
+                  const l10nId = child.getAttribute("data-l10n-id") || "";
+                  
+                  // 1. Remove "Closed Groups" completely
+                  if (id === "context_closedTabGroups" || l10nId === "tab-context-closed-groups" || child.classList.contains("context-closed-tab-groups") || label === "Closed Groups" || l10nId.includes("closed-groups")) {
+                    child.remove();
+                  } 
+                  // 2. Remove Zen's blank native group items (they are menuitems without our custom ID, often following 'New Group')
+                  else if (child.tagName && child.tagName.toLowerCase() === "menuitem" && !child.hasAttribute("zentral-group-id")) {
+                    // We must NOT remove 'New Group' or 'Add split view...'. We only remove items that are actual groups.
+                    // Native groups typically have no ID or an ID ending in 'tabToGroup' (but not 'NewGroup')
+                    if (!id || (id.includes("tabToGroup") && !id.includes("NewGroup") && !id.includes("SplitView"))) {
+                       child.remove();
+                    } else if (l10nId === "") {
+                       // Often native group items have no l10nId whereas static items do
+                       if (!id) child.remove();
+                    }
+                  }
+                });
+
+                // 3. Re-inject our robust custom items
+                populateSubMenu(popup);
+              } catch (_) {}
+            }, 0);
+          }
+        };
+        window.addEventListener("popupshowing", this._tabContextSubmenuListener, true);
+      }
     }
 
     /**
