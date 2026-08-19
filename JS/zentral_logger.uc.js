@@ -525,17 +525,13 @@
   } catch (e) {
     loggerEnabled = false;
   }
-  
-  if (!loggerEnabled) {
-    return; // Do not initialize logger if disabled
-  }
 
   // Listen to UI Capture button
   window.addEventListener("ZentralCaptureLog", () => {
     exportLog();
   });
 
-  // Run observers & tracers
+  // Run observers & tracers ONLY if enabled
   if (document.readyState === "complete") {
     setupLayoutObservers();
     setupTabContextMenuTracer();

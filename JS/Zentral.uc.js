@@ -144,7 +144,9 @@
         [Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH]: false,
         [Constants.TabGroups.PREF_THUMBNAILS]: true,
         [Constants.TabGroups.PREF_SHOW_CHEVRON]: true,
-        [Constants.TabGroups.PREF_LABEL_OPACITY]: 85
+        [Constants.TabGroups.PREF_LABEL_OPACITY]: 85,
+        [Constants.Diagnostics.PREF_LOGGER_ENABLED]: false,
+        [Constants.Diagnostics.PREF_LOGGER_PATH]: ""
       };
     }
 
@@ -221,6 +223,10 @@
      * @param {any} fallback - Fallback value if preference key does not exist or fails to read.
      * @returns {any} The preference value or fallback.
      */
+    setNativePref(key, value) {
+      this.setPref(key, value);
+    }
+
     getNativePref(key, fallback) {
       try {
         if (typeof fallback === "boolean") return Services.prefs.getBoolPref(key, fallback);
@@ -4871,6 +4877,15 @@
         get("zs-tg-opacity").value = opacity;
         if (get("zs-tg-opacity-val")) get("zs-tg-opacity-val").textContent = opacity + "%";
       }
+      
+      if (get("zs-pref-logger-enabled")) {
+        get("zs-pref-logger-enabled").checked = Core.getPref(Constants.Diagnostics.PREF_LOGGER_ENABLED, false);
+      }
+      if (get("zs-pref-logger-path")) {
+        const savedPath = Core.getPref(Constants.Diagnostics.PREF_LOGGER_PATH, "");
+        get("zs-pref-logger-path").value = savedPath;
+        this.updatePathUI(savedPath);
+      }
     }
     
     /**
@@ -4893,6 +4908,13 @@
       Core.setPref(Constants.TabGroups.PREF_SHOW_CHEVRON, get("zs-tg-chevron").checked);
       if (get("zs-tg-opacity")) {
         Core.setPref(Constants.TabGroups.PREF_LABEL_OPACITY, parseInt(get("zs-tg-opacity").value));
+      }
+
+      if (get("zs-pref-logger-enabled")) {
+        Core.setPref(Constants.Diagnostics.PREF_LOGGER_ENABLED, get("zs-pref-logger-enabled").checked);
+      }
+      if (get("zs-pref-logger-path")) {
+        Core.setPref(Constants.Diagnostics.PREF_LOGGER_PATH, get("zs-pref-logger-path").value.trim());
       }
       
       this.close();
@@ -5546,9 +5568,16 @@
             <div class="zs-row">
               <div class="zs-label-container">
                 <span class="zs-label">Export Log Path</span>
-                <span class="zs-sublabel">Custom directory path for saving diagnostic logs. Leave blank for default logs folder.</span>
+                <span class="zs-sublabel" id="zs-pref-logger-path-desc">Directory where diagnostic logs are saved</span>
               </div>
-              <input type="text" id="zs-pref-logger-path" class="zs-text-input" placeholder="e.g. C:\Logs" style="width:140px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:inherit; border-radius:4px; padding:4px;" />
+              <div style="display: flex; align-items: center; gap: 6px; max-width: 55%;">
+                <input type="hidden" id="zs-pref-logger-path" />
+                <button type="button" id="zs-btn-choose-path" class="zs-reset-btn" style="margin: 0; padding: 5px 10px; font-size: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: inherit; max-width: 180px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 6px;" title="Click to choose export directory">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+                  <span id="zs-btn-choose-path-label">Default Folder</span>
+                </button>
+                <button type="button" id="zs-btn-clear-path" title="Reset to default folder (chrome/logs)" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); cursor: pointer; padding: 4px 8px; display: none; align-items: center; justify-content: center; font-size: 11px; border-radius: 5px;">✕</button>
+              </div>
             </div>
 
             <div class="zs-row">
@@ -5556,7 +5585,7 @@
                 <span class="zs-label">Capture Log</span>
                 <span class="zs-sublabel">Generate and save a diagnostic log file instantly. (Shortcut: <kbd>Alt</kbd>+<kbd>L</kbd>)</span>
               </div>
-              <button id="zs-btn-capture-log" class="zs-reset-btn" style="background:var(--zen-primary-color); color:#fff; border:none; margin: 0;">Export Now</button>
+              <button id="zs-btn-capture-log" class="zs-reset-btn" style="background:var(--zen-primary-color); color:#fff; border:none; margin: 0; min-width: 75px; text-align: center; transition: background 0.2s ease, transform 0.1s ease;">Export</button>
             </div>
 
           </div>
@@ -5581,9 +5610,52 @@
       this.modal.querySelector("#zs-close").addEventListener("click", () => this.close());
       this.modal.querySelector("#zs-cancel").addEventListener("click", () => this.close());
       this.modal.querySelector("#zs-save").addEventListener("click", () => this.save());
-      this.modal.querySelector("#zs-btn-capture-log").addEventListener("click", () => {
-        window.dispatchEvent(new CustomEvent("ZentralCaptureLog"));
-      });
+
+      const choosePathBtn = this.modal.querySelector("#zs-btn-choose-path");
+      const clearPathBtn = this.modal.querySelector("#zs-btn-clear-path");
+      const pathInput = this.modal.querySelector("#zs-pref-logger-path");
+
+      if (choosePathBtn) {
+        choosePathBtn.addEventListener("click", async () => {
+          const selectedFolder = await this.pickExportFolder();
+          if (selectedFolder) {
+            pathInput.value = selectedFolder;
+            this.updatePathUI(selectedFolder);
+          }
+        });
+      }
+
+      if (clearPathBtn) {
+        clearPathBtn.addEventListener("click", () => {
+          pathInput.value = "";
+          this.updatePathUI("");
+        });
+      }
+
+      const captureBtn = this.modal.querySelector("#zs-btn-capture-log");
+      if (captureBtn) {
+        captureBtn.addEventListener("click", () => {
+          if (pathInput && pathInput.value) {
+            Core.setPref(Constants.Diagnostics.PREF_LOGGER_PATH, pathInput.value.trim());
+          }
+          window.dispatchEvent(new CustomEvent("ZentralCaptureLog"));
+
+          const originalText = "Export";
+          const originalBg = "var(--zen-primary-color)";
+          captureBtn.textContent = "✓ Exported!";
+          captureBtn.style.background = "#10b981";
+          captureBtn.style.color = "#ffffff";
+          captureBtn.style.pointerEvents = "none";
+
+          setTimeout(() => {
+            if (this.modal && captureBtn) {
+              captureBtn.textContent = originalText;
+              captureBtn.style.background = originalBg;
+              captureBtn.style.pointerEvents = "auto";
+            }
+          }, 2200);
+        });
+      }
 
       this.modal.addEventListener("mousedown", (e) => {
         if (e.target === this.modal) this.close();
@@ -5741,6 +5813,15 @@
       if (get("zs-tg-opacity")) {
         get("zs-tg-opacity").value = opacity;
         if (get("zs-tg-opacity-val")) get("zs-tg-opacity-val").textContent = opacity + "%";
+      }
+      
+      if (get("zs-pref-logger-enabled")) {
+        get("zs-pref-logger-enabled").checked = Core.getPref(Constants.Diagnostics.PREF_LOGGER_ENABLED, false);
+      }
+      if (get("zs-pref-logger-path")) {
+        const savedPath = Core.getPref(Constants.Diagnostics.PREF_LOGGER_PATH, "");
+        get("zs-pref-logger-path").value = savedPath;
+        this.updatePathUI(savedPath);
       }
     }
 
