@@ -24,7 +24,31 @@
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
   }
 
+  function isLoggerEnabled() {
+    try {
+      return Services.prefs.getBoolPref("zentral.logger.enabled", false);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function showLoggingDisabledWarning() {
+    try {
+      const promptService = Services.prompt || Cc["@mozilla.org/embedcomp/prompt-service;1"]?.getService(Ci.nsIPromptService);
+      if (promptService) {
+        promptService.alert(
+          window,
+          "Zentral Diagnostics — Inactive",
+          "Diagnostic Logging is currently disabled.\n\nTo capture and export diagnostic logs, please enable 'Enable Diagnostic Logging' in Zentral Settings first."
+        );
+        return;
+      }
+    } catch (_) {}
+    alert("Diagnostic Logging is disabled.\nPlease enable 'Enable Diagnostic Logging' in Zentral Settings to export logs.");
+  }
+
   function record(level, tag, message) {
+    if (!isLoggerEnabled()) return; // DO NOT COLLECT DATA IF DISABLED
     const line = `[${ts()}] [${level.toUpperCase()}] [${tag}] ${message}`;
     if (ringBuffer.length >= MAX_ENTRIES) ringBuffer.shift();
     ringBuffer.push(line);
@@ -92,6 +116,7 @@
   function patchConsoleMethod(originalFn, level) {
     return function (...args) {
       originalFn(...args);
+      if (!isLoggerEnabled()) return; // Fast return: no stringifying, no regex matching, no overhead
       const text = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
       let tag = "Console";
       const tagMatch = text.match(/^\[(.*?)\]/);
@@ -110,9 +135,11 @@
 
   // Capture uncaught window errors & rejections
   const onWinError = (e) => {
+    if (!isLoggerEnabled()) return;
     record("error", "WindowError", `Uncaught: ${e.message} @ ${e.filename}:${e.lineno}:${e.colno}`);
   };
   const onUnhandledRej = (e) => {
+    if (!isLoggerEnabled()) return;
     record("error", "UnhandledRejection", `Reason: ${e.reason?.message || e.reason}`);
   };
   window.addEventListener("error", onWinError, true);
@@ -388,6 +415,7 @@
   // User Interactions & Hit-Test Logger (Clicks, Buttons, Modals)
   // -------------------------------------------------------------------------
   const onClick = (e) => {
+    if (!isLoggerEnabled()) return;
     const t = e.target;
     if (!t) return;
     
@@ -440,6 +468,14 @@
    * Export diagnostic logs to file in workspace logs folder
    */
   function exportLog() {
+    if (!isLoggerEnabled()) {
+      showLoggingDisabledWarning();
+      try {
+        window.dispatchEvent(new CustomEvent("ZentralLogExportDisabled"));
+      } catch (_) {}
+      return;
+    }
+
     try {
       const now = new Date();
       const pad = (n) => String(n).padStart(2, "0");

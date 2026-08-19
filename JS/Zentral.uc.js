@@ -4885,8 +4885,8 @@
           const nsIFilePicker = Ci?.nsIFilePicker || Components.interfaces.nsIFilePicker;
           const fp = (Cc?.["@mozilla.org/filepicker;1"] || Components.classes["@mozilla.org/filepicker;1"]).createInstance(nsIFilePicker);
           
-          const parentWin = window.browsingContext ? window : (window.ownerGlobal || window);
-          fp.init(parentWin.browsingContext || parentWin, "Select Diagnostic Log Export Directory", nsIFilePicker.modeGetFolder);
+          const parentWin = window.browsingContext || window;
+          fp.init(parentWin, "Select Diagnostic Log Export Directory", nsIFilePicker.modeGetFolder);
           
           let resolved = false;
           const onDone = (result) => {
@@ -4899,9 +4899,31 @@
             }
           };
 
-          const openRes = fp.open(res => onDone(res));
-          if (openRes && typeof openRes.then === "function") {
-            openRes.then(res => onDone(res)).catch(() => onDone(null));
+          if (typeof fp.open === "function") {
+            try {
+              const res = fp.open({
+                done(val) {
+                  onDone(val);
+                }
+              });
+              if (res && typeof res.then === "function") {
+                res.then(result => onDone(result)).catch(() => onDone(null));
+              }
+            } catch (_) {
+              try {
+                const res2 = fp.open(val => onDone(val));
+                if (res2 && typeof res2.then === "function") {
+                  res2.then(result => onDone(result)).catch(() => onDone(null));
+                }
+              } catch (e2) {
+                onDone(null);
+              }
+            }
+          } else if (typeof fp.show === "function") {
+            const res = fp.show();
+            onDone(res);
+          } else {
+            onDone(null);
           }
         } catch (err) {
           console.error("[ZentralSettings] Error opening folder picker:", err);
@@ -5717,6 +5739,36 @@
       const captureBtn = this.modal.querySelector("#zs-btn-capture-log");
       if (captureBtn) {
         captureBtn.addEventListener("click", () => {
+          const loggerToggle = this.modal.querySelector("#zs-pref-logger-enabled");
+          const isEnabled = loggerToggle ? loggerToggle.checked : Core.getPref(Constants.Diagnostics.PREF_LOGGER_ENABLED, false);
+
+          if (!isEnabled) {
+            captureBtn.textContent = "⚠️ Logging Disabled";
+            captureBtn.style.background = "#ef4444";
+            captureBtn.style.color = "#ffffff";
+            captureBtn.style.pointerEvents = "none";
+
+            try {
+              const promptService = Services.prompt || Cc["@mozilla.org/embedcomp/prompt-service;1"]?.getService(Ci.nsIPromptService);
+              if (promptService) {
+                promptService.alert(
+                  window,
+                  "Zentral Diagnostics — Inactive",
+                  "Diagnostic Logging is currently disabled.\n\nPlease toggle 'Enable Diagnostic Logging' ON above and save changes before exporting logs."
+                );
+              }
+            } catch (_) {}
+
+            setTimeout(() => {
+              if (this.modal && captureBtn) {
+                captureBtn.textContent = "Export";
+                captureBtn.style.background = "var(--zen-primary-color)";
+                captureBtn.style.pointerEvents = "auto";
+              }
+            }, 2500);
+            return;
+          }
+
           if (pathInput && pathInput.value) {
             Core.setPref(Constants.Diagnostics.PREF_LOGGER_PATH, pathInput.value.trim());
           }
