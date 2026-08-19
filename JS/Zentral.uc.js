@@ -4294,8 +4294,8 @@
         Object.defineProperty(targetGbrowserObj, "selectedTab", {
           get: origSelectedTabDesc.get,
           set: function(val) {
-            if (isDraggingTab && prevActiveTab && prevActiveTab.isConnected && val !== prevActiveTab) {
-              return; // Block activation of the dragged tab
+            if (isDraggingTab) {
+              return; // BLANKET BLOCK ALL SELECTION CHANGES WHILE DRAGGING
             }
             origSelectedTabDesc.set.call(this, val);
           },
@@ -4322,8 +4322,8 @@
         Object.defineProperty(targetTabContainerObj, "selectedItem", {
           get: origSelectedItemDesc.get,
           set: function(val) {
-            if (isDraggingTab && prevActiveTab && prevActiveTab.isConnected && val !== prevActiveTab) {
-              return; // Block activation of the dragged tab from native tabs.js drag events
+            if (isDraggingTab) {
+              return; // BLANKET BLOCK ALL SELECTION CHANGES WHILE DRAGGING
             }
             origSelectedItemDesc.set.call(this, val);
           },
@@ -4335,6 +4335,7 @@
       // 3. Setup drag detection logic
       const onMouseDown = (e) => {
         if (e.button !== 0) return;
+        if (!e.target || typeof e.target.closest !== "function") return;
         const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab");
         if (!tab) return;
         if (e.target.closest(".tab-close-button, .tab-icon-sound, .tab-audio-button, .tab-pin-icon")) return;
@@ -4360,7 +4361,7 @@
 
       const onDragStart = (e) => {
         if (pressTimer) clearTimeout(pressTimer);
-        const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab") || dragCandidateTab;
+        const tab = (e.target && typeof e.target.closest === "function" ? e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab") : null) || dragCandidateTab;
         if (tab) {
           isDraggingTab = true; // Lock selection
           dragCandidateTab = tab;
@@ -5526,6 +5527,38 @@
             </div>
 
             <button id="zs-tg-reset" class="zs-reset-btn">Reset Tab Groups Defaults</button>
+          </div>
+
+          <div class="zs-section-title">Diagnostics</div>
+          <div class="zs-card">
+            
+            <div class="zs-row">
+              <div class="zs-label-container">
+                <span class="zs-label">Enable Diagnostic Logging</span>
+                <span class="zs-sublabel">Starts Zentral Logger in the background to capture internal layout events</span>
+              </div>
+              <label class="zs-switch">
+                <input type="checkbox" id="zs-pref-logger-enabled" />
+                <span class="zs-slider"></span>
+              </label>
+            </div>
+
+            <div class="zs-row">
+              <div class="zs-label-container">
+                <span class="zs-label">Export Log Path</span>
+                <span class="zs-sublabel">Custom directory path for saving diagnostic logs. Leave blank for default logs folder.</span>
+              </div>
+              <input type="text" id="zs-pref-logger-path" class="zs-text-input" placeholder="e.g. C:\Logs" style="width:140px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:inherit; border-radius:4px; padding:4px;" />
+            </div>
+
+            <div class="zs-row">
+              <div class="zs-label-container">
+                <span class="zs-label">Capture Log</span>
+                <span class="zs-sublabel">Generate and save a diagnostic log file instantly. (Shortcut: <kbd>Alt</kbd>+<kbd>L</kbd>)</span>
+              </div>
+              <button id="zs-btn-capture-log" class="zs-reset-btn" style="background:var(--zen-primary-color); color:#fff; border:none; margin: 0;">Export Now</button>
+            </div>
+
           </div>
         </div>
 
