@@ -3985,10 +3985,14 @@
           const item = document.createXULElement("menuitem");
           item.setAttribute("zentral-group-id", group.id);
           item.setAttribute("label", label);
-          item.setAttribute("class", "menuitem-iconic zentral-group-menuitem");
+          // Set as property too just in case
+          item.label = label;
+          // Avoid menuitem-iconic which might hide the text if DOM structure is strictly enforced by Zen's CSS
+          item.setAttribute("class", "zentral-group-menuitem");
           const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color");
           if (color) {
             item.style.setProperty("--menu-icon-color", color);
+            item.style.setProperty("color", color); // Add color to the text or standard menu item for visibility
           }
           item.addEventListener("command", (evt) => {
             evt.stopPropagation();
@@ -4006,10 +4010,37 @@
       };
 
       tabContextMenu.addEventListener("popupshowing", (e) => {
-        try {
-          const subPopups = document.querySelectorAll("#context_tabToGroupPopup, #context_moveTabToGroupPopup, #context_zenTabToGroupPopup, .context-tab-to-group menupopup");
-          subPopups.forEach(popup => populateSubMenu(popup));
-        } catch (_) {}
+        // Use requestAnimationFrame to run AFTER Zen's native popup population
+        requestAnimationFrame(() => {
+          try {
+            const subPopups = document.querySelectorAll("#context_tabToGroupPopup, #context_moveTabToGroupPopup, #context_zenTabToGroupPopup, .context-tab-to-group menupopup");
+            subPopups.forEach(popup => {
+              if (!popup) return;
+              
+              // 1. Remove Zen's native group items (they are often blank due to DOM manipulation)
+              // We identify them because they lack our custom 'zentral-group-id' but are menuitems.
+              // We also want to remove "Closed Groups" per user request.
+              Array.from(popup.children).forEach(child => {
+                const label = child.getAttribute("label");
+                // Remove Closed Groups
+                if (label === "Closed Groups" || child.id === "context_closedTabGroups" || child.getAttribute("data-l10n-id") === "tab-context-closed-groups" || child.classList.contains("context-closed-tab-groups")) {
+                  child.remove();
+                } else if (child.tagName.toLowerCase() === "menuitem" && !child.hasAttribute("zentral-group-id")) {
+                  // If it's a native group item (typically follows 'New Group' separator), remove it
+                  // We only remove items that don't have special ids like "context_addTabToNewGroup"
+                  if (!child.id || child.id.includes("tabToGroup")) {
+                     child.remove();
+                  } else if (!child.id) {
+                     child.remove(); // Native group items often have no ID
+                  }
+                }
+              });
+
+              // 2. Populate our custom items
+              populateSubMenu(popup);
+            });
+          } catch (_) {}
+        });
       });
     }
 
