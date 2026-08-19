@@ -79,6 +79,7 @@
       PREF_APPS_PER_ROW: "zen.workspace.apps.sidebar.apps_per_row",
       PREF_MAX_ROWS: "zen.workspace.apps.sidebar.max_rows",
       PREF_COMPACT_DRAWER_ENABLED: "zen.workspace.apps.sidebar.compact_drawer_enabled",
+      PREF_AUTOHIDE: "zen.workspace.apps.sidebar.autohide",
       MIN_WIDTH_PX: 280,
       MAX_WIDTH_RATIO: 0.80,
       DEFAULT_SLIDE_MS: 450,
@@ -138,6 +139,7 @@
         [Constants.Apps.PREF_APPS_PER_ROW]: Constants.Apps.DEFAULT_APPS_PER_ROW,
         [Constants.Apps.PREF_MAX_ROWS]: Constants.Apps.DEFAULT_MAX_ROWS,
         [Constants.Apps.PREF_COMPACT_DRAWER_ENABLED]: false,
+        [Constants.Apps.PREF_AUTOHIDE]: false,
         [Constants.TabGroups.PREF_COLORS]: "{}",
         [Constants.TabGroups.PREF_STATE]: "{}",
         [Constants.TabGroups.PREF_ENABLED]: true,
@@ -314,6 +316,7 @@
           "zen-app-panel-root",
           "zen-compact-apps-drawer",
           "zen-compact-apps-trigger",
+          "zen-apps-autohide-trigger",
           "zen-apps-sidebar-tile-context",
           "context_zenAppsSidebarAdd_sep",
           "context_zenAppsSidebarAdd"
@@ -614,6 +617,75 @@
       if (document.getElementById("zen-apps-sidebar-styles") || this._stylesInjected) return;
       this._stylesInjected = true;
       const css = `
+                /* 3-Dot Autohide Trigger Strip */
+        #zen-apps-autohide-trigger {
+          display: none;
+          width: 100%;
+          height: 14px;
+          min-height: 14px;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          position: relative;
+          z-index: 15;
+          margin: 0;
+          padding: 2px 0;
+          box-sizing: border-box;
+          opacity: 0.65;
+          transition: opacity 0.2s ease, background 0.2s ease;
+          border-radius: var(--toolbarbutton-border-radius, 4px);
+        }
+        #zen-apps-autohide-trigger:hover {
+          opacity: 1;
+          background: rgba(255, 255, 255, 0.06);
+        }
+        .zen-apps-autohide-dots {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 3.5px;
+          pointer-events: none;
+        }
+        .zen-apps-autohide-dot {
+          width: 3.5px;
+          height: 3.5px;
+          border-radius: 50%;
+          background-color: currentColor;
+          opacity: 0.6;
+          transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        #zen-apps-autohide-trigger:hover .zen-apps-autohide-dot {
+          opacity: 1;
+          transform: scale(1.15);
+        }
+
+        /* Autohide Mode for Sidebar Grid */
+        :root[zentral-apps-autohide="true"] #zen-apps-autohide-trigger {
+          display: flex;
+        }
+        :root[zentral-apps-autohide="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) {
+          max-height: 0px !important;
+          padding-top: 0px !important;
+          padding-bottom: 0px !important;
+          margin-top: 0px !important;
+          margin-bottom: 0px !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          overflow: hidden !important;
+          transform: translateY(-6px);
+          transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease, transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), padding 0.28s ease !important;
+        }
+        :root[zentral-apps-autohide="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"],
+        :root[zentral-apps-autohide="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover,
+        :root[zentral-apps-autohide="true"] #zen-apps-autohide-trigger:hover + #zen-apps-sidebar-grid:not(.zen-apps-horizontal) {
+          max-height: calc(var(--zentral-max-rows, 3) * 42px + 24px) !important;
+          padding: 6px 10px 8px !important;
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          overflow-y: auto !important;
+          transform: translateY(0) !important;
+        }
+
         #zen-apps-sidebar-grid { display: grid; grid-template-columns: repeat(var(--zentral-grid-cols, 7), minmax(0, 1fr)); justify-items: center; align-items: center; gap: 6px; padding: 8px 10px; width: 100%; box-sizing: border-box; position: relative; z-index: 10; max-height: calc(var(--zentral-max-rows, 3) * 42px + 16px); overflow-y: auto; scrollbar-width: none; }
         #zen-apps-sidebar-grid::-webkit-scrollbar { display: none; }
         .zen-apps-scroll-box { display: contents; }
@@ -729,6 +801,39 @@
      * Creates and attaches persistent DOM elements for the app grid and panel overlays.
      */
     createContainers() {
+      if (!this.#dom.autohideTrigger) {
+        const trigger = document.createElement("div");
+        trigger.id = "zen-apps-autohide-trigger";
+        trigger.className = "zen-apps-autohide-trigger";
+        trigger.title = "Hover to show Apps Grid";
+        trigger.innerHTML = `
+          <div class="zen-apps-autohide-dots">
+            <span class="zen-apps-autohide-dot"></span>
+            <span class="zen-apps-autohide-dot"></span>
+            <span class="zen-apps-autohide-dot"></span>
+          </div>
+        `;
+
+        trigger.addEventListener("mouseenter", () => {
+          this.setAutohideHovered(true);
+        });
+        trigger.addEventListener("mouseleave", () => {
+          this.scheduleAutohideCollapse();
+        });
+
+        trigger.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const popup = document.getElementById("zen-apps-sidebar-tile-context");
+          if (popup) {
+            delete popup.dataset.activeAppId;
+            popup.openPopupAtScreen(e.screenX, e.screenY, true);
+          }
+        });
+
+        this.#dom.autohideTrigger = trigger;
+      }
+
       if (!this.#dom.grid) {
         this.#dom.grid = document.createElement("div");
         this.#dom.grid.id = "zen-apps-sidebar-grid";
@@ -738,6 +843,13 @@
 
         this.#dom.grid.appendChild(scrollBox);
         this.#dom.scrollBox = scrollBox;
+
+        this.#dom.grid.addEventListener("mouseenter", () => {
+          this.setAutohideHovered(true);
+        });
+        this.#dom.grid.addEventListener("mouseleave", () => {
+          this.scheduleAutohideCollapse();
+        });
 
         scrollBox.addEventListener("wheel", (e) => {
           if (!this.#dom.grid.classList.contains("zen-apps-horizontal")) return;
@@ -906,6 +1018,7 @@
         }, 300);
       });
 
+      this.updateAutohideState();
       this.updateCompactDrawerState();
     }
 
@@ -950,6 +1063,49 @@
      * Renders or updates the app tiles grid using DocumentFragment for maximum DOM performance.
      * Filters apps based on workspace isolation rules (All Spaces vs Current Space).
      */
+    /**
+     * Updates documentElement and trigger state based on autohide preference.
+     */
+    updateAutohideState() {
+      const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
+      document.documentElement.setAttribute("zentral-apps-autohide", isAutohide ? "true" : "false");
+      if (!isAutohide && this.#dom.grid) {
+        this.#dom.grid.removeAttribute("data-revealed");
+      }
+    }
+
+    /**
+     * Sets whether the autohide apps grid is currently revealed.
+     * @param {boolean} hovered - Whether cursor is over trigger or grid.
+     */
+    setAutohideHovered(hovered) {
+      if (this.#state.autohideCollapseTimer) {
+        clearTimeout(this.#state.autohideCollapseTimer);
+        this.#state.autohideCollapseTimer = null;
+      }
+      if (this.#dom.grid) {
+        if (hovered) {
+          this.#dom.grid.setAttribute("data-revealed", "true");
+        } else if (!this.#state.activeAppId) {
+          this.#dom.grid.removeAttribute("data-revealed");
+        }
+      }
+    }
+
+    /**
+     * Schedules delayed collapse after cursor leaves apps grid.
+     * @param {number} [delay=220] - Delay in milliseconds.
+     */
+    scheduleAutohideCollapse(delay = 220) {
+      if (this.#state.autohideCollapseTimer) clearTimeout(this.#state.autohideCollapseTimer);
+      this.#state.autohideCollapseTimer = setTimeout(() => {
+        this.#state.autohideCollapseTimer = null;
+        if (!this.#state.activeAppId) {
+          this.setAutohideHovered(false);
+        }
+      }, delay);
+    }
+
     renderGrid() {
       if (!this.#dom.grid) return;
       const oldAddBtn = this.#dom.grid.querySelector(".zen-app-add-btn");
@@ -975,6 +1131,7 @@
       let draggedAppId = null;
       const fragment = document.createDocumentFragment();
 
+      this.updateAutohideState();
       this.updateCompactDrawerState();
       this.renderCompactDrawer(activeApps);
 
@@ -1763,6 +1920,7 @@
           <menuitem id="zen-apps-sidebar-space-current-item" type="checkbox" label="Current Space"/>
           <menuitem id="zen-apps-sidebar-space-all-item" type="checkbox" label="All Spaces"/>
           <menuseparator id="zen-apps-sidebar-settings-sep"/>
+          <menuitem id="zen-apps-sidebar-autohide-item" type="checkbox" label="Autohide Apps Grid"/>
           <menuitem id="zen-apps-sidebar-settings-item" label="Zentral Settings"/>
         </menupopup>`);
         (document.getElementById("mainPopupSet") || document.body).appendChild(frag);
@@ -1775,8 +1933,9 @@
         const currentSpaceItem = document.createXULElement("menuitem"); currentSpaceItem.id = "zen-apps-sidebar-space-current-item"; currentSpaceItem.setAttribute("label", "Current Space"); currentSpaceItem.setAttribute("type", "checkbox");
         const allSpacesItem = document.createXULElement("menuitem"); allSpacesItem.id = "zen-apps-sidebar-space-all-item"; allSpacesItem.setAttribute("label", "All Spaces"); allSpacesItem.setAttribute("type", "checkbox");
         const settingsSep = document.createXULElement("menuseparator"); settingsSep.id = "zen-apps-sidebar-settings-sep";
+        const autohideItem = document.createXULElement("menuitem"); autohideItem.id = "zen-apps-sidebar-autohide-item"; autohideItem.setAttribute("label", "Autohide Apps Grid"); autohideItem.setAttribute("type", "checkbox");
         const settingsItem = document.createXULElement("menuitem"); settingsItem.id = "zen-apps-sidebar-settings-item"; settingsItem.setAttribute("label", "Zentral Settings");
-        popup.appendChild(removeMenuItem); popup.appendChild(preloadItem); popup.appendChild(spaceSep); popup.appendChild(currentSpaceItem); popup.appendChild(allSpacesItem); popup.appendChild(settingsSep); popup.appendChild(settingsItem);
+        popup.appendChild(removeMenuItem); popup.appendChild(preloadItem); popup.appendChild(spaceSep); popup.appendChild(currentSpaceItem); popup.appendChild(allSpacesItem); popup.appendChild(settingsSep); popup.appendChild(autohideItem); popup.appendChild(settingsItem);
         (document.getElementById("mainPopupSet") || document.body).appendChild(popup);
       }
       
@@ -1797,6 +1956,13 @@
         if (allSpacesBtn) allSpacesBtn.hidden = !hasApp;
         if (spaceSep) spaceSep.hidden = !hasApp;
         if (settingsSep) settingsSep.hidden = !hasApp;
+
+        const autohideBtn = popup.querySelector("#zen-apps-sidebar-autohide-item");
+        if (autohideBtn) {
+          const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
+          if (isAutohide) autohideBtn.setAttribute("checked", "true");
+          else autohideBtn.removeAttribute("checked");
+        }
 
         if (hasApp) {
           const app = this.#state.apps.find(a => a.id === popup.dataset.activeAppId);
@@ -1858,6 +2024,15 @@
             this.renderGrid();
           }
         }
+      });
+
+      popup.querySelector("#zen-apps-sidebar-autohide-item")?.addEventListener("command", (e) => {
+        const cur = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
+        const next = !cur;
+        Core.setPref(Constants.Apps.PREF_AUTOHIDE, next);
+        if (next) e.target.setAttribute("checked", "true");
+        else e.target.removeAttribute("checked");
+        this.updateAutohideState();
       });
 
       popup.querySelector("#zen-apps-sidebar-settings-item")?.addEventListener("command", () => {
@@ -1954,6 +2129,13 @@
           grid.classList.remove("zen-apps-horizontal");
           const sidebarContainer = gBrowser?.tabContainer?.parentNode;
           if (sidebarContainer) {
+            const trigger = this.#dom.autohideTrigger;
+            if (trigger) {
+              if (trigger.parentNode !== sidebarContainer || trigger.nextSibling !== grid) {
+                sidebarContainer.insertBefore(trigger, grid.parentNode === sidebarContainer ? grid : gBrowser.tabContainer);
+              }
+              trigger.style.order = "-2";
+            }
             if (grid.parentNode !== sidebarContainer || grid.nextSibling !== gBrowser.tabContainer) {
               sidebarContainer.insertBefore(grid, gBrowser.tabContainer);
             }
@@ -4972,6 +5154,9 @@
       if (get("zs-ag-compact-drawer")) {
         get("zs-ag-compact-drawer").checked = Core.getPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, false) === true;
       }
+      if (get("zs-ag-autohide")) {
+        get("zs-ag-autohide").checked = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
+      }
       get("zs-anim-type").value = Core.getPref(Constants.Apps.PREF_ANIMATION_TYPE, "slide") || "slide";
       get("zs-anim-speed").value = Core.getPref(Constants.Apps.PREF_ANIMATION_SPEED, 450) || 450;
       get("zs-max-apps").value = Core.getPref(Constants.Apps.PREF_MAX_APPS, 21) || 21;
@@ -5009,6 +5194,9 @@
       if (get("zs-ag-compact-drawer")) {
         Core.setPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, get("zs-ag-compact-drawer").checked);
       }
+      if (get("zs-ag-autohide")) {
+        Core.setPref(Constants.Apps.PREF_AUTOHIDE, get("zs-ag-autohide").checked);
+      }
       Core.setPref(Constants.Apps.PREF_ANIMATION_TYPE, get("zs-anim-type").value);
       Core.setPref(Constants.Apps.PREF_ANIMATION_SPEED, parseInt(get("zs-anim-speed").value) || 450);
       Core.setPref(Constants.Apps.PREF_MAX_APPS, parseInt(get("zs-max-apps").value) || 21);
@@ -5031,7 +5219,10 @@
       }
       
       this.close();
-      if (window.Zentral?.Apps) window.Zentral.Apps.renderGrid();
+      if (window.Zentral?.Apps) {
+        window.Zentral.Apps.updateAutohideState();
+        window.Zentral.Apps.renderGrid();
+      }
       if (window.Zentral?.TabGroups) {
         window.Zentral.TabGroups.applyChevronPref();
         window.Zentral.TabGroups.applyLabelOpacityPref();
