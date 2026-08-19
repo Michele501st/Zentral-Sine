@@ -3003,839 +3003,40 @@
      * Removes builtin native tab group context menus to prevent UI redundancy.
      * @param {Element|Document} [root=document] - Container scope to scan.
      */
+    /**
+     * Suppresses and removes native tab group editor dialog panels and popup menus.
+     * @param {Element|Document} [root=document] - Container scope to scan.
+     */
     removeBuiltinTabGroupMenu(root = document) {
-      try {
-        const list = root.querySelectorAll ? root.querySelectorAll("#tab-group-editor, tabgroup-meu") : [];
-        list.forEach(el => el.remove());
-      } catch (e) {
-        console.error("[ZentralTabGroups] Error removing built-in menu:", e);
-      }
-    }
-
-    /**
-     * Scans and processes all existing tab group DOM elements in the workspace.
-     */
-    processExistingGroups() {
-      const groups = document.querySelectorAll("tab-group:not([split-view-group])");
-      groups.forEach(group => this.processGroup(group));
-      this.loadTabGroupState();
-    }
-
-    /**
-     * Handles keyboard events when editing tab group titles (Enter to confirm, Escape to cancel).
-     * @param {KeyboardEvent} event - Keydown event object.
-     */
-    renameGroupKeydown(event) {
-      event.stopPropagation();
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        const label = this.#state.groupEdited;
-        const input = document.getElementById('tab-label-input');
-        if (!input || !label) return;
-
-        const newName = input.value.trim();
-        const group = label.closest('tab-group');
-
-        document.documentElement.removeAttribute('zen-renaming-group');
-        input.remove();
-        label.classList.remove('tab-group-label-editing');
-        label.style.display = '';
-
-        if (group && newName) {
-          group.label = newName;
-          try { group.setAttribute('label', newName); } catch (_) {}
-          label.textContent = newName;
-          const labelContainer = group.querySelector('.tab-group-label-container');
-          if (labelContainer) {
-            const initialsEl = labelContainer.querySelector('.zentral-group-initials');
-            if (initialsEl) initialsEl.textContent = this.getGroupInitials(newName);
-          }
-          this.scheduleStateSave();
-        }
-        this.#state.groupEdited = null;
-      } else if (event.key === 'Escape') {
-        event.preventDefault();
-        this.renameGroupHalt(event, true);
-      }
-    }
-
-    /**
-     * Replaces tab group text label with an inline text input to begin group renaming.
-     * @param {Element} group - Tab group DOM element.
-     * @param {boolean} [selectAll=true] - Whether to select full text in input.
-     */
-    renameGroupStart(group, selectAll = true) {
-      if (!group || this.#state.groupEdited) return;
-      const labelElement = group.querySelector('.tab-group-label');
-      if (!labelElement) return;
-
-      this.#state.groupEdited = labelElement;
-      this.#state.isStartingRename = true;
-      setTimeout(() => { this.#state.isStartingRename = false; }, 350);
-
-      document.documentElement.setAttribute('zen-renaming-group', 'true');
-      labelElement.classList.add('tab-group-label-editing');
-      labelElement.style.display = 'none';
-
-      const input = document.createElement('input');
-      input.id = 'tab-label-input';
-      input.className = 'tab-group-label-input';
-      input.type = 'text';
-      input.value = group.label || labelElement.textContent || '';
-      input.setAttribute('autocomplete', 'off');
-
-      labelElement.after(input);
-      setTimeout(() => {
-        try {
-          input.focus();
-          if (selectAll) input.select();
-          else {
-            const len = input.value.length;
-            input.setSelectionRange(len, len);
-          }
-        } catch (_) {}
-      }, 50);
-
-      input.addEventListener('keydown', (e) => this.renameGroupKeydown(e));
-      input.addEventListener('blur', (e) => this.renameGroupHalt(e));
-    }
-
-    /**
-     * Halts tab group title rename operation and restores original text label.
-     * @param {FocusEvent} event - Blur event on text input.
-     * @param {boolean} [force=false] - Force halt regardless of active state.
-     */
-    renameGroupHalt(event, force = false) {
-      if (this.#state.isStartingRename && !force) return;
-      if (!this.#state.groupEdited) return;
-
-      const input = document.getElementById('tab-label-input');
-      if (input && document.activeElement === input && !force) return;
-
-      document.documentElement.removeAttribute('zen-renaming-group');
-      if (input) input.remove();
-      if (this.#state.groupEdited) {
-        this.#state.groupEdited.classList.remove('tab-group-label-editing');
-        this.#state.groupEdited.style.display = '';
-        this.#state.groupEdited = null;
-      }
-    }
-
-    /**
-     * Enhances a tab group DOM node with custom icons, close buttons, tooltips, and context menus.
-     * @param {Element} group - Tab group DOM element.
-     */
-    processGroup(group) {
-      // Use a WeakSet instead of a DOM attribute to avoid persisting across restarts
-      // and to prevent guard bypasses when native code resets group attributes.
-      if (this.#processedGroups.has(group) || group.classList.contains("zen-folder") || group.hasAttribute("zen-folder") || group.hasAttribute("split-view-group")) {
-        return;
-      }
-      group.style.setProperty("border-radius", "6px", "important");
-
-      // Ensure full internal structure exists
-      let labelContainer = group.querySelector(".tab-group-label-container");
-      if (!labelContainer) {
-        labelContainer = document.createElement("div");
-        labelContainer.className = "tab-group-label-container";
-        const innerLabel = document.createElement("label");
-        innerLabel.className = "tab-group-label";
-        innerLabel.textContent = group.label || group.getAttribute("label") || "Group";
-        labelContainer.appendChild(innerLabel);
-        group.insertBefore(labelContainer, group.firstChild);
-      }
-
-      let groupTabContainer = group.querySelector(".tab-group-container");
-      if (!groupTabContainer) {
-        groupTabContainer = document.createElement("div");
-        groupTabContainer.className = "tab-group-container";
-        group.appendChild(groupTabContainer);
-      }
-
-      // Bind click collapse toggle to ensure all groups (top-level and nested) collapse/expand on click
-      if (!labelContainer._zentralToggleBound) {
-        labelContainer._zentralToggleBound = true;
-        labelContainer.addEventListener("click", (e) => {
-          if (e.target.closest(".tab-close-button") || e.target.closest("#tab-label-input") || e.target.closest(".ztg-drag-handle")) return;
-          e.preventDefault();
-          e.stopPropagation();
-
-          if (typeof group.toggleCollapse === "function") {
-            group.toggleCollapse();
-          } else {
-            const isColl = group.hasAttribute("collapsed") && group.getAttribute("collapsed") === "true";
-            if (isColl) {
-              group.removeAttribute("collapsed");
-              group.collapsed = false;
-            } else {
-              group.setAttribute("collapsed", "true");
-              group.collapsed = true;
-            }
-          }
-          this.scheduleStateSave();
-        });
-      }
-
-      if (group.shadowRoot && !group.shadowRoot.querySelector('.zentral-shadow-style')) {
-        const style = document.createElement('style');
-        style.className = 'zentral-shadow-style';
-        style.textContent = `
-          * { border-radius: 6px !important; outline: none !important; }
-          .group-marker, .group-marker *, .tab-group-icon > image, .tab-group-icon > img, .tab-group-icon > svg:not(.zentral-chevron) {
-            display: none !important; visibility: hidden !important; width: 0 !important; height: 0 !important; opacity: 0 !important; list-style-image: none !important; background: none !important;
-          }
-          .tab-group-icon, .tab-group-icon * { border: none !important; outline: none !important; box-shadow: none !important; background: transparent !important; }
-          .tab-group-icon::before { display: none !important; content: none !important; }
-          :host([collapsed]) .tab-group-icon,
-          :host([collapsed]) .tab-group-icon * { border: none !important; outline: none !important; box-shadow: none !important; background: transparent !important; }
-          :host([collapsed]) .tab-group-icon::before { display: none !important; content: none !important; }
-          :host([collapsed]) .tab-group-container::after,
-          :host([collapsed]) .tab-group-container::before { display: none !important; content: none !important; }
-        `;
-        group.shadowRoot.appendChild(style);
-      }
-      // Clear and hide any native children (like image.group-marker) inside .tab-group-icon
-      const iconEl = group.querySelector('.tab-group-icon');
-      if (iconEl) {
-        Array.from(iconEl.children).forEach(child => {
-          if (!child.classList.contains('zentral-chevron')) {
-            child.style.setProperty('display', 'none', 'important');
-            child.style.setProperty('visibility', 'hidden', 'important');
-            child.style.setProperty('width', '0', 'important');
-            child.style.setProperty('height', '0', 'important');
-            child.style.setProperty('min-width', '0', 'important');
-            child.style.setProperty('min-height', '0', 'important');
-            child.style.setProperty('opacity', '0', 'important');
-            child.style.setProperty('list-style-image', 'none', 'important');
-            child.style.setProperty('background', 'none', 'important');
-            child.setAttribute('hidden', 'true');
-          }
-        });
-        iconEl.style.setProperty('border', 'none', 'important');
-        iconEl.style.setProperty('outline', 'none', 'important');
-        iconEl.style.setProperty('box-shadow', 'none', 'important');
-        iconEl.style.setProperty('background', 'transparent', 'important');
-        iconEl.style.setProperty('background-image', 'none', 'important');
-      }
-      if (labelContainer) {
-        // Track hover state so we don't collapse during a hover
-        let _isHovered = false;
-
-        /**
-         * Enforces our inline layout styles on the labelContainer.
-         * Called initially and re-called by the style MutationObserver
-         * whenever Zen's own JS rewrites the element's style attribute.
-         */
-        const enforceRestingStyles = () => {
-          labelContainer.style.setProperty("border-radius", "14px", "important");
-          labelContainer.style.setProperty("aspect-ratio", "auto", "important");
-          labelContainer.style.setProperty("align-self", "stretch", "important");
-          labelContainer.style.setProperty("width", "100%", "important");
-          labelContainer.style.setProperty("min-width", "100%", "important");
-          labelContainer.style.setProperty("max-width", "100%", "important");
-          labelContainer.style.setProperty("height", "28px", "important");
-          labelContainer.style.setProperty("min-height", "28px", "important");
-          labelContainer.style.setProperty("box-sizing", "border-box", "important");
-          labelContainer.style.setProperty("display", "flex", "important");
-          labelContainer.style.setProperty("flex-direction", "row", "important");
-          labelContainer.style.setProperty("align-items", "center", "important");
-          labelContainer.style.setProperty("justify-content", "center", "important");
-          labelContainer.style.setProperty("padding", "0 10px", "important");
-          // Sync chevron icon visibility with the pref to prevent CSS vs inline-style conflict (H-05)
-          const iconEl = labelContainer.querySelector(".tab-group-icon");
-          if (iconEl) {
-            const showChevron = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON) !== false;
-            iconEl.style.setProperty("display", showChevron ? "inline-flex" : "none", "important");
-          }
-        };
-
-        // Apply immediately
-        enforceRestingStyles();
-
-        const innerLabel = labelContainer.querySelector(".tab-group-label");
-        if (innerLabel) {
-          innerLabel.style.setProperty("border-radius", "12px", "important");
-          innerLabel.style.setProperty("width", "auto", "important");
-          innerLabel.style.setProperty("flex", "0 1 auto", "important");
-          innerLabel.style.setProperty("overflow", "hidden", "important");
-          innerLabel.style.setProperty("text-overflow", "ellipsis", "important");
-        }
-
-        // Guard against MutationObserver re-entrancy
-        let _styleGuard = false;
-        const styleWatcher = new MutationObserver(() => {
-          if (_styleGuard || _isHovered) return;
-          _styleGuard = true;
-          enforceRestingStyles();
-          _styleGuard = false;
-        });
-        styleWatcher.observe(labelContainer, { attributes: true, attributeFilter: ["style"] });
-        // Track for cleanup when this group is removed from the DOM (M-02)
-        this.#groupObservers.set(group, styleWatcher);
-
-        // Labels are always full-width ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no hover expand/collapse needed.
-        
-        let hoverTimer = null;
-        labelContainer.addEventListener("mouseenter", () => {
-          if (!Core.getPref(Constants.TabGroups.PREF_THUMBNAILS)) return;
-          labelContainer.setAttribute("zentral-hover", "true");
-          hoverTimer = setTimeout(() => {
-            const panel = document.getElementById("zentral-tabgroup-tooltip");
-            const container = document.getElementById("zentral-tabgroup-tooltip-container");
-            if (panel && container && group) {
-              let tabs = group.tabs ? Array.from(group.tabs) : [];
-              container.replaceChildren();
-              if (tabs.length === 0) {
-                const div = document.createElement("div");
-                div.textContent = "No tabs";
-                div.style.color = "var(--text-color, inherit)";
-                container.appendChild(div);
-              } else {
-                tabs.forEach(tab => {
-                  const row = document.createElement("div");
-                  row.className = "zentral-tooltip-row";
-                  
-                  row.addEventListener("click", (e) => {
-                    e.preventDefault();
-                    if (gBrowser && tab) gBrowser.selectedTab = tab;
-                    if (panel.hidePopup) panel.hidePopup();
-                  });
-                  
-                  const icon = document.createElement("img");
-                  const imgSrc = tab.getAttribute("image") || tab.image || "chrome://global/skin/icons/defaultFavicon.svg";
-                  icon.src = imgSrc;
-                  icon.style.width = "16px";
-                  icon.style.height = "16px";
-                  icon.style.borderRadius = "3px";
-                  icon.style.flexShrink = "0";
-                  
-                  let cleanTitle = tab.label || "New Tab";
-                  let prev;
-                  do {
-                    prev = cleanTitle;
-                    cleanTitle = cleanTitle.replace(/^\s*[\(\[]\d+[\)\]]\s*/g, "");
-                    cleanTitle = cleanTitle.replace(/^[\p{Extended_Pictographic}\s\u200d\u2600-\u27BF]+/gu, "");
-                  } while (cleanTitle !== prev);
-                  cleanTitle = cleanTitle.trim() || (tab.label || "New Tab");
-
-                  let domain = "";
-                  try {
-                    const uri = tab.linkedBrowser?.currentURI;
-                    if (uri && uri.host) {
-                      domain = uri.host.replace(/^www\./, "");
-                    }
-                  } catch (_) {}
-
-                  const textCol = document.createElement("div");
-                  textCol.className = "zentral-tooltip-text-col";
-
-                  const titleEl = document.createElement("div");
-                  titleEl.className = "zentral-tooltip-title";
-                  titleEl.textContent = cleanTitle;
-                  textCol.appendChild(titleEl);
-
-                  if (domain) {
-                    const domainEl = document.createElement("div");
-                    domainEl.className = "zentral-tooltip-domain";
-                    domainEl.textContent = domain;
-                    textCol.appendChild(domainEl);
-                  }
-                  
-                  row.appendChild(icon);
-                  row.appendChild(textCol);
-                  container.appendChild(row);
-                });
-              }
-              if (panel.openPopup) panel.openPopup(labelContainer, "end_before", -4, 0, false, false);
-            }
-          }, 350);
-        });
-        labelContainer.addEventListener("mouseleave", () => {
-          labelContainer.removeAttribute("zentral-hover");
-          if (hoverTimer) clearTimeout(hoverTimer);
-          this.safeHideTooltip(350);
-        });
-        labelContainer.addEventListener("mousedown", () => {
-          if (hoverTimer) clearTimeout(hoverTimer);
-          const panel = document.getElementById("zentral-tabgroup-tooltip");
-          if (panel && panel.hidePopup) panel.hidePopup();
-        });
-        labelContainer.addEventListener("dblclick", (e) => {
-          if (e.target.closest(".tab-close-button") || e.target.closest(".tab-group-icon")) return;
-          e.preventDefault();
-          e.stopPropagation();
-          this.renameGroupStart(group, true);
-        });
-
-        const labelValue = group.label || (innerLabel ? innerLabel.textContent : '');
-        let initialsEl = labelContainer.querySelector(".zentral-group-initials");
-        if (!initialsEl) {
-          initialsEl = document.createElement("label");
-          initialsEl.className = "zentral-group-initials";
-          labelContainer.appendChild(initialsEl);
-        }
-        initialsEl.textContent = this.getGroupInitials(labelValue);
-      }
-      if (!labelContainer || labelContainer.querySelector(".tab-close-button")) return;
-      // Safe DOM injection
-      if (window.MozXULElement?.parseXULToFragment) {
-        const frag = window.MozXULElement.parseXULToFragment(`
-          <div class="tab-group-icon-container"><div class="tab-group-icon"><image class="group-marker" role="button" keyNav="false" tooltiptext="Toggle Group"/></div></div>
-          <image class="tab-close-button close-icon" role="button" keyNav="false" tooltiptext="Close Group"/>
-        `);
-        const iconContainer = frag.children[0];
-        const closeButton = frag.children[1];
-
-        labelContainer.insertBefore(iconContainer, labelContainer.firstChild);
-        labelContainer.appendChild(closeButton);
-
-        closeButton.addEventListener("click", (event) => {
-          event.stopPropagation();
-          event.preventDefault();
-          try {
-            this.removeSavedColor(group.id);
-            gBrowser.removeTabGroup(group);
-          } catch (error) { console.error("[ZentralTabGroups] Error removing tab group:", error); }
-        });
-      }
-
-      // Wrap title elements in .zentral-tab-title-wrapper for physical Folder Tab contour
-      if (!labelContainer.querySelector(".zentral-tab-title-wrapper")) {
-        const wrapper = document.createElement("div");
-        wrapper.className = "zentral-tab-title-wrapper";
-        const iconContainer = labelContainer.querySelector(".tab-group-icon-container");
-        const innerLabel = labelContainer.querySelector(".tab-group-label");
-        const initialsEl = labelContainer.querySelector(".zentral-group-initials");
-        const closeBtn = labelContainer.querySelector(".tab-close-button");
-
-        if (iconContainer) wrapper.appendChild(iconContainer);
-        if (innerLabel) wrapper.appendChild(innerLabel);
-        if (initialsEl) wrapper.appendChild(initialsEl);
-
-        labelContainer.insertBefore(wrapper, closeBtn || labelContainer.firstChild);
-      }
-
-      group.classList.remove('tab-group-editor-mode-create');
-      this.#processedGroups.add(group);
-      group.setAttribute("data-close-button-added", "true"); // Kept for external compatibility
-
-      this.addContextMenu(group);
-
-      if (typeof group._useFaviconColor === 'function') {
-        group._useFaviconColor();
-      }
-
-      if (!group.label || group.label === '' || ("defaultGroupName" in group && group.label === group.defaultGroupName)) {
-        this.renameGroupStart(group, false);
-      }
-    }
-
-    /**
-     * Constructs or returns the shared context menu popup for tab groups.
-     * @returns {Element} XUL menupopup element.
-     */
-    ensureSharedContextMenu() {
-      if (this.#state.sharedContextMenu) return this.#state.sharedContextMenu;
-
-      if (window.MozXULElement?.parseXULToFragment) {
-        const frag = window.MozXULElement.parseXULToFragment(`
-          <menupopup id="advanced-tab-groups-context-menu">
-            <menu class="change-group-color" label="Change Group Color"><menupopup><menuitem class="set-group-color" label="Set Group Color"/><menuitem class="use-favicon-color" label="Average Group's Color"/></menupopup></menu>
-            <menuitem class="rename-group" label="Rename Group"/>
-            <menuseparator/>
-            <menuitem class="ungroup-tabs" label="Ungroup Tabs"/>
-          </menupopup>
-        `);
-        const contextMenu = frag.firstElementChild;
-        document.body.appendChild(contextMenu);
-
-        contextMenu.querySelector(".set-group-color")?.addEventListener("command", (e) => {
-          if (this.#state.contextMenuCurrentGroup) {
-             const picker = this.ensureColorPickerPanel();
-             if (picker) {
-                picker.openPopupAtScreen(this.#state.lastContextMenuX || 0, this.#state.lastContextMenuY || 0, false);
-                picker._currentGroup = this.#state.contextMenuCurrentGroup;
-                const currentColor = picker._currentGroup.style.getPropertyValue("--tab-group-color").trim() || "#2b2b2b";
-                const hex = currentColor.startsWith("#") && currentColor.length >= 7 ? currentColor.substring(0,7) : "#2b2b2b";
-                picker.querySelector("#ztg-input-hex").value = hex;
-                const bigint = parseInt(hex.slice(1), 16);
-                const rgbInput = picker.querySelector("#ztg-input-rgb");
-                if (rgbInput) rgbInput.value = `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
-                const nativeColorInput = picker.querySelector("#ztg-native-color");
-                if (nativeColorInput) nativeColorInput.value = hex;
-             }
-          }
-        });
-        contextMenu.querySelector(".use-favicon-color")?.addEventListener("command", () => {
-          if (this.#state.contextMenuCurrentGroup?._useFaviconColor) this.#state.contextMenuCurrentGroup._useFaviconColor();
-        });
-        contextMenu.querySelector(".rename-group")?.addEventListener("command", () => {
-          if (this.#state.contextMenuCurrentGroup) this.renameGroupStart(this.#state.contextMenuCurrentGroup);
-        });
-        contextMenu.querySelector(".ungroup-tabs")?.addEventListener("command", () => {
-          if (this.#state.contextMenuCurrentGroup?.ungroupTabs) this.#state.contextMenuCurrentGroup.ungroupTabs();
-        });
-
-        contextMenu.addEventListener("popuphidden", () => { 
-           // do not nullify current group here so the color picker can still reference it if needed
-        });
-        this.#state.sharedContextMenu = contextMenu;
-        return contextMenu;
-      }
-      return null;
-    }
-
-    /* --------------------------------------------------------------------------
-     * 4.4 Color Picker & Theme Processing
-     * --------------------------------------------------------------------------
-     */
-
-    /**
-     * Constructs and initializes the interactive popup color picker panel with spectrum wheel and eyedropper.
-     * @returns {Element} XUL panel element for color selection.
-     */
-    ensureColorPickerPanel() {
-      if (this.#state.colorPickerPanel) return this.#state.colorPickerPanel;
-      if (!window.MozXULElement?.parseXULToFragment) return null;
-
-      const palette = [
-        "#ff4b4b", "#ff8f3d", "#f2c94c", "#2196f3", "#9b51e0",
-        "#eb5757", "#f2994a", "#6fcf97", "#2d9cdb", "#bb6bd9",
-        "#e53935", "#fb8c00", "#43a047", "#1e88e5", "#8e24aa",
-        "#d32f2f", "#f57c00", "#388e3c", "#1976d2", "#7b1fa2",
-        "#c62828", "#ef6c00", "#2e7d32", "#1565c0", "#6a1b9a"
-      ];
-
-      const htmlPalette = palette.map(c => `<div class="zentral-color-swatch" data-color="${c}" style="background-color: ${c};"></div>`).join("");
-
-      const frag = window.MozXULElement.parseXULToFragment(`
-        <panel id="zentral-group-color-picker" type="arrow" rolluponmousewheel="true" noautofocus="true" consumeoutsideclicks="false">
-          <vbox class="ztg-cp-box">
-            <html:div id="ztg-drag-handle" class="ztg-drag-handle" title="Drag to move">
-              <html:div class="ztg-drag-pill"></html:div>
-            </html:div>
-            <html:div id="ztg-palette-container" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 156px; height: 144px;">
-              ${htmlPalette}
-            </html:div>
-            <html:div id="ztg-wheel-container" style="display: none; flex-direction: column; gap: 6px; align-items: center; width: 156px; height: 144px;">
-              <html:canvas id="ztg-satval-canvas" width="156" height="124" style="border-radius: 8px; cursor: crosshair; border: 1px solid color-mix(in srgb, currentColor 12%, transparent);"></html:canvas>
-              <html:canvas id="ztg-hue-canvas" width="156" height="14" style="border-radius: 8px; cursor: pointer; border: 1px solid color-mix(in srgb, currentColor 12%, transparent);"></html:canvas>
-            </html:div>
-            <hbox style="align-items: center; justify-content: space-between; gap: 4px; width: 156px;">
-              <html:button id="ztg-btn-auto" class="ztg-btn" title="Average Group's Color">Auto</html:button>
-              <html:button id="ztg-btn-wheel" class="ztg-btn">Wheel</html:button>
-              <html:button id="ztg-btn-pick" class="ztg-btn">Pick</html:button>
-            </hbox>
-            <hbox style="align-items: center; justify-content: space-between; gap: 6px; width: 156px;">
-              <html:input id="ztg-input-hex" type="text" placeholder="#HEX" class="ztg-input" style="width: 70px;"/>
-              <html:input id="ztg-input-rgb" type="text" placeholder="R, G, B" class="ztg-input" style="width: 80px;"/>
-            </hbox>
-          </vbox>
-        </panel>
-      `);
-
-      const panel = frag.firstElementChild;
-      document.body.appendChild(panel);
-
-      // High-Performance RAF Panel Dragging Logic (0 Lag)
-      const dragHandle = panel.querySelector("#ztg-drag-handle");
-      let isDraggingPanel = false;
-      let startPanelX = 0;
-      let startPanelY = 0;
-      let startMouseX = 0;
-      let startMouseY = 0;
-      let targetX = 0;
-      let targetY = 0;
-      let dragRafId = null;
-
-      const updateDragPosition = () => {
-        if (!isDraggingPanel) return;
-        if (typeof panel.moveTo === "function") {
-          panel.moveTo(targetX, targetY);
-        } else {
-          panel.style.left = targetX + "px";
-          panel.style.top = targetY + "px";
-        }
-        dragRafId = null;
-      };
-
-      if (dragHandle) {
-        dragHandle.addEventListener("mousedown", (e) => {
-          if (e.button !== 0) return;
-          isDraggingPanel = true;
-          startMouseX = e.screenX;
-          startMouseY = e.screenY;
-
-          const rect = panel.getBoundingClientRect();
-          startPanelX = panel.screenX !== undefined ? panel.screenX : window.screenX + rect.left;
-          startPanelY = panel.screenY !== undefined ? panel.screenY : window.screenY + rect.top;
-          targetX = startPanelX;
-          targetY = startPanelY;
-
-          e.preventDefault();
-          e.stopPropagation();
-        });
-
-        window.addEventListener("mousemove", (e) => {
-          if (!isDraggingPanel) return;
-          const dx = e.screenX - startMouseX;
-          const dy = e.screenY - startMouseY;
-          targetX = startPanelX + dx;
-          targetY = startPanelY + dy;
-
-          if (!dragRafId) {
-            dragRafId = requestAnimationFrame(updateDragPosition);
-          }
-        });
-
-        window.addEventListener("mouseup", () => {
-          isDraggingPanel = false;
-          if (dragRafId) {
-            cancelAnimationFrame(dragRafId);
-            dragRafId = null;
-          }
-        });
-      }
-
-      const applyColor = (hex) => {
-        if (!panel._currentGroup) return;
-        panel._currentGroup.style.setProperty("--tab-group-color", hex);
-        panel._currentGroup.style.setProperty("--tab-group-color-invert", hex);
-        panel._currentGroup.style.setProperty("--zentral-custom-color", hex);
-        panel._currentGroup.style.setProperty("--zentral-tabgroup-contrast-color", this.getContrastColor(hex));
-        panel._currentGroup.style.setProperty("--atg-contrast-color", this.getContrastColor(hex));
-        panel.querySelector("#ztg-input-hex").value = hex;
-        const bigint = parseInt(hex.slice(1), 16);
-        panel.querySelector("#ztg-input-rgb").value = `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
-        this.saveTabGroupColors();
-      };
-
-      panel.querySelector("#ztg-palette-container").addEventListener("click", (e) => {
-        if (e.target.classList.contains("zentral-color-swatch")) {
-          applyColor(e.target.dataset.color);
-        }
-      });
-
-      // Canvas Color Spectrum initialization
-      const satValCanvas = panel.querySelector("#ztg-satval-canvas");
-      const hueCanvas = panel.querySelector("#ztg-hue-canvas");
-      let currentHue = 0;
-
-      const drawHueCanvas = () => {
-        const ctx = hueCanvas.getContext("2d");
-        const grad = ctx.createLinearGradient(0, 0, hueCanvas.width, 0);
-        grad.addColorStop(0, "#ff0000");
-        grad.addColorStop(0.17, "#ffff00");
-        grad.addColorStop(0.33, "#00ff00");
-        grad.addColorStop(0.50, "#00ffff");
-        grad.addColorStop(0.67, "#0000ff");
-        grad.addColorStop(0.83, "#ff00ff");
-        grad.addColorStop(1, "#ff0000");
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, hueCanvas.width, hueCanvas.height);
-      };
-
-      const drawSatValCanvas = (hue) => {
-        const ctx = satValCanvas.getContext("2d");
-        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-        ctx.fillRect(0, 0, satValCanvas.width, satValCanvas.height);
-
-        const whiteGrad = ctx.createLinearGradient(0, 0, satValCanvas.width, 0);
-        whiteGrad.addColorStop(0, "#ffffff");
-        whiteGrad.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.fillStyle = whiteGrad;
-        ctx.fillRect(0, 0, satValCanvas.width, satValCanvas.height);
-
-        const blackGrad = ctx.createLinearGradient(0, 0, 0, satValCanvas.height);
-        blackGrad.addColorStop(0, "rgba(0,0,0,0)");
-        blackGrad.addColorStop(1, "#000000");
-        ctx.fillStyle = blackGrad;
-        ctx.fillRect(0, 0, satValCanvas.width, satValCanvas.height);
-      };
-
-      let isDraggingSatVal = false;
-      let isDraggingHue = false;
-
-      const pickSatValColor = (e) => {
-        const rect = satValCanvas.getBoundingClientRect();
-        const x = Math.max(0, Math.min(e.clientX - rect.left, satValCanvas.width - 1));
-        const y = Math.max(0, Math.min(e.clientY - rect.top, satValCanvas.height - 1));
-        const ctx = satValCanvas.getContext("2d");
-        const p = ctx.getImageData(x, y, 1, 1).data;
-        const hex = "#" + ((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1);
-        applyColor(hex);
-      };
-
-      const pickHueColor = (e) => {
-        const rect = hueCanvas.getBoundingClientRect();
-        const x = Math.max(0, Math.min(e.clientX - rect.left, hueCanvas.width - 1));
-        currentHue = Math.round((x / hueCanvas.width) * 360);
-        drawSatValCanvas(currentHue);
-        pickSatValColor({ clientX: rect.left + satValCanvas.width / 2, clientY: rect.top + satValCanvas.height / 2 });
-      };
-
-      satValCanvas.addEventListener("mousedown", (e) => { isDraggingSatVal = true; pickSatValColor(e); });
-      hueCanvas.addEventListener("mousedown", (e) => { isDraggingHue = true; pickHueColor(e); });
-
-      // Convert to named functions so they can be removed on window unload (C-03).
-      // Anonymous arrow functions added to window can never be removed, causing a
-      // permanent mousemove listener that runs for the entire browser session.
-      const onSatHueMouseMove = (e) => {
-        if (isDraggingSatVal) pickSatValColor(e);
-        if (isDraggingHue) pickHueColor(e);
-      };
-      const onSatHueMouseUp = () => {
-        isDraggingSatVal = false;
-        isDraggingHue = false;
-      };
-      window.addEventListener("mousemove", onSatHueMouseMove);
-      window.addEventListener("mouseup", onSatHueMouseUp);
-      window.addEventListener("unload", () => {
-        window.removeEventListener("mousemove", onSatHueMouseMove);
-        window.removeEventListener("mouseup", onSatHueMouseUp);
-      }, { once: true });
-
-      panel.querySelector("#ztg-btn-auto").addEventListener("click", () => {
-        if (panel._currentGroup && typeof panel._currentGroup._useFaviconColor === "function") {
-          panel._currentGroup._useFaviconColor();
-          const currentColor = panel._currentGroup.style.getPropertyValue("--tab-group-color").trim();
-          if (currentColor) {
-            const hex = currentColor.startsWith("#") && currentColor.length >= 7 ? currentColor.substring(0, 7) : currentColor;
-            panel.querySelector("#ztg-input-hex").value = hex;
-            if (hex.startsWith("#") && hex.length === 7) {
-              const bigint = parseInt(hex.slice(1), 16);
-              const rgbInput = panel.querySelector("#ztg-input-rgb");
-              if (rgbInput) rgbInput.value = `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
-            }
-          }
-        }
-      });
-
-      panel.querySelector("#ztg-btn-wheel").addEventListener("click", () => {
-        const paletteContainer = panel.querySelector("#ztg-palette-container");
-        const wheelContainer = panel.querySelector("#ztg-wheel-container");
-        const btn = panel.querySelector("#ztg-btn-wheel");
-
-        if (wheelContainer.style.display === "none") {
-          wheelContainer.style.display = "flex";
-          paletteContainer.style.display = "none";
-          btn.textContent = "Palette";
-          drawHueCanvas();
-          drawSatValCanvas(currentHue);
-        } else {
-          wheelContainer.style.display = "none";
-          paletteContainer.style.display = "grid";
-          btn.textContent = "Wheel";
-        }
-      });
-
-      panel.querySelector("#ztg-btn-pick").addEventListener("click", () => {
-        panel.hidePopup();
-        try {
-          const canvas = document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
-          canvas.width = window.innerWidth;
-          canvas.height = window.innerHeight;
-          canvas.style.position = "fixed";
-          canvas.style.top = "0";
-          canvas.style.left = "0";
-          canvas.style.zIndex = "2147483647";
-          canvas.style.cursor = "crosshair";
-
-          const ctx = canvas.getContext("2d");
-          ctx.drawWindow(window, 0, 0, window.innerWidth, window.innerHeight, "rgb(255,255,255)");
-
-          const loupe = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
-          loupe.style.position = "fixed";
-          loupe.style.width = "40px";
-          loupe.style.height = "40px";
-          loupe.style.borderRadius = "50%";
-          loupe.style.border = "2px solid #ffffff";
-          loupe.style.boxShadow = "0 2px 10px rgba(0,0,0,0.5)";
-          loupe.style.pointerEvents = "none";
-          loupe.style.zIndex = "2147483647";
-          loupe.style.display = "none";
-
-          document.documentElement.appendChild(canvas);
-          document.documentElement.appendChild(loupe);
-
-          const cleanup = () => {
-            if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
-            if (loupe.parentNode) loupe.parentNode.removeChild(loupe);
-            window.removeEventListener("keydown", onKeyDown);
-          };
-
-          const onKeyDown = (e) => {
-            if (e.key === "Escape") cleanup();
-          };
-          window.addEventListener("keydown", onKeyDown);
-
-          canvas.addEventListener("mousemove", (e) => {
-            loupe.style.display = "block";
-            loupe.style.left = `${e.clientX + 15}px`;
-            loupe.style.top = `${e.clientY + 15}px`;
-            const p = ctx.getImageData(e.clientX, e.clientY, 1, 1).data;
-            const hex = "#" + ((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1);
-            loupe.style.backgroundColor = hex;
-          });
-
-          canvas.addEventListener("click", (e) => {
-            const p = ctx.getImageData(e.clientX, e.clientY, 1, 1).data;
-            const hex = "#" + ((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1);
-            applyColor(hex);
-            cleanup();
-          });
-        } catch (err) {
-          console.error("Eyedropper drawWindow failed:", err);
-        }
-      });
-
-      panel.querySelector("#ztg-input-hex").addEventListener("input", (e) => {
-        const val = e.target.value;
-        if (/^#[0-9A-Fa-f]{6}$/.test(val)) applyColor(val);
-      });
-      panel.querySelector("#ztg-input-rgb").addEventListener("change", (e) => {
-        const parts = e.target.value.split(',').map(s => parseInt(s.trim()));
-        if (parts.length === 3 && parts.every(n => !isNaN(n) && n >= 0 && n <= 255)) {
-           applyColor("#" + parts.map(n => n.toString(16).padStart(2, '0')).join(''));
-        }
-      });
-
-      this.#state.colorPickerPanel = panel;
-      return panel;
-    }
-
-    /**
-     * Attaches custom context menu actions to native Zen folder menus.
-     */
-    addFolderContextMenuItems() {
-      setTimeout(() => {
-        const folderMenu = document.getElementById("zenFolderActions");
-        if (!folderMenu || folderMenu.querySelector("#atg-convert-folder-to-group")) return;
-        
-        if (window.MozXULElement?.parseXULToFragment) {
-          const frag = window.MozXULElement.parseXULToFragment(`<menuseparator id="atg-folder-separator"/><menuitem id="atg-convert-folder-to-group" label="Convert Folder to Group"/>`);
-          const convertToSpaceItem = folderMenu.querySelector("#context_zenFolderToSpace");
-          if (convertToSpaceItem) { convertToSpaceItem.after(frag); } else { folderMenu.appendChild(frag); }
-          
-          folderMenu.addEventListener('command', (event) => {
-            if (event.target.id === 'atg-convert-folder-to-group') {
-              const triggerNode = folderMenu.triggerNode;
-              const folder = triggerNode?.closest('zen-folder');
-              if (folder) this.convertFolderToGroup(folder);
-            }
-          });
-        }
-      }, 1500);
-    }
-
-    /**
-     * Removes or cleans up native tab group context menus if present.
-     */
-    removeBuiltinTabGroupMenu() {
       try {
         const builtinMenu = document.getElementById("tabGroupContextMenu");
         if (builtinMenu) builtinMenu.remove();
-      } catch (_) {}
+
+        const list = root.querySelectorAll ? root.querySelectorAll("#tab-group-editor, panel#tab-group-editor, tabgroup-meu, #tabgroup-editor-panel") : [];
+        list.forEach(el => {
+          try {
+            if (typeof el.hidePopup === "function") el.hidePopup();
+            el.style.setProperty("display", "none", "important");
+            el.style.setProperty("visibility", "hidden", "important");
+            el.style.setProperty("pointer-events", "none", "important");
+            if (!el._zentralSuppressed) {
+              el._zentralSuppressed = true;
+              el.addEventListener("popupshowing", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                try { el.hidePopup(); } catch (_) {}
+              }, true);
+              el.addEventListener("popupshown", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                try { el.hidePopup(); } catch (_) {}
+              }, true);
+            }
+          } catch (_) {}
+        });
+      } catch (e) {
+        console.error("[ZentralTabGroups] Error removing built-in menu:", e);
+      }
     }
 
     /**
@@ -3844,45 +3045,99 @@
      */
     enhanceTabContextMenu() {
       const tabContextMenu = document.getElementById("tabContextMenu");
-      if (!tabContextMenu || tabContextMenu._zentralEnhanced) return;
-      tabContextMenu._zentralEnhanced = true;
+      if (!tabContextMenu) return;
 
       const populateSubMenu = (menuPopup) => {
         if (!menuPopup) return;
+
+        // 1. Remove native "Closed Groups" submenu / items
+        const closedGroupsItems = menuPopup.querySelectorAll(
+          "#context_closedTabGroups, #context_closedTabGroupsSeparator, #context_reopenClosedTabGroup, [id*='closedTabGroup'], [id*='ClosedTabGroup'], [label*='Closed Group'], [label*='Gruppi chiusi']"
+        );
+        closedGroupsItems.forEach(el => el.remove());
+
+        // 2. Remove previously injected Zentral group items
+        menuPopup.querySelectorAll(".zentral-group-menuitem, [zentral-group-id]").forEach(el => el.remove());
+
+        // 3. Locate New Group item to place separator after it
+        const newGroupItem = menuPopup.querySelector("#context_tabToNewGroup, [id*='NewGroup'], [id*='newGroup'], menuitem:first-child");
+        let groupSeparator = menuPopup.querySelector("#context_tabToGroupSeparator, .zentral-group-sep");
+        if (!groupSeparator && newGroupItem) {
+          groupSeparator = document.createXULElement ? document.createXULElement("menuseparator") : document.createElement("menuseparator");
+          groupSeparator.className = "zentral-group-sep";
+          newGroupItem.after(groupSeparator);
+        }
+
         const groups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
+        if (groups.length === 0) {
+          if (groupSeparator) groupSeparator.style.display = "none";
+          return;
+        }
+        if (groupSeparator) groupSeparator.style.display = "";
+
         groups.forEach(group => {
           const label = group.label || group.getAttribute("label");
           if (!group.id || !label) return;
-          if (menuPopup.querySelector(`[zentral-group-id="${group.id}"]`)) return;
 
-          const item = document.createXULElement("menuitem");
+          const item = document.createXULElement ? document.createXULElement("menuitem") : document.createElement("menuitem");
           item.setAttribute("zentral-group-id", group.id);
           item.setAttribute("label", label);
           item.setAttribute("class", "menuitem-iconic zentral-group-menuitem");
           const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color");
           if (color) {
             item.style.setProperty("--menu-icon-color", color);
+            item.style.setProperty("color", color);
           }
+
           item.addEventListener("command", (evt) => {
             evt.stopPropagation();
-            const selectedTabs = gBrowser.selectedTabs || (gBrowser.selectedTab ? [gBrowser.selectedTab] : []);
+            const contextTab = (typeof TabContextMenu !== "undefined" && TabContextMenu.contextTab) ? TabContextMenu.contextTab : gBrowser.selectedTab;
+            const selectedTabs = (gBrowser.selectedTabs && gBrowser.selectedTabs.includes(contextTab)) ? gBrowser.selectedTabs : (contextTab ? [contextTab] : []);
+
             if (selectedTabs.length > 0) {
               if (typeof gBrowser.addTabToGroup === "function") {
                 selectedTabs.forEach(t => gBrowser.addTabToGroup(t, group));
               } else if (typeof group.addTabs === "function") {
                 group.addTabs(selectedTabs);
+              } else {
+                const targetContainer = group.querySelector(".tab-group-container") || group;
+                selectedTabs.forEach(t => {
+                  targetContainer.appendChild(t);
+                  t.group = group;
+                });
               }
+              this.scheduleStateSave();
             }
           });
           menuPopup.appendChild(item);
         });
       };
 
-      tabContextMenu.addEventListener("popupshowing", (e) => {
+      // Bind to main tab context menu
+      tabContextMenu.addEventListener("popupshowing", () => {
         try {
-          const subPopups = document.querySelectorAll("#context_tabToGroupPopup, #context_moveTabToGroupPopup, #context_zenTabToGroupPopup, .context-tab-to-group menupopup");
-          subPopups.forEach(popup => populateSubMenu(popup));
+          const subPopups = document.querySelectorAll(
+            "#context_tabToGroupPopup, #context_moveTabToGroupPopup, #context_zenTabToGroupPopup, #context_tabToGroup menupopup, #context_moveTabToGroup menupopup, .context-tab-to-group menupopup"
+          );
+          subPopups.forEach(popup => {
+            populateSubMenu(popup);
+            if (!popup._zentralPopshowingBound) {
+              popup._zentralPopshowingBound = true;
+              popup.addEventListener("popupshowing", () => populateSubMenu(popup));
+            }
+          });
         } catch (_) {}
+      });
+
+      // Also directly bind all existing subPopups in DOM
+      const subPopups = document.querySelectorAll(
+        "#context_tabToGroupPopup, #context_moveTabToGroupPopup, #context_zenTabToGroupPopup, #context_tabToGroup menupopup, #context_moveTabToGroup menupopup, .context-tab-to-group menupopup"
+      );
+      subPopups.forEach(popup => {
+        if (!popup._zentralPopshowingBound) {
+          popup._zentralPopshowingBound = true;
+          popup.addEventListener("popupshowing", () => populateSubMenu(popup));
+        }
       });
     }
 
@@ -3897,6 +3152,11 @@
         if (!group || group.hasAttribute("split-view-group")) return;
 
         this.removeBuiltinTabGroupMenu();
+        const editor = document.getElementById("tab-group-editor");
+        if (editor && typeof editor.hidePopup === "function") {
+          try { editor.hidePopup(); } catch (_) {}
+        }
+
         if (!group.hasAttribute("data-close-button-added")) this.processGroup(group);
 
         if (!group.label || group.label === '' || ("defaultGroupName" in group && group.label === group.defaultGroupName)) {
