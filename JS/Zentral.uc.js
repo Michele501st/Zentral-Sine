@@ -5429,9 +5429,11 @@
     updatePosition() {
       if (!this.modal) return;
       try {
-        const sidebar = document.getElementById("navigator-toolbox") || 
-                        document.getElementById("zen-sidebar-box") || 
-                        document.getElementById("tabbrowser-tabs")?.closest("#navigator-toolbox, #sidebar-box, .zen-sidebar");
+        const sidebar = document.getElementById("sidebar-box") || 
+                        document.getElementById("sidebar-container") || 
+                        document.getElementById("vertical-tabs") ||
+                        document.getElementById("tabbrowser-tabs")?.closest("#sidebar-box, #sidebar-container, #vertical-tabs, .zen-sidebar") ||
+                        document.getElementById("tabbrowser-tabs");
         
         const isSidebarCollapsed = document.documentElement.getAttribute("zen-sidebar-collapsed") === "true" ||
                                    document.documentElement.getAttribute("zentral-sidebar-collapsed") === "true";
@@ -5440,7 +5442,7 @@
           const sRect = sidebar.getBoundingClientRect();
           const isRight = document.documentElement.getAttribute("zen-sidebar-right") === "true" || 
                           document.documentElement.getAttribute("zen-right-side") === "true" ||
-                          sRect.left > (window.innerWidth / 2);
+                          (sRect.left > window.innerWidth / 2);
 
           if (sRect.width > 20 && sRect.width < window.innerWidth) {
             if (isRight) {
@@ -5497,49 +5499,56 @@
       if (!this.modal) return;
       const get = (id) => this.modal.querySelector("#" + id);
       if (!get("zs-anim-speed")) return;
-      get("zs-ag-enabled").checked = Core.getPref(Constants.AppsGrid.PREF_ENABLED);
-      if (get("zs-ag-compact-drawer")) {
-        get("zs-ag-compact-drawer").checked = Core.getPref(Constants.AppsGrid.PREF_COMPACT_DRAWER_ENABLED);
-      }
-      get("zs-anim-type").value = Core.getPref(Constants.AppsGrid.PREF_ANIMATION_TYPE);
-      get("zs-anim-speed").value = Core.getPref(Constants.AppsGrid.PREF_ANIMATION_SPEED);
-      get("zs-max-apps").value = Core.getPref(Constants.AppsGrid.PREF_MAX_TOTAL_APPS);
-      get("zs-apps-row").value = Core.getPref(Constants.AppsGrid.PREF_APPS_PER_ROW);
-      get("zs-max-rows").value = Core.getPref(Constants.AppsGrid.PREF_MAX_ROWS_BEFORE_SCROLL);
-
-      get("zs-tg-enabled").checked = Core.getPref(Constants.TabGroups.PREF_ENABLED);
-      get("zs-tg-collapse").checked = Core.getPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH);
-      get("zs-tg-thumbnails").checked = Core.getPref(Constants.TabGroups.PREF_THUMBNAILS_ENABLED);
-      get("zs-tg-chevron").checked = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON);
       
-      const opacity = Core.getPref(Constants.TabGroups.PREF_LABEL_OPACITY);
-      get("zs-tg-opacity").value = opacity;
-      get("zs-tg-opacity-val").textContent = opacity + "%";
+      get("zs-ag-enabled").checked = Core.getPref(Constants.Apps.PREF_ENABLED, true) !== false;
+      if (get("zs-ag-compact-drawer")) {
+        get("zs-ag-compact-drawer").checked = Core.getPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, false) === true;
+      }
+      get("zs-anim-type").value = Core.getPref(Constants.Apps.PREF_ANIMATION_TYPE, "slide") || "slide";
+      get("zs-anim-speed").value = Core.getPref(Constants.Apps.PREF_ANIMATION_SPEED, 450) || 450;
+      get("zs-max-apps").value = Core.getPref(Constants.Apps.PREF_MAX_APPS, 21) || 21;
+      get("zs-apps-row").value = Core.getPref(Constants.Apps.PREF_APPS_PER_ROW, 7) || 7;
+      get("zs-max-rows").value = Core.getPref(Constants.Apps.PREF_MAX_ROWS, 3) || 3;
+
+      get("zs-tg-enabled").checked = Core.getPref(Constants.TabGroups.PREF_ENABLED, true) !== false;
+      get("zs-tg-collapse").checked = Core.getPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH, false) === true;
+      get("zs-tg-thumbnails").checked = Core.getPref(Constants.TabGroups.PREF_THUMBNAILS, true) !== false;
+      get("zs-tg-chevron").checked = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON, true) !== false;
+      
+      const opacity = Core.getPref(Constants.TabGroups.PREF_LABEL_OPACITY, 85) || 85;
+      if (get("zs-tg-opacity")) {
+        get("zs-tg-opacity").value = opacity;
+        if (get("zs-tg-opacity-val")) get("zs-tg-opacity-val").textContent = opacity + "%";
+      }
     }
 
     save() {
       if (!this.modal) return;
       const get = (id) => this.modal.querySelector("#" + id);
-      
-      Core.setPref(Constants.AppsGrid.PREF_ENABLED, get("zs-ag-enabled").checked);
+      Core.setPref(Constants.Apps.PREF_ENABLED, get("zs-ag-enabled").checked);
       if (get("zs-ag-compact-drawer")) {
-        Core.setPref(Constants.AppsGrid.PREF_COMPACT_DRAWER_ENABLED, get("zs-ag-compact-drawer").checked);
+        Core.setPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, get("zs-ag-compact-drawer").checked);
       }
-      Core.setPref(Constants.AppsGrid.PREF_ANIMATION_TYPE, get("zs-anim-type").value);
-      Core.setPref(Constants.AppsGrid.PREF_ANIMATION_SPEED, parseInt(get("zs-anim-speed").value) || 450);
-      Core.setPref(Constants.AppsGrid.PREF_MAX_TOTAL_APPS, parseInt(get("zs-max-apps").value) || 21);
-      Core.setPref(Constants.AppsGrid.PREF_APPS_PER_ROW, parseInt(get("zs-apps-row").value) || 7);
-      Core.setPref(Constants.AppsGrid.PREF_MAX_ROWS_BEFORE_SCROLL, parseInt(get("zs-max-rows").value) || 3);
+      Core.setPref(Constants.Apps.PREF_ANIMATION_TYPE, get("zs-anim-type").value);
+      Core.setPref(Constants.Apps.PREF_ANIMATION_SPEED, parseInt(get("zs-anim-speed").value) || 450);
+      Core.setPref(Constants.Apps.PREF_MAX_APPS, parseInt(get("zs-max-apps").value) || 21);
+      Core.setPref(Constants.Apps.PREF_APPS_PER_ROW, parseInt(get("zs-apps-row").value) || 7);
+      Core.setPref(Constants.Apps.PREF_MAX_ROWS, parseInt(get("zs-max-rows").value) || 3);
 
       Core.setPref(Constants.TabGroups.PREF_ENABLED, get("zs-tg-enabled").checked);
       Core.setPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH, get("zs-tg-collapse").checked);
-      Core.setPref(Constants.TabGroups.PREF_THUMBNAILS_ENABLED, get("zs-tg-thumbnails").checked);
+      Core.setPref(Constants.TabGroups.PREF_THUMBNAILS, get("zs-tg-thumbnails").checked);
       Core.setPref(Constants.TabGroups.PREF_SHOW_CHEVRON, get("zs-tg-chevron").checked);
+      if (get("zs-tg-opacity")) {
+        Core.setPref(Constants.TabGroups.PREF_LABEL_OPACITY, parseInt(get("zs-tg-opacity").value) || 85);
+      }
       
-      const opacity = parseInt(get("zs-tg-opacity").value) || 85;
-      Core.setPref(Constants.TabGroups.PREF_LABEL_OPACITY, opacity);
-
       this.close();
+      if (window.Zentral?.Apps) window.Zentral.Apps.renderGrid();
+      if (window.Zentral?.TabGroups) {
+        window.Zentral.TabGroups.applyChevronPref();
+        window.Zentral.TabGroups.applyLabelOpacityPref();
+      }
     }
   }
 
