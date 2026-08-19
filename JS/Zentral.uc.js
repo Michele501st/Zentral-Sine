@@ -4153,6 +4153,7 @@
 
       group.ungroupTabs = () => {
         try {
+          const ss = this.#getSessionStore();
           this.removeSavedColor(group.id);
 
           const parentContainer = group.parentNode || document.getElementById("tabbrowser-tabs");
@@ -4176,7 +4177,6 @@
           if (parentContainer) {
             tabs.forEach(tab => {
               try {
-                // Move tab element in DOM so it becomes a sibling of the group container
                 parentContainer.insertBefore(tab, group);
               } catch (e) {
                 try {
@@ -4199,20 +4199,33 @@
                 tab.removeAttribute("group");
                 tab.removeAttribute("zen-group");
               } catch (e) {}
+
+              // Clean all Zentral custom data attributes and SessionStore metadata
+              ["data-zentral-group-id", "data-zentral-group-label", "data-zentral-group-color", "data-zentral-group-collapsed", "data-zentral-group-ws", "data-zentral-parent-id"].forEach(attr => tab.removeAttribute(attr));
+              if (ss) {
+                ["zentral-group-id", "zentral-group-label", "zentral-group-color", "zentral-parent-id", "zentral-group-collapsed", "zentral-group-ws"].forEach(key => {
+                  try {
+                    if (typeof ss.deleteCustomTabValue === "function") ss.deleteCustomTabValue(tab, key);
+                    else if (typeof ss.setCustomTabValue === "function") ss.setCustomTabValue(tab, key, "");
+                  } catch (_) {}
+                });
+              }
             });
           }
 
           // 3. Remove the group via the native API so Zen's internal registry stays consistent.
-          // Fall back to raw DOM removal if the native API is unavailable.
           try {
             if (typeof gBrowser?.removeTabGroup === "function") {
               gBrowser.removeTabGroup(group);
             } else {
-              setTimeout(() => { try { group.remove(); } catch (_) {} }, 50);
+              group.remove();
             }
           } catch (e) {
-            setTimeout(() => { try { group.remove(); } catch (_) {} }, 50);
+            try { group.remove(); } catch (_) {}
           }
+
+          // 4. Immediately synchronize and persist clean state so deleted group never resurrects
+          this.saveTabGroupState();
 
         } catch (e) {
           console.error("[ZentralTabGroups] Error ungrouping tabs:", e);
@@ -4399,6 +4412,23 @@
           groups: {},
           tabMapping: {}
         };
+
+        // Clean any tabs that are no longer part of any tab group
+        const allBrowserTabs = Array.from(gBrowser?.tabs || document.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab"));
+        allBrowserTabs.forEach(tab => {
+          const tabGroup = tab.closest("tab-group:not([split-view-group])") || (tab.group && !tab.group.hasAttribute?.("split-view-group") ? tab.group : null);
+          if (!tabGroup) {
+            ["data-zentral-group-id", "data-zentral-group-label", "data-zentral-group-color", "data-zentral-group-collapsed", "data-zentral-group-ws", "data-zentral-parent-id"].forEach(attr => tab.removeAttribute(attr));
+            if (ss) {
+              ["zentral-group-id", "zentral-group-label", "zentral-group-color", "zentral-parent-id", "zentral-group-collapsed", "zentral-group-ws"].forEach(key => {
+                try {
+                  if (typeof ss.deleteCustomTabValue === "function") ss.deleteCustomTabValue(tab, key);
+                  else if (typeof ss.setCustomTabValue === "function") ss.setCustomTabValue(tab, key, "");
+                } catch (_) {}
+              });
+            }
+          }
+        });
 
         document.querySelectorAll("tab-group:not([split-view-group])").forEach(group => {
           if (!group.id) return;
@@ -4718,20 +4748,6 @@
           animation: zsFadeIn 0.18s ease-out;
         }
 
-        /* Responsive sidebar-exclusion rules */
-        html[zen-sidebar-right="true"] #zentral-settings-modal,
-        html[zen-right-side="true"] #zentral-settings-modal {
-          right: var(--zen-sidebar-width, 240px);
-          left: 0;
-          width: calc(100vw - var(--zen-sidebar-width, 240px));
-        }
-
-        html:not([zen-sidebar-right="true"]):not([zen-right-side="true"]):not([zen-sidebar-collapsed="true"]):not([zentral-sidebar-collapsed="true"]) #zentral-settings-modal {
-          left: var(--zen-sidebar-width, 240px);
-          right: 0;
-          width: calc(100vw - var(--zen-sidebar-width, 240px));
-        }
-
         @keyframes zsFadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -4857,35 +4873,82 @@
           margin-top: 2px;
         }
 
-        /* High-contrast number inputs without clunky bright spin arrows */
-        .zs-input-number {
-          width: 74px;
-          background: rgba(255, 255, 255, 0.08) !important;
-          border: 1px solid rgba(255, 255, 255, 0.16) !important;
+        /* Integrated Dark Stepper Container */
+        .zs-stepper {
+          display: inline-flex;
+          align-items: center;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.16);
           border-radius: 8px;
-          color: #ffffff !important;
-          padding: 6px 8px;
-          font-size: 13px;
-          text-align: center;
-          font-weight: 600;
-          outline: none;
-          transition: all 0.15s ease;
-          -moz-appearance: textfield !important;
-          appearance: textfield !important;
+          overflow: hidden;
+          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+          width: 86px;
+          height: 32px;
         }
 
-        .zs-input-number::-webkit-outer-spin-button,
-        .zs-input-number::-webkit-inner-spin-button {
-          -webkit-appearance: none !important;
-          margin: 0 !important;
-        }
-
-        .zs-input-number:focus {
+        .zs-stepper:focus-within {
           border-color: var(--zen-primary-color, #ff5555) !important;
           box-shadow: 0 0 0 2px rgba(255, 85, 85, 0.3) !important;
         }
 
-        /* Sleek select box with integrated subtle arrow */
+        .zs-stepper .zs-input-number {
+          flex: 1;
+          width: 54px !important;
+          background: transparent !important;
+          border: none !important;
+          color: #ffffff !important;
+          padding: 4px 6px 4px 10px !important;
+          font-size: 13px !important;
+          text-align: left !important;
+          font-weight: 600 !important;
+          outline: none !important;
+          -moz-appearance: textfield !important;
+          appearance: textfield !important;
+        }
+
+        .zs-stepper .zs-input-number::-webkit-outer-spin-button,
+        .zs-stepper .zs-input-number::-webkit-inner-spin-button {
+          -webkit-appearance: none !important;
+          margin: 0 !important;
+        }
+
+        .zs-stepper-btns {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          border-left: 1px solid rgba(255, 255, 255, 0.1);
+          width: 22px;
+        }
+
+        .zs-stepper-btn {
+          flex: 1;
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.7);
+          cursor: pointer;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.12s ease;
+          user-select: none;
+        }
+
+        .zs-stepper-btn:hover {
+          background: rgba(255, 255, 255, 0.15);
+          color: #ffffff;
+        }
+
+        .zs-stepper-btn:active {
+          background: var(--zen-primary-color, #ff5555);
+          color: #ffffff;
+        }
+
+        .zs-stepper-up {
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Sleek select box */
         .zs-select {
           width: 155px;
           background: #242429 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>') no-repeat right 10px center !important;
@@ -5091,7 +5154,9 @@
       } catch (e) {
         console.error("[Zentral] Error injecting settings styles:", e);
       }
-    }    createModal() {
+    }
+
+    createModal() {
       this.injectStyles();
       this.modal = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
       this.modal.id = "zentral-settings-modal";
@@ -5151,28 +5216,68 @@
               <div class="zs-label-container">
                 <span class="zs-label">Animation speed (ms)</span>
               </div>
-              <input type="number" id="zs-anim-speed" class="zs-input-number" />
+              <div class="zs-stepper">
+                <input type="number" id="zs-anim-speed" class="zs-input-number" min="50" max="2000" step="50" />
+                <div class="zs-stepper-btns">
+                  <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-anim-speed" data-step="50" title="Increase">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                  </button>
+                  <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-anim-speed" data-step="-50" title="Decrease">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div class="zs-row">
               <div class="zs-label-container">
                 <span class="zs-label">Max total apps</span>
               </div>
-              <input type="number" id="zs-max-apps" class="zs-input-number" />
+              <div class="zs-stepper">
+                <input type="number" id="zs-max-apps" class="zs-input-number" min="1" max="100" step="1" />
+                <div class="zs-stepper-btns">
+                  <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-max-apps" data-step="1" title="Increase">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                  </button>
+                  <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-max-apps" data-step="-1" title="Decrease">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div class="zs-row">
               <div class="zs-label-container">
                 <span class="zs-label">Apps per row (max 10)</span>
               </div>
-              <input type="number" id="zs-apps-row" class="zs-input-number" />
+              <div class="zs-stepper">
+                <input type="number" id="zs-apps-row" class="zs-input-number" min="1" max="10" step="1" />
+                <div class="zs-stepper-btns">
+                  <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-apps-row" data-step="1" title="Increase">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                  </button>
+                  <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-apps-row" data-step="-1" title="Decrease">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div class="zs-row">
               <div class="zs-label-container">
                 <span class="zs-label">Max rows before scroll</span>
               </div>
-              <input type="number" id="zs-max-rows" class="zs-input-number" />
+              <div class="zs-stepper">
+                <input type="number" id="zs-max-rows" class="zs-input-number" min="1" max="10" step="1" />
+                <div class="zs-stepper-btns">
+                  <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-max-rows" data-step="1" title="Increase">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                  </button>
+                  <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-max-rows" data-step="-1" title="Decrease">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                </div>
+              </div>
             </div>
 
             <button id="zs-ag-reset" class="zs-reset-btn">Reset Apps Grid Defaults</button>
@@ -5262,6 +5367,28 @@
         if (e.target === this.modal) this.close();
       });
 
+      // Stepper button events
+      this.modal.querySelectorAll(".zs-stepper-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          const targetId = btn.dataset.target;
+          const step = parseInt(btn.dataset.step, 10) || 1;
+          const input = this.modal.querySelector("#" + targetId);
+          if (input) {
+            const min = input.min !== "" ? parseInt(input.min, 10) : -Infinity;
+            const max = input.max !== "" ? parseInt(input.max, 10) : Infinity;
+            let current = parseInt(input.value, 10);
+            if (isNaN(current)) current = 0;
+            let nextVal = current + step;
+            if (nextVal < min) nextVal = min;
+            if (nextVal > max) nextVal = max;
+            input.value = nextVal;
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        });
+      });
+
       this.modal.querySelector("#zs-ag-reset").addEventListener("click", () => {
         const get = (id) => this.modal.querySelector("#" + id);
         get("zs-ag-enabled").checked = true;
@@ -5298,16 +5425,124 @@
       
       this.populate();
     }
+
+    updatePosition() {
+      if (!this.modal) return;
+      try {
+        const sidebar = document.getElementById("navigator-toolbox") || 
+                        document.getElementById("zen-sidebar-box") || 
+                        document.getElementById("tabbrowser-tabs")?.closest("#navigator-toolbox, #sidebar-box, .zen-sidebar");
+        
+        const isSidebarCollapsed = document.documentElement.getAttribute("zen-sidebar-collapsed") === "true" ||
+                                   document.documentElement.getAttribute("zentral-sidebar-collapsed") === "true";
+
+        if (sidebar && !isSidebarCollapsed) {
+          const sRect = sidebar.getBoundingClientRect();
+          const isRight = document.documentElement.getAttribute("zen-sidebar-right") === "true" || 
+                          document.documentElement.getAttribute("zen-right-side") === "true" ||
+                          sRect.left > (window.innerWidth / 2);
+
+          if (sRect.width > 20 && sRect.width < window.innerWidth) {
+            if (isRight) {
+              this.modal.style.left = "0px";
+              this.modal.style.top = "0px";
+              this.modal.style.bottom = "0px";
+              this.modal.style.right = (window.innerWidth - Math.round(sRect.left)) + "px";
+              this.modal.style.width = Math.round(sRect.left) + "px";
+            } else {
+              this.modal.style.left = Math.round(sRect.right) + "px";
+              this.modal.style.top = "0px";
+              this.modal.style.bottom = "0px";
+              this.modal.style.right = "0px";
+              this.modal.style.width = (window.innerWidth - Math.round(sRect.right)) + "px";
+            }
+            this.modal.style.height = "100vh";
+            return;
+          }
+        }
+      } catch (_) {}
+
+      this.modal.style.left = "0px";
+      this.modal.style.top = "0px";
+      this.modal.style.right = "0px";
+      this.modal.style.bottom = "0px";
+      this.modal.style.width = "100vw";
+      this.modal.style.height = "100vh";
+    }
+
+    open() {
+      if (!this.modal) {
+        this.createModal();
+      } else {
+        this.modal.style.display = "flex";
+        this.populate();
+      }
+      this.updatePosition();
+
+      if (!this._resizeHandler) {
+        this._resizeHandler = () => this.updatePosition();
+        window.addEventListener("resize", this._resizeHandler, { passive: true });
+      }
+    }
+
+    close() {
+      if (this.modal) this.modal.style.display = "none";
+      if (this._resizeHandler) {
+        window.removeEventListener("resize", this._resizeHandler);
+        this._resizeHandler = null;
+      }
+    }
+
+    populate() {
+      if (!this.modal) return;
+      const get = (id) => this.modal.querySelector("#" + id);
+      if (!get("zs-anim-speed")) return;
+      get("zs-ag-enabled").checked = Core.getPref(Constants.AppsGrid.PREF_ENABLED);
+      if (get("zs-ag-compact-drawer")) {
+        get("zs-ag-compact-drawer").checked = Core.getPref(Constants.AppsGrid.PREF_COMPACT_DRAWER_ENABLED);
+      }
+      get("zs-anim-type").value = Core.getPref(Constants.AppsGrid.PREF_ANIMATION_TYPE);
+      get("zs-anim-speed").value = Core.getPref(Constants.AppsGrid.PREF_ANIMATION_SPEED);
+      get("zs-max-apps").value = Core.getPref(Constants.AppsGrid.PREF_MAX_TOTAL_APPS);
+      get("zs-apps-row").value = Core.getPref(Constants.AppsGrid.PREF_APPS_PER_ROW);
+      get("zs-max-rows").value = Core.getPref(Constants.AppsGrid.PREF_MAX_ROWS_BEFORE_SCROLL);
+
+      get("zs-tg-enabled").checked = Core.getPref(Constants.TabGroups.PREF_ENABLED);
+      get("zs-tg-collapse").checked = Core.getPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH);
+      get("zs-tg-thumbnails").checked = Core.getPref(Constants.TabGroups.PREF_THUMBNAILS_ENABLED);
+      get("zs-tg-chevron").checked = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON);
+      
+      const opacity = Core.getPref(Constants.TabGroups.PREF_LABEL_OPACITY);
+      get("zs-tg-opacity").value = opacity;
+      get("zs-tg-opacity-val").textContent = opacity + "%";
+    }
+
+    save() {
+      if (!this.modal) return;
+      const get = (id) => this.modal.querySelector("#" + id);
+      
+      Core.setPref(Constants.AppsGrid.PREF_ENABLED, get("zs-ag-enabled").checked);
+      if (get("zs-ag-compact-drawer")) {
+        Core.setPref(Constants.AppsGrid.PREF_COMPACT_DRAWER_ENABLED, get("zs-ag-compact-drawer").checked);
+      }
+      Core.setPref(Constants.AppsGrid.PREF_ANIMATION_TYPE, get("zs-anim-type").value);
+      Core.setPref(Constants.AppsGrid.PREF_ANIMATION_SPEED, parseInt(get("zs-anim-speed").value) || 450);
+      Core.setPref(Constants.AppsGrid.PREF_MAX_TOTAL_APPS, parseInt(get("zs-max-apps").value) || 21);
+      Core.setPref(Constants.AppsGrid.PREF_APPS_PER_ROW, parseInt(get("zs-apps-row").value) || 7);
+      Core.setPref(Constants.AppsGrid.PREF_MAX_ROWS_BEFORE_SCROLL, parseInt(get("zs-max-rows").value) || 3);
+
+      Core.setPref(Constants.TabGroups.PREF_ENABLED, get("zs-tg-enabled").checked);
+      Core.setPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH, get("zs-tg-collapse").checked);
+      Core.setPref(Constants.TabGroups.PREF_THUMBNAILS_ENABLED, get("zs-tg-thumbnails").checked);
+      Core.setPref(Constants.TabGroups.PREF_SHOW_CHEVRON, get("zs-tg-chevron").checked);
+      
+      const opacity = parseInt(get("zs-tg-opacity").value) || 85;
+      Core.setPref(Constants.TabGroups.PREF_LABEL_OPACITY, opacity);
+
+      this.close();
+    }
   }
 
-  /* ============================================================================
-   * 6.0 MASTER BOOTSTRAPPER & ENTRY POINT
-   * ============================================================================
-   */
-
-  /**
-   * Instantiate module singletons
-   */
   const Apps = new ZentralApps();
   const TabGroups = new ZentralTabGroups();
   const Settings = new ZentralSettings();
