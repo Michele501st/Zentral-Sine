@@ -4663,7 +4663,8 @@
      * Injects CSS styles for settings modal, backdrop filters, toggles, and form controls.
      */
     injectStyles() {
-      if (document.getElementById("zentral-settings-styles") || this._stylesInjected) return;
+      const existing = document.getElementById("zentral-settings-styles");
+      if (existing) existing.remove();
       this._stylesInjected = true;
       const css = `
         #zentral-settings-modal {
@@ -4671,7 +4672,7 @@
           inset: 0;
           width: 100vw;
           height: 100vh;
-          background: rgba(0, 0, 0, 0.45);
+          background: rgba(0, 0, 0, 0.65);
           backdrop-filter: blur(16px) saturate(140%);
           -webkit-backdrop-filter: blur(16px) saturate(140%);
           z-index: 2147483647;
@@ -4693,13 +4694,13 @@
         }
 
         .zs-dialog {
-          background: var(--tabpanels-background-color, var(--in-content-page-background, #16161a));
-          color: var(--in-content-page-color, #fbfbfe);
+          background: #18181c !important;
+          color: #f2f2f7 !important;
           width: 480px;
           max-width: 92vw;
           border-radius: 16px;
-          box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px color-mix(in srgb, currentColor 10%, transparent);
-          border: 1px solid color-mix(in srgb, currentColor 12%, rgba(255, 255, 255, 0.08));
+          box-shadow: 0 28px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
           display: flex;
           flex-direction: column;
           overflow: hidden;
@@ -4708,11 +4709,12 @@
 
         .zs-header {
           padding: 16px 22px;
-          border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           display: flex;
           justify-content: space-between;
           align-items: center;
-          background: color-mix(in srgb, currentColor 2%, transparent);
+          background: rgba(255, 255, 255, 0.02);
+          color: #ffffff !important;
         }
 
         .zs-title-group {
@@ -4726,12 +4728,13 @@
           font-size: 15px;
           font-weight: 600;
           letter-spacing: -0.2px;
+          color: #ffffff !important;
         }
 
         .zs-close-btn {
           background: transparent;
           border: none;
-          color: inherit;
+          color: #f2f2f7 !important;
           cursor: pointer;
           width: 28px;
           height: 28px;
@@ -4746,7 +4749,7 @@
 
         .zs-close-btn:hover {
           opacity: 1;
-          background: color-mix(in srgb, currentColor 12%, transparent);
+          background: rgba(255, 255, 255, 0.1) !important;
         }
 
         .zs-body {
@@ -4757,6 +4760,8 @@
           overflow-y: auto;
           max-height: 72vh;
           scrollbar-width: thin;
+          background: #18181c !important;
+          color: #f2f2f7 !important;
         }
 
         .zs-section-title {
@@ -4764,14 +4769,14 @@
           text-transform: uppercase;
           font-weight: 700;
           letter-spacing: 0.08em;
-          color: var(--zen-primary-color, #70a0ff);
-          opacity: 0.9;
+          color: var(--zen-primary-color, #ff5555) !important;
+          opacity: 0.95;
           margin: 6px 0 2px 0;
         }
 
         .zs-card {
-          background: color-mix(in srgb, currentColor 3%, transparent);
-          border: 1px solid color-mix(in srgb, currentColor 6%, transparent);
+          background: rgba(255, 255, 255, 0.04) !important;
+          border: 1px solid rgba(255, 255, 255, 0.07) !important;
           border-radius: 12px;
           padding: 12px 14px;
           display: flex;
@@ -4794,20 +4799,21 @@
         .zs-label {
           font-size: 13px;
           font-weight: 500;
+          color: #f2f2f7 !important;
         }
 
         .zs-sublabel {
           font-size: 11px;
-          opacity: 0.6;
+          color: rgba(255, 255, 255, 0.6) !important;
           margin-top: 2px;
         }
 
         .zs-input-number {
           width: 68px;
-          background: color-mix(in srgb, currentColor 8%, transparent);
-          border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+          background: rgba(255, 255, 255, 0.08) !important;
+          border: 1px solid rgba(255, 255, 255, 0.14) !important;
           border-radius: 8px;
-          color: inherit;
+          color: #ffffff !important;
           padding: 6px 8px;
           font-size: 13px;
           text-align: center;
@@ -4817,16 +4823,16 @@
         }
 
         .zs-input-number:focus {
-          border-color: var(--zen-primary-color, #70a0ff);
-          box-shadow: 0 0 0 2px color-mix(in srgb, var(--zen-primary-color, #70a0ff) 30%, transparent);
+          border-color: var(--zen-primary-color, #ff5555) !important;
+          box-shadow: 0 0 0 2px rgba(255, 85, 85, 0.3) !important;
         }
 
         .zs-select {
           width: 145px;
-          background: color-mix(in srgb, var(--in-content-page-color, #fff) 8%, var(--in-content-page-background, #16161a));
-          border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+          background: #242429 !important;
+          border: 1px solid rgba(255, 255, 255, 0.14) !important;
           border-radius: 8px;
-          color: inherit;
+          color: #ffffff !important;
           padding: 6px 10px;
           font-size: 13px;
           font-weight: 500;
@@ -4836,16 +4842,16 @@
         }
 
         .zs-select:hover {
-          border-color: color-mix(in srgb, currentColor 30%, transparent);
+          border-color: rgba(255, 255, 255, 0.3) !important;
         }
 
         .zs-select:focus {
-          border-color: var(--zen-primary-color, #70a0ff);
+          border-color: var(--zen-primary-color, #ff5555) !important;
         }
 
         .zs-select option {
-          background-color: var(--in-content-page-background, #16161a) !important;
-          color: var(--in-content-page-color, #fbfbfe) !important;
+          background-color: #242429 !important;
+          color: #f2f2f7 !important;
         }
 
         .zs-switch {
@@ -4866,10 +4872,10 @@
           position: absolute;
           cursor: pointer;
           inset: 0;
-          background-color: color-mix(in srgb, currentColor 18%, transparent);
+          background-color: rgba(255, 255, 255, 0.16) !important;
           transition: background-color 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
           border-radius: 22px;
-          border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
         }
 
         .zs-slider:before {
@@ -4886,8 +4892,8 @@
         }
 
         .zs-switch input:checked + .zs-slider {
-          background-color: var(--zen-primary-color, #0061e0);
-          border-color: transparent;
+          background-color: var(--zen-primary-color, #ff5555) !important;
+          border-color: transparent !important;
         }
 
         .zs-switch input:checked + .zs-slider:before {
@@ -4907,7 +4913,7 @@
           -webkit-appearance: none;
           height: 6px;
           border-radius: 3px;
-          background: color-mix(in srgb, currentColor 18%, transparent);
+          background: rgba(255, 255, 255, 0.16) !important;
           outline: none;
           cursor: pointer;
         }
@@ -4918,7 +4924,7 @@
           width: 16px;
           height: 16px;
           border-radius: 50%;
-          background: var(--zen-primary-color, #70a0ff);
+          background: var(--zen-primary-color, #ff5555) !important;
           box-shadow: 0 1px 4px rgba(0,0,0,0.3);
           cursor: pointer;
           transition: transform 0.15s ease;
@@ -4933,7 +4939,8 @@
           font-weight: 600;
           width: 40px;
           text-align: right;
-          opacity: 0.85;
+          color: #f2f2f7 !important;
+          opacity: 0.9;
         }
 
         .zs-reset-btn {
@@ -4941,9 +4948,9 @@
           font-size: 11px;
           font-weight: 500;
           border-radius: 6px;
-          background: color-mix(in srgb, currentColor 6%, transparent);
-          border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
-          color: inherit;
+          background: rgba(255, 255, 255, 0.08) !important;
+          border: 1px solid rgba(255, 255, 255, 0.12) !important;
+          color: #f2f2f7 !important;
           cursor: pointer;
           opacity: 0.85;
           transition: all 0.15s ease;
@@ -4952,13 +4959,13 @@
 
         .zs-reset-btn:hover {
           opacity: 1;
-          background: color-mix(in srgb, currentColor 12%, transparent);
+          background: rgba(255, 255, 255, 0.14) !important;
         }
 
         .zs-footer {
           padding: 14px 22px;
-          background: color-mix(in srgb, currentColor 2%, transparent);
-          border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent);
+          background: rgba(255, 255, 255, 0.02) !important;
+          border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
           display: flex;
           justify-content: flex-end;
           gap: 10px;
@@ -4967,9 +4974,9 @@
         .zs-btn-cancel {
           padding: 7px 16px;
           border-radius: 8px;
-          background: transparent;
-          border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
-          color: inherit;
+          background: transparent !important;
+          border: 1px solid rgba(255, 255, 255, 0.16) !important;
+          color: #f2f2f7 !important;
           font-size: 13px;
           font-weight: 500;
           cursor: pointer;
@@ -4979,19 +4986,19 @@
 
         .zs-btn-cancel:hover {
           opacity: 1;
-          background: color-mix(in srgb, currentColor 8%, transparent);
+          background: rgba(255, 255, 255, 0.08) !important;
         }
 
         .zs-btn-save {
-          padding: 7px 20px;
+          padding: 7px 18px;
           border-radius: 8px;
-          background: var(--zen-primary-color, #0061e0);
+          background: var(--zen-primary-color, #ff5555) !important;
           border: none;
-          color: #ffffff;
+          color: #ffffff !important;
           font-size: 13px;
           font-weight: 600;
           cursor: pointer;
-          box-shadow: 0 4px 12px color-mix(in srgb, var(--zen-primary-color, #0061e0) 35%, transparent);
+          box-shadow: 0 2px 8px color-mix(in srgb, var(--zen-primary-color, #ff5555) 40%, transparent);
           transition: all 0.15s ease;
         }
 
@@ -5000,8 +5007,19 @@
           transform: translateY(-1px);
         }
 
-        .zs-btn-save:active {
-          transform: translateY(0);
+        .zs-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          background: rgba(255, 85, 85, 0.15);
+          color: #ff6b6b;
+          border: 1px solid rgba(255, 85, 85, 0.25);
+          margin-left: 6px;
         }
       `;
       try {
@@ -5014,9 +5032,6 @@
       }
     }
 
-    /**
-     * Constructs and attaches the HTML modal dialog DOM elements to browser document.
-     */
     createModal() {
       this.injectStyles();
       this.modal = document.createElementNS("http://www.w3.org/1999/xhtml", "div");

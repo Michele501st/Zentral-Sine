@@ -799,3 +799,42 @@ panel[id*="tabgroup-editor"] {
 #zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-settings-sep {
   display: none !important;
 }
+
+/* --------------------------------------------------------------------------
+ * Zentral Settings Modal Dark Theme & High Contrast Enforcements
+ * -------------------------------------------------------------------------- */
+#zentral-settings-modal .zs-dialog {
+  background: #18181c !important;
+  color: #f2f2f7 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+#zentral-settings-modal .zs-header,
+#zentral-settings-modal .zs-body,
+#zentral-settings-modal .zs-footer {
+  color: #f2f2f7 !important;
+}
+
+#zentral-settings-modal .zs-title {
+  color: #ffffff !important;
+}
+
+#zentral-settings-modal .zs-label {
+  color: #f2f2f7 !important;
+}
+
+#zentral-settings-modal .zs-sublabel {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+#zentral-settings-modal .zs-card {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+#zentral-settings-modal .zs-select,
+#zentral-settings-modal .zs-input-number {
+  background: #242429 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+}
