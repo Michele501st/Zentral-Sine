@@ -100,6 +100,13 @@
       PREF_SHOW_CHEVRON: "zen.workspace.tabgroups.show_chevron",
       PREF_LABEL_OPACITY: "zen.workspace.tabgroups.label_opacity"
     },
+    /**
+     * 1.3 Diagnostics Preference Keys
+     */
+    Diagnostics: {
+      PREF_LOGGER_ENABLED: "zentral.logger.enabled",
+      PREF_LOGGER_PATH: "zentral.logger.path"
+    },
     /** Debug logging preference Ã¢â‚¬â€ set true in about:config to enable verbose console output */
     DEBUG_PREF: "zen.workspace.zentral.debug"
   };
@@ -4259,7 +4266,7 @@
      */
     initTabDragSelectionGuard() {
       const tabContainer = gBrowser?.tabContainer || document.getElementById("tabbrowser-tabs");
-      if (!tabContainer || this.#tabDragGuardInitialized || !gBrowser?._selectNewTab) return;
+      if (!tabContainer || this.#tabDragGuardInitialized) return;
       this.#tabDragGuardInitialized = true;
 
       let isDraggingTab = false;
@@ -4269,17 +4276,63 @@
       let startY = 0;
       let pressTimer = null;
 
-      // 1. Monkey-patch gBrowser._selectNewTab to block tab activation during drag
-      const origSelectNewTab = gBrowser._selectNewTab;
-      gBrowser._selectNewTab = function(newTab, fallbackTab, options) {
-        if (isDraggingTab && prevActiveTab && prevActiveTab.isConnected && newTab !== prevActiveTab) {
-          // Tab is being dragged to reorder: block activation so sleeping tabs never load
-          return false;
+      // 1. Intercept gBrowser.selectedTab setter
+      let origSelectedTabDesc = null;
+      let targetGbrowserObj = null;
+      let proto = gBrowser;
+      while (proto) {
+        let desc = Object.getOwnPropertyDescriptor(proto, "selectedTab");
+        if (desc && desc.set) {
+          origSelectedTabDesc = desc;
+          targetGbrowserObj = proto;
+          break;
         }
-        return origSelectNewTab.apply(this, arguments);
-      };
+        proto = Object.getPrototypeOf(proto);
+      }
 
-      // 2. Intercept mousedown on unselected tabs
+      if (origSelectedTabDesc && targetGbrowserObj) {
+        Object.defineProperty(targetGbrowserObj, "selectedTab", {
+          get: origSelectedTabDesc.get,
+          set: function(val) {
+            if (isDraggingTab && prevActiveTab && prevActiveTab.isConnected && val !== prevActiveTab) {
+              return; // Block activation of the dragged tab
+            }
+            origSelectedTabDesc.set.call(this, val);
+          },
+          configurable: true,
+          enumerable: origSelectedTabDesc.enumerable
+        });
+      }
+
+      // 2. Intercept tabContainer.selectedItem setter (Native Firefox drag uses this)
+      let origSelectedItemDesc = null;
+      let targetTabContainerObj = null;
+      let tcProto = tabContainer;
+      while (tcProto) {
+        let desc = Object.getOwnPropertyDescriptor(tcProto, "selectedItem");
+        if (desc && desc.set) {
+          origSelectedItemDesc = desc;
+          targetTabContainerObj = tcProto;
+          break;
+        }
+        tcProto = Object.getPrototypeOf(tcProto);
+      }
+
+      if (origSelectedItemDesc && targetTabContainerObj) {
+        Object.defineProperty(targetTabContainerObj, "selectedItem", {
+          get: origSelectedItemDesc.get,
+          set: function(val) {
+            if (isDraggingTab && prevActiveTab && prevActiveTab.isConnected && val !== prevActiveTab) {
+              return; // Block activation of the dragged tab from native tabs.js drag events
+            }
+            origSelectedItemDesc.set.call(this, val);
+          },
+          configurable: true,
+          enumerable: origSelectedItemDesc.enumerable
+        });
+      }
+
+      // 3. Setup drag detection logic
       const onMouseDown = (e) => {
         if (e.button !== 0) return;
         const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab");
@@ -4293,30 +4346,27 @@
           startX = e.clientX;
           startY = e.clientY;
 
-          // If left click is held for > 150ms (drag gesture), arm drag guard so mousedown cannot activate tab
+          // Block mousedown propagation so Firefox doesn't synchronously select it
+          e.stopImmediatePropagation();
+
           if (pressTimer) clearTimeout(pressTimer);
           pressTimer = setTimeout(() => {
             if (dragCandidateTab) {
-              isDraggingTab = true;
+              isDraggingTab = true; // Lock selection before dragstart
             }
           }, 150);
         }
       };
 
-      // 3. Detect drag start
       const onDragStart = (e) => {
         if (pressTimer) clearTimeout(pressTimer);
         const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab") || dragCandidateTab;
         if (tab) {
-          isDraggingTab = true;
+          isDraggingTab = true; // Lock selection
           dragCandidateTab = tab;
-          if (prevActiveTab && prevActiveTab.isConnected && gBrowser.selectedTab !== prevActiveTab) {
-            try { origSelectNewTab.call(gBrowser, prevActiveTab); } catch (_) {}
-          }
         }
       };
 
-      // 4. Handle clean clicks vs drags on mouseup
       const onMouseUp = (e) => {
         if (pressTimer) {
           clearTimeout(pressTimer);
@@ -4327,62 +4377,55 @@
         if (dragCandidateTab && !isDraggingTab) {
           const moveDist = Math.hypot(e.clientX - startX, e.clientY - startY);
           if (moveDist < 6 && dragCandidateTab.isConnected) {
-            // Genuine click: activate the clicked tab now
+            // Un-intercept briefly to allow the intended click selection
+            isDraggingTab = false;
             try {
-              origSelectNewTab.call(gBrowser, dragCandidateTab);
+              if (origSelectedTabDesc) {
+                origSelectedTabDesc.set.call(gBrowser, dragCandidateTab);
+              } else {
+                gBrowser.selectedTab = dragCandidateTab;
+              }
             } catch (_) {}
           }
         }
-
         if (!isDraggingTab) {
           dragCandidateTab = null;
           prevActiveTab = null;
         }
       };
 
-      // 5. Conclude drag: keep original active tab and release guard
       const onDragEnd = (e) => {
-        if (pressTimer) {
-          clearTimeout(pressTimer);
-          pressTimer = null;
-        }
-        if (prevActiveTab && prevActiveTab.isConnected && gBrowser.selectedTab !== prevActiveTab) {
-          try { origSelectNewTab.call(gBrowser, prevActiveTab); } catch (_) {}
-        }
+        if (pressTimer) clearTimeout(pressTimer);
         setTimeout(() => {
-          if (prevActiveTab && prevActiveTab.isConnected && gBrowser.selectedTab !== prevActiveTab) {
-            try { origSelectNewTab.call(gBrowser, prevActiveTab); } catch (_) {}
-          }
           isDraggingTab = false;
           dragCandidateTab = null;
           prevActiveTab = null;
-        }, 60);
+        }, 50);
       };
 
       const onDrop = (e) => {
-        if (prevActiveTab && prevActiveTab.isConnected && gBrowser.selectedTab !== prevActiveTab) {
-          setTimeout(() => {
-            if (prevActiveTab && prevActiveTab.isConnected && gBrowser.selectedTab !== prevActiveTab) {
-              try { origSelectNewTab.call(gBrowser, prevActiveTab); } catch (_) {}
-            }
-          }, 0);
-        }
+        // Just let the drop resolve natively while isDraggingTab is still true
       };
 
-      window.addEventListener("mousedown", onMouseDown, { capture: true, passive: true });
-      window.addEventListener("mouseup", onMouseUp, { capture: true, passive: true });
-      window.addEventListener("dragstart", onDragStart, { capture: true });
-      window.addEventListener("dragend", onDragEnd, { capture: true });
-      window.addEventListener("drop", onDrop, { capture: true });
+      tabContainer.addEventListener("mousedown", onMouseDown, { capture: true });
+      window.addEventListener("mouseup", onMouseUp, { capture: true });
+      tabContainer.addEventListener("dragstart", onDragStart, { capture: true });
+      tabContainer.addEventListener("dragend", onDragEnd, { capture: true });
+      tabContainer.addEventListener("drop", onDrop, { capture: true });
 
       this.#dragGuardCleanup = () => {
         if (pressTimer) clearTimeout(pressTimer);
-        gBrowser._selectNewTab = origSelectNewTab;
-        window.removeEventListener("mousedown", onMouseDown, { capture: true });
+        if (origSelectedTabDesc && targetGbrowserObj) {
+          Object.defineProperty(targetGbrowserObj, "selectedTab", origSelectedTabDesc);
+        }
+        if (origSelectedItemDesc && targetTabContainerObj) {
+          Object.defineProperty(targetTabContainerObj, "selectedItem", origSelectedItemDesc);
+        }
+        tabContainer.removeEventListener("mousedown", onMouseDown, { capture: true });
         window.removeEventListener("mouseup", onMouseUp, { capture: true });
-        window.removeEventListener("dragstart", onDragStart, { capture: true });
-        window.removeEventListener("dragend", onDragEnd, { capture: true });
-        window.removeEventListener("drop", onDrop, { capture: true });
+        tabContainer.removeEventListener("dragstart", onDragStart, { capture: true });
+        tabContainer.removeEventListener("dragend", onDragEnd, { capture: true });
+        tabContainer.removeEventListener("drop", onDrop, { capture: true });
         this.#tabDragGuardInitialized = false;
       };
     }
@@ -5505,6 +5548,9 @@
       this.modal.querySelector("#zs-close").addEventListener("click", () => this.close());
       this.modal.querySelector("#zs-cancel").addEventListener("click", () => this.close());
       this.modal.querySelector("#zs-save").addEventListener("click", () => this.save());
+      this.modal.querySelector("#zs-btn-capture-log").addEventListener("click", () => {
+        window.dispatchEvent(new CustomEvent("ZentralCaptureLog"));
+      });
 
       this.modal.addEventListener("mousedown", (e) => {
         if (e.target === this.modal) this.close();

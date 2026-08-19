@@ -448,18 +448,32 @@
 
       let targetFile = null;
 
-      // 1. Try resolving chrome/logs directory via Firefox XPCOM Services
+      // 1. Try resolving custom directory from prefs or fallback to chrome/logs
       try {
-        const chromeDir = Services.dirsvc.get("UChrm", Ci.nsIFile);
-        const logsDir = chromeDir.clone();
-        logsDir.append("logs");
-        if (!logsDir.exists()) {
-          logsDir.create(Ci.nsIFile.DIRECTORY_TYPE, 0o755);
+        let customPath = "";
+        try {
+          customPath = Services.prefs.getCharPref("zentral.logger.path");
+        } catch (e) {}
+
+        if (customPath && customPath.trim() !== "") {
+          targetFile = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
+          targetFile.initWithPath(customPath.trim());
+          if (!targetFile.exists()) {
+            targetFile.create(Ci.nsIFile.DIRECTORY_TYPE, 0o755);
+          }
+          targetFile.append(name);
+        } else {
+          const chromeDir = Services.dirsvc.get("UChrm", Ci.nsIFile);
+          const logsDir = chromeDir.clone();
+          logsDir.append("logs");
+          if (!logsDir.exists()) {
+            logsDir.create(Ci.nsIFile.DIRECTORY_TYPE, 0o755);
+          }
+          targetFile = logsDir.clone();
+          targetFile.append(name);
         }
-        targetFile = logsDir.clone();
-        targetFile.append(name);
       } catch (dirErr) {
-        _warn("[Zentral-Logger] Could not resolve UChrm directory:", dirErr);
+        _warn("[Zentral-Logger] Could not resolve export directory:", dirErr);
       }
 
       if (!targetFile) {
@@ -502,6 +516,24 @@
     cleanupObservers.forEach(fn => { try { fn(); } catch (_) {} });
     cleanupObservers = [];
   };
+
+  // Respect Diagnostics Prefs
+  const Services = globalThis.Services || Components.classes["@mozilla.org/network/services;1"].getService(Components.interfaces.nsIServiceManager).getServiceByContractID("@mozilla.org/preferences-service;1").QueryInterface(Components.interfaces.nsIPrefBranch);
+  let loggerEnabled = false;
+  try {
+    loggerEnabled = Services.prefs.getBoolPref("zentral.logger.enabled");
+  } catch (e) {
+    loggerEnabled = false;
+  }
+  
+  if (!loggerEnabled) {
+    return; // Do not initialize logger if disabled
+  }
+
+  // Listen to UI Capture button
+  window.addEventListener("ZentralCaptureLog", () => {
+    exportLog();
+  });
 
   // Run observers & tracers
   if (document.readyState === "complete") {
