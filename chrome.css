@@ -324,7 +324,7 @@ tab-group[collapsed] .tab-group-icon {
   cursor: pointer !important;
 }
 
-/* 1. Closed State: Small Solid full dot */
+/* 1. Closed State: Small Solid full dot (Fixed size, pure opacity fade - zero zoom bounce) */
 tab-group .tab-group-icon::before {
   content: "" !important;
   position: absolute !important;
@@ -335,15 +335,15 @@ tab-group .tab-group-icon::before {
   border-radius: 50% !important;
   background-color: currentColor !important;
   opacity: 0 !important;
-  transform: scale(0.3) !important;
-  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transform: none !important;
+  transition: opacity 0.16s ease !important;
   pointer-events: none !important;
 }
 
 tab-group[collapsed] .tab-group-icon::before {
   opacity: 1 !important;
-  transform: scale(1) !important;
-  transition: opacity 0.22s ease, transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
+  transform: none !important;
+  transition: opacity 0.20s ease !important;
 }
 
 /* Complete obliteration of native image.group-marker and children inside .tab-group-icon on tabstrip ONLY */
@@ -417,15 +417,15 @@ tab-group .tab-group-icon::after {
   -webkit-mask-position: center !important;
   mask-position: center !important;
   opacity: 1 !important;
-  transform: scale(1) rotate(0deg) !important;
-  transition: opacity 0.24s ease 0.03s, transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) 0.03s !important;
+  transform: scale(1) !important;
+  transition: opacity 0.22s ease, transform 0.24s cubic-bezier(0.25, 1, 0.5, 1) !important;
   pointer-events: none !important;
 }
 
 tab-group[collapsed] .tab-group-icon::after {
   opacity: 0 !important;
-  transform: scale(0.35) rotate(-45deg) !important;
-  transition: opacity 0.16s ease, transform 0.20s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transform: scale(0.46) !important;
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* Hide chevron icon when user disables it in Zentral Settings (in all open & collapsed states) */
