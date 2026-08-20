@@ -91,7 +91,7 @@
   align-items: center !important;
   justify-content: flex-start !important;
   height: 28px !important;
-  padding: 0 14px 0 10px !important;
+  padding: 0 14px 0 7px !important;
   border-radius: 14px !important;
   background-color: color-mix(in srgb, var(--zentral-custom-color, var(--tab-group-color, #777777)) calc(var(--zentral-tabgroup-label-opacity, 0.85) * 100%), transparent) !important;
   backdrop-filter: blur(16px) saturate(140%) !important;
@@ -245,9 +245,9 @@ html[zentral-label-opacity-below-85="true"][zen-right-side="true"] #tabbrowser-t
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
-  justify-content: center !important;
+  justify-content: flex-start !important;
   flex: 0 1 auto !important;
-  text-align: center !important;
+  text-align: start !important;
   background-color: transparent !important;
   opacity: 1 !important;
   color: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
@@ -266,10 +266,31 @@ html[zentral-label-opacity-below-85="true"][zen-right-side="true"] #tabbrowser-t
 }
 
 html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label {
-  text-align: center !important;
+  text-align: start !important;
 }
 
-/* Chevron icon - Dynamically Auto-Contrast (Black or White) based on Label Color */
+/* Icon container within title wrapper */
+.tab-group-icon-container,
+#tabbrowser-tabs tab-group .tab-group-icon-container,
+#tabbrowser-tabs tab-group[collapsed] .tab-group-icon-container {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
+  margin-right: 6px !important;
+  margin-left: 0 !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+  order: 1 !important;
+}
+
+/* Circular Group State Indicator - Dynamically Auto-Contrast (Black or White) based on Label Color */
 #tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-icon,
 #tabbrowser-tabs tab-group[collapsed] > .tab-group-label-container .tab-group-icon,
 tab-group .tab-group-icon,
@@ -277,14 +298,19 @@ tab-group[collapsed] .tab-group-icon {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+  position: relative !important;
   opacity: 1 !important;
   color: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
   fill: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
   stroke: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
   width: 14px !important;
   height: 14px !important;
-  margin-right: 6px !important;
-  margin-left: 0 !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
+  margin: 0 !important;
+  padding: 0 !important;
   flex-shrink: 0 !important;
   order: 1 !important;
   border: none !important;
@@ -295,16 +321,17 @@ tab-group[collapsed] .tab-group-icon {
   text-decoration: none !important;
   -webkit-appearance: none !important;
   appearance: none !important;
+  cursor: pointer !important;
 }
 
-/* 1. Closed State: Solid full dot */
+/* 1. Closed State: Small Solid full dot */
 tab-group .tab-group-icon::before {
   content: "" !important;
   position: absolute !important;
   inset: 0 !important;
   margin: auto !important;
-  width: 10px !important;
-  height: 10px !important;
+  width: 6.5px !important;
+  height: 6.5px !important;
   border-radius: 50% !important;
   background-color: currentColor !important;
   opacity: 0 !important;
@@ -391,13 +418,13 @@ tab-group .tab-group-icon::after {
   mask-position: center !important;
   opacity: 1 !important;
   transform: scale(1) rotate(0deg) !important;
-  transition: opacity 0.24s ease 0.04s, transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) 0.04s !important;
+  transition: opacity 0.24s ease 0.03s, transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) 0.03s !important;
   pointer-events: none !important;
 }
 
 tab-group[collapsed] .tab-group-icon::after {
   opacity: 0 !important;
-  transform: scale(0.4) rotate(-45deg) !important;
+  transform: scale(0.35) rotate(-45deg) !important;
   transition: opacity 0.16s ease, transform 0.20s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
