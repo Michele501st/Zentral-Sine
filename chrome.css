@@ -1,4 +1,4 @@
-﻿/* ============================================================================ */
+/* ============================================================================ */
 /*               ZENTRAL TAB GROUPS & UI STYLESHEET (v0.1.5a)                  */
 /* ============================================================================ */
 /*  Part of the Zentral userChrome.js suite for Zen Browser.                   */
@@ -297,15 +297,26 @@ tab-group[collapsed] .tab-group-icon {
   appearance: none !important;
 }
 
-#tabbrowser-tabs tab-group .tab-group-icon::before,
-#tabbrowser-tabs tab-group[collapsed] .tab-group-icon::before,
-tab-group .tab-group-icon::before,
+/* 1. Closed State: Solid full dot */
+tab-group .tab-group-icon::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  margin: auto !important;
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+  background-color: currentColor !important;
+  opacity: 0 !important;
+  transform: scale(0.3) !important;
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  pointer-events: none !important;
+}
+
 tab-group[collapsed] .tab-group-icon::before {
-  display: none !important;
-  content: none !important;
-  border: none !important;
-  outline: none !important;
-  background: none !important;
+  opacity: 1 !important;
+  transform: scale(1) !important;
+  transition: opacity 0.22s ease, transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
 }
 
 /* Complete obliteration of native image.group-marker and children inside .tab-group-icon on tabstrip ONLY */
@@ -360,26 +371,34 @@ tab-group[collapsed] .group-marker::after,
   border: none !important;
 }
 
+/* 2. Open State: Concentric Circles with central dot (Zen logo style) */
 tab-group .tab-group-icon::after {
   content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  margin: auto !important;
   display: block !important;
-  width: 10px !important;
-  height: 10px !important;
+  width: 14px !important;
+  height: 14px !important;
   background-color: currentColor !important;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='10.2' stroke='black' stroke-width='2.2'/%3E%3Ccircle cx='12' cy='12' r='6.2' stroke='black' stroke-width='2.2'/%3E%3Ccircle cx='12' cy='12' r='2.4' fill='black'/%3E%3C/svg%3E") !important;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='10.2' stroke='black' stroke-width='2.2'/%3E%3Ccircle cx='12' cy='12' r='6.2' stroke='black' stroke-width='2.2'/%3E%3Ccircle cx='12' cy='12' r='2.4' fill='black'/%3E%3C/svg%3E") !important;
   -webkit-mask-size: contain !important;
   mask-size: contain !important;
   -webkit-mask-repeat: no-repeat !important;
   mask-repeat: no-repeat !important;
   -webkit-mask-position: center !important;
   mask-position: center !important;
-  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
-  transform: rotate(0deg) !important;
+  opacity: 1 !important;
+  transform: scale(1) rotate(0deg) !important;
+  transition: opacity 0.24s ease 0.04s, transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) 0.04s !important;
+  pointer-events: none !important;
 }
 
 tab-group[collapsed] .tab-group-icon::after {
-  transform: rotate(-90deg) !important;
+  opacity: 0 !important;
+  transform: scale(0.4) rotate(-45deg) !important;
+  transition: opacity 0.16s ease, transform 0.20s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* Hide chevron icon when user disables it in Zentral Settings (in all open & collapsed states) */
