@@ -1,4 +1,4 @@
-
+﻿
 // ==UserScript==
 // @name           Zentral
 // @description    Unified Apps Grid and Tabs Groups
@@ -613,7 +613,173 @@
     /**
      * Injects CSS styling for grid, tiles, badges, floating panel slider, and pills.
      */
-    injectStyles() { /* Extracted to chrome.css */ }
+    injectStyles() {
+      if (document.getElementById("zen-apps-sidebar-styles") || this._stylesInjected) return;
+      this._stylesInjected = true;
+      const css = `
+                /* Morphing Autohide Apps Grid */
+        #zen-apps-sidebar-grid .zen-apps-autohide-dots {
+          display: none;
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) scale(1);
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 0.30s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+          z-index: 5;
+        }
+        #zen-apps-sidebar-grid .zen-apps-autohide-dot {
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          background-color: currentColor;
+          opacity: 0.65;
+          transition: transform 0.25s ease, opacity 0.25s ease;
+        }
+        #zen-apps-sidebar-grid:hover .zen-apps-autohide-dot {
+          opacity: 1;
+        }
+
+        /* When Autohide is active in expanded vertical sidebar */
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) {
+          min-height: 22px;
+          max-height: 22px;
+          padding: 0 10px !important;
+          cursor: pointer;
+          overflow: hidden !important;
+          border-radius: var(--toolbarbutton-border-radius, 6px);
+          transition: max-height 0.44s cubic-bezier(0.16, 1, 0.3, 1), padding 0.38s ease, background 0.25s ease !important;
+        }
+
+        /* Collapsed Strip State: Show 3 dots, hide app tiles */
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) {
+          background: transparent;
+        }
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) .zen-apps-autohide-dots {
+          display: flex;
+          opacity: 0.75;
+          transform: translate(-50%, -50%) scale(1);
+        }
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover):hover .zen-apps-autohide-dots {
+          opacity: 1;
+        }
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) .zen-apps-scroll-box,
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) .zen-app-tile,
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) .zen-app-add-btn {
+          opacity: 0 !important;
+          pointer-events: none !important;
+          transform: translateY(-8px) scale(0.94);
+          transition: opacity 0.25s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+
+        /* Keep Apps Grid expanded while an App Panel is open */
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) {
+          max-height: calc(var(--zentral-max-rows, 3) * 42px - 2px) !important;
+          padding: 4px 10px 0px 10px !important;
+          margin: 0 !important;
+          overflow-y: auto !important;
+        }
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-apps-autohide-dots {
+          opacity: 0 !important;
+          transform: translate(-50%, -50%) scale(0.5) !important;
+          pointer-events: none !important;
+        }
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-apps-scroll-box,
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-tile,
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-add-btn {
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          transform: translateY(0) scale(1) !important;
+        }
+
+        /* Expanded Grid State: Hide 3 dots, reveal app tiles with smooth slide-down */
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"],
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover {
+          max-height: calc(var(--zentral-max-rows, 3) * 42px - 2px) !important;
+          padding: 4px 10px 0px 10px !important;
+          margin: 0 !important;
+          overflow-y: auto !important;
+        }
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-apps-autohide-dots,
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zen-apps-autohide-dots {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(0.5);
+          pointer-events: none;
+        }
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-apps-scroll-box,
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-app-tile,
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-app-add-btn,
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zen-apps-scroll-box,
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zen-app-tile,
+        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zen-app-add-btn {
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          transform: translateY(0) scale(1);
+          transition: opacity 0.35s ease 0.05s, transform 0.42s cubic-bezier(0.16, 1, 0.3, 1) 0.05s !important;
+        }
+
+        #zen-apps-sidebar-grid { display: grid; grid-template-columns: repeat(var(--zentral-grid-cols, 7), minmax(0, 1fr)); justify-items: center; align-items: center; gap: 6px; padding: 4px 10px 0px 10px; margin: 0; width: 100%; box-sizing: border-box; position: relative; z-index: 10; max-height: calc(var(--zentral-max-rows, 3) * 42px - 2px); overflow-y: auto; scrollbar-width: none; }
+        #zen-apps-sidebar-grid::-webkit-scrollbar { display: none; }
+        .zen-apps-scroll-box { display: contents; }
+        #zen-apps-sidebar-grid.zen-apps-horizontal { display: flex; flex-direction: row; padding: 0 2px; gap: 2px; width: auto; align-items: center; -moz-window-dragging: no; position: relative; flex-shrink: 1 !important; min-width: 0 !important; margin-left: auto !important; }
+        #zen-apps-sidebar-grid.zen-apps-horizontal .zen-apps-scroll-box { display: flex; flex-direction: row; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; width: max-content; max-width: calc(10 * 38px + 9 * 4px) !important; scroll-behavior: smooth; -moz-window-dragging: no; flex-shrink: 1 !important; }
+        #zen-apps-sidebar-grid.zen-apps-horizontal .zen-apps-scroll-box::-webkit-scrollbar { display: none; }
+        #zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile { width: 38px !important; min-width: 38px !important; max-width: 38px !important; height: 28px !important; padding: 0 !important; aspect-ratio: auto; border-radius: var(--toolbarbutton-border-radius, 6px); flex-shrink: 0 !important; }
+        .zen-app-tile { position: relative; appearance: none; border: none; width: 100%; height: auto; aspect-ratio: 1 / 1; max-width: 36px; max-height: 36px; border-radius: var(--toolbarbutton-border-radius, 8px); background-color: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.15s ease, opacity 0.15s ease, transform 0.1s ease; padding: 0; margin: 0; overflow: visible; -moz-window-dragging: no-drag; pointer-events: auto !important; }
+        .zen-app-tile:hover { background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, currentColor 10%, transparent)) !important; }
+        .zen-app-tile:active { transform: scale(0.95); }
+        .zen-app-tile[data-active="true"] { background-color: var(--toolbarbutton-active-background, color-mix(in srgb, currentColor 15%, transparent)) !important; }
+        .zen-app-tile img { width: 18px; height: 18px; object-fit: contain; pointer-events: none; border-radius: 4px; image-rendering: -webkit-optimize-contrast; }
+        .zen-app-add-btn { background-color: transparent; border: 1px dashed color-mix(in srgb, currentColor 30%, transparent); opacity: 0.7; flex-shrink: 0 !important; }
+        .zen-app-add-btn:hover { opacity: 1; border-style: solid; }
+        .zen-app-add-btn svg { width: 16px; height: 16px; pointer-events: none; }
+        .zen-app-badge { position: absolute; top: 2px; right: 2px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; background-color: #ff3b30; color: #ffffff; font-size: 9px; font-weight: 700; line-height: 14px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3); pointer-events: none; z-index: 10; box-sizing: border-box; }
+        .zen-app-badge[data-dot="true"] { min-width: 8px; width: 8px; height: 8px; padding: 0; border-radius: 50%; top: 3px; right: 3px; font-size: 0; }
+
+        #zen-app-panel-root { position: fixed; display: none; pointer-events: none; overflow: visible; z-index: 1 !important; }
+        #zen-app-panel-root[open] { display: block; }
+        #zen-app-panel-root:not([open]) #zen-app-panel-slider, #zen-app-panel-root[closing] #zen-app-panel-slider { box-shadow: none !important; }
+        #zen-app-panel-clip { position: absolute; inset: 0; overflow: hidden; border-radius: var(--zen-native-inner-radius, 8px); pointer-events: none; }
+        #zen-app-panel-slider { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--tabpanels-background-color, #1e1e24); box-shadow: 0 8px 40px rgba(0, 0, 0, 0.55), 0 2px 10px rgba(0, 0, 0, 0.30); pointer-events: auto; will-change: transform; }
+        #zen-app-panel-pill { position: absolute; top: 50%; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 4px; border-radius: 14px; background: var(--zen-colors-tertiary, var(--zen-colors-secondary, var(--zen-primary-color, light-dark(#f4b4b4, #362929)))); color: var(--zen-colors-tertiary-text, light-dark(#18181b, #f4f4f5)); border: 1px solid color-mix(in srgb, currentColor 12%, transparent); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35); z-index: 20; opacity: 0; transition: opacity 0.2s ease 0.3s; pointer-events: none; }
+        #zen-app-panel-root:not([open]) #zen-app-panel-pill, #zen-app-panel-root[closing] #zen-app-panel-pill { display: none !important; opacity: 0 !important; pointer-events: none !important; }
+        :root[zen-right-side="true"] #zen-app-panel-pill { left: 0; transform: translate(-50%, -50%); }
+        :root:not([zen-right-side="true"]) #zen-app-panel-pill { right: 0; transform: translate(50%, -50%); }
+        .zen-app-hover-zone { position: absolute; top: 0; bottom: 0; width: 44px; z-index: 10; pointer-events: none; background: transparent; }
+        #zen-app-panel-root[open] .zen-app-hover-zone { pointer-events: auto; }
+        :root[zen-right-side="true"] .zen-app-hover-zone { left: -22px; right: auto; }
+        :root:not([zen-right-side="true"]) .zen-app-hover-zone { right: -22px; left: auto; }
+        .zen-app-hover-zone:hover ~ #zen-app-panel-pill, #zen-app-panel-pill:hover, .zen-app-resize-strip:hover ~ #zen-app-panel-pill { opacity: 1; pointer-events: auto; transition-delay: 0s; }
+        .zen-app-btn { appearance: none; background: transparent; border: none; border-radius: 8px; color: inherit; padding: 4px; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.15s ease; }
+        .zen-app-btn:hover { background-color: color-mix(in srgb, currentColor 15%, transparent); }
+        .zen-app-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; display: block; }
+        .zen-app-btn[data-pinned="true"] { background-color: color-mix(in srgb, currentColor 20%, transparent); }
+        .zen-app-btn[data-pinned="true"] svg { fill: currentColor; stroke: currentColor; stroke-width: 0.5; }
+        .zen-app-close-btn { color: #ff4d4d !important; }
+        .zen-app-close-btn:hover { background-color: rgba(255, 77, 77, 0.22) !important; color: #ff6666 !important; }
+        .zen-app-close-btn svg { stroke: #ff4d4d !important; stroke-width: 2 !important; }
+        .zen-app-close-btn:hover svg { stroke: #ff6666 !important; }
+        .zen-app-grabber { cursor: ew-resize; padding: 4px 2px; width: 26px; height: 24px; display: flex; align-items: center; justify-content: center; color: inherit; border-radius: 8px; user-select: none; transition: background-color 0.15s ease; }
+        .zen-app-grabber:hover { background-color: color-mix(in srgb, currentColor 15%, transparent); }
+        .zen-app-grabber svg { width: 10px; height: 14px; fill: currentColor; stroke: none; display: block; }
+        .zen-app-resize-strip { position: absolute; top: 0; bottom: 0; width: 10px; cursor: ew-resize; z-index: 15; background: transparent; pointer-events: none; }
+        #zen-app-panel-root[open] .zen-app-resize-strip { pointer-events: auto; }
+        :root[zen-right-side="true"] .zen-app-resize-strip { left: -5px; right: auto; }
+        :root:not([zen-right-side="true"]) .zen-app-resize-strip { right: -5px; left: auto; }
+      `;
+      try {
+        const style = document.createElement("style");
+        style.id = "zen-apps-sidebar-styles";
+        style.textContent = css;
+        (document.head || document.documentElement).appendChild(style);
+      } catch (e) {
+        console.error("[Zentral] Error injecting sidebar styles:", e);
+      }
+    }
 
     /* --------------------------------------------------------------------------
      * 3.4 Grid & Tile Rendering
@@ -698,23 +864,19 @@
           this.scheduleAutohideCollapse();
         });
 
-        let _wheelScrollAF;
         scrollBox.addEventListener("wheel", (e) => {
           if (!this.#dom.grid.classList.contains("zen-apps-horizontal")) return;
           if (e.deltaY !== 0 || e.deltaX !== 0) {
             e.preventDefault();
             const delta = e.deltaY !== 0 ? e.deltaY : e.deltaX;
             scrollBox.scrollLeft += delta * 8;
-            if (_wheelScrollAF) cancelAnimationFrame(_wheelScrollAF);
-            _wheelScrollAF = requestAnimationFrame(() => this.updateScrollMask());
+            this.updateScrollMask();
           }
         }, { passive: false });
 
-        let _scrollAF;
         scrollBox.addEventListener("scroll", () => {
-          if (_scrollAF) cancelAnimationFrame(_scrollAF);
-          _scrollAF = requestAnimationFrame(() => this.updateScrollMask());
-        }, { passive: true });
+          this.updateScrollMask();
+        });
 
         this.#dom.grid.addEventListener("contextmenu", (e) => {
           if (e.target.closest(".zen-app-tile[data-app-id]")) return;
@@ -833,25 +995,20 @@
         }, 120);
       });
 
-      let _drawerAF;
       window.addEventListener("mousemove", (e) => {
         if (!this.isCollapsedSidebar() || Core.getPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED) === false) return;
-        
-        if (_drawerAF) cancelAnimationFrame(_drawerAF);
-        _drawerAF = requestAnimationFrame(() => {
-          if (e.clientY > window.innerHeight / 3) return;
+        if (e.clientY > window.innerHeight / 3) return;
 
-          const isRight = this.isSidebarRight();
-          const isNearEdge = isRight ? (e.clientX >= window.innerWidth - 18) : (e.clientX <= 18);
+        const isRight = this.isSidebarRight();
+        const isNearEdge = isRight ? (e.clientX >= window.innerWidth - 18) : (e.clientX <= 18);
 
-          if (isNearEdge && !drawer.hasAttribute("open") && !openTimer) {
-            cancelTimers();
-            openTimer = setTimeout(() => {
-              openTimer = null;
-              drawer.setAttribute("open", "true");
-            }, 120);
-          }
-        });
+        if (isNearEdge && !drawer.hasAttribute("open") && !openTimer) {
+          cancelTimers();
+          openTimer = setTimeout(() => {
+            openTimer = null;
+            drawer.setAttribute("open", "true");
+          }, 120);
+        }
       }, { passive: true });
 
       trigger.addEventListener("mouseleave", () => {
@@ -1558,11 +1715,7 @@
       });
 
       // --- Vector 4: window resize fallback ---
-      let _windowResizeAF;
-      this._windowResizeListener = () => {
-        if (_windowResizeAF) cancelAnimationFrame(_windowResizeAF);
-        _windowResizeAF = requestAnimationFrame(reposition);
-      };
+      this._windowResizeListener = reposition;
       window.addEventListener("resize", this._windowResizeListener, { passive: true });
     }
 
@@ -2808,7 +2961,249 @@
     /**
      * Injects CSS styles for customized tab group pills, initial badges, and color pickers.
      */
-    injectStyles() { /* Extracted to chrome.css */ }
+    injectStyles() {
+      const css = `
+
+        /* Suppress Native Firefox/Zen Tab Group Editor Popups */
+        #tab-group-editor,
+        #tabgroup-editor-panel,
+        #tabGroupEditor,
+        tabgroup-editor-panel,
+        .tab-group-editor,
+        #tabGroupContextMenu,
+        tabgroup-meu,
+        panel[id*="tab-group-editor"],
+        panel[id*="tabgroup-editor"] {
+          display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          height: 0 !important;
+          width: 0 !important;
+        }
+
+        /* Zentral Tooltip Styling (Matched to native Zen tab previews) */
+        #zentral-tabgroup-tooltip {
+          --panel-background: transparent !important;
+          --panel-border-color: transparent !important;
+          background: transparent !important;
+          border: none !important;
+        }
+        #zentral-tabgroup-tooltip::part(content) {
+          border: none !important;
+          background: transparent !important;
+          padding: 0 !important;
+          box-shadow: none !important;
+        }
+        #zentral-tabgroup-tooltip-container {
+          background: var(--zen-colors-tertiary, var(--arrowpanel-background, var(--tabpanels-background-color, #1e1e22))) !important;
+          color: var(--zen-colors-text, var(--arrowpanel-color, var(--in-content-page-color, #fbfbfe))) !important;
+          border: 1px solid var(--zen-colors-border, var(--arrowpanel-border-color, color-mix(in srgb, currentColor 12%, rgba(255, 255, 255, 0.08)))) !important;
+          border-radius: 12px !important;
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px color-mix(in srgb, currentColor 8%, transparent) !important;
+          padding: 6px !important;
+          gap: 2px !important;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+          font-size: 13px !important;
+          line-height: 1.4 !important;
+          max-height: 320px !important;
+          backdrop-filter: blur(20px) saturate(140%) !important;
+          -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+        }
+        .zentral-tooltip-row {
+          padding: 6px 10px !important;
+          border-radius: 8px !important;
+          cursor: pointer !important;
+          transition: background-color 0.15s ease !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 10px !important;
+          max-width: 320px !important;
+        }
+        #tab-label-input {
+          background: rgba(0, 0, 0, 0.3) !important;
+          border: 1px solid color-mix(in srgb, currentColor 40%, transparent) !important;
+          border-radius: 6px !important;
+          color: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
+          font-size: 12.5px !important;
+          font-weight: 600 !important;
+          font-family: inherit !important;
+          text-align: center !important;
+          padding: 2px 6px !important;
+          margin: 0 !important;
+          outline: none !important;
+          width: 100% !important;
+          max-width: 180px !important;
+          box-sizing: border-box !important;
+          order: 2 !important;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.3) !important;
+        }
+        .zentral-tooltip-row:hover {
+          background-color: color-mix(in srgb, currentColor 10%, transparent) !important;
+        }
+        .zentral-tooltip-text-col {
+          display: flex !important;
+          flex-direction: column !important;
+          min-width: 0 !important;
+          flex: 1 !important;
+        }
+        .zentral-tooltip-title {
+          font-size: 12.5px !important;
+          font-weight: 500 !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          color: inherit !important;
+        }
+        .zentral-tooltip-domain {
+          font-size: 10.5px !important;
+          opacity: 0.65 !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          margin-top: 1px !important;
+          color: inherit !important;
+        }
+
+        /* Zentral Color Picker Panel Styling */
+        #zentral-group-color-picker,
+        #zentral-group-color-picker::part(content),
+        #zentral-group-color-picker::part(arrow),
+        panel#zentral-group-color-picker,
+        #zentral-group-color-picker .panel-arrowcontent,
+        #zentral-group-color-picker .panel-subview-body {
+          --panel-background: transparent !important;
+          --panel-border-color: transparent !important;
+          --panel-box-shadow: none !important;
+          --panel-padding: 0 !important;
+          --arrowpanel-background: transparent !important;
+          --arrowpanel-border-color: transparent !important;
+          --arrowpanel-border-radius: 0px !important;
+          --arrowpanel-borderRadius: 0px !important;
+          --arrowpanel-box-shadow: none !important;
+          --arrowpanel-padding: 0 !important;
+          --arrowpanel-margin: 0 !important;
+          border: none !important;
+          background: transparent !important;
+          background-color: transparent !important;
+          box-shadow: none !important;
+          outline: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+
+        .ztg-cp-box {
+          padding: 12px 14px 14px 14px !important;
+          gap: 10px !important;
+          background: #1e1e24 !important;
+          color: var(--in-content-page-color, #fbfbfe) !important;
+          border: 1px solid color-mix(in srgb, currentColor 14%, rgba(255, 255, 255, 0.12)) !important;
+          border-radius: 18px !important;
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75) !important;
+          backdrop-filter: blur(20px) !important;
+          width: 184px !important;
+          box-sizing: border-box !important;
+          margin: 0 !important;
+          overflow: visible !important;
+        }
+
+        .zentral-color-swatch {
+          width: 24px !important;
+          height: 24px !important;
+          border-radius: 50% !important;
+          cursor: pointer !important;
+          border: 1px solid color-mix(in srgb, currentColor 15%, transparent) !important;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15) !important;
+          transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.15s ease !important;
+        }
+
+        .zentral-color-swatch:hover {
+          transform: scale(1.15) !important;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.35) !important;
+          z-index: 2 !important;
+        }
+
+        .ztg-btn {
+          flex: 1 !important;
+          padding: 6px 8px !important;
+          border: 1px solid color-mix(in srgb, currentColor 14%, transparent) !important;
+          background: color-mix(in srgb, currentColor 8%, transparent) !important;
+          color: inherit !important;
+          cursor: pointer !important;
+          border-radius: 8px !important;
+          font-size: 11px !important;
+          font-weight: 500 !important;
+          transition: all 0.15s ease !important;
+          outline: none !important;
+        }
+
+        .ztg-btn:hover {
+          background: color-mix(in srgb, currentColor 14%, transparent) !important;
+          border-color: color-mix(in srgb, currentColor 22%, transparent) !important;
+        }
+
+        .ztg-btn:active {
+          transform: scale(0.97) !important;
+        }
+
+        .ztg-input {
+          font-size: 11px !important;
+          font-weight: 500 !important;
+          padding: 5px 6px !important;
+          border-radius: 8px !important;
+          background: color-mix(in srgb, currentColor 8%, transparent) !important;
+          color: inherit !important;
+          border: 1px solid color-mix(in srgb, currentColor 14%, transparent) !important;
+          text-align: center !important;
+          outline: none !important;
+          transition: all 0.15s ease !important;
+        }
+
+        .ztg-input:focus {
+          border-color: var(--zen-primary-color, #70a0ff) !important;
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--zen-primary-color, #70a0ff) 25%, transparent) !important;
+        }
+
+        .ztg-drag-handle {
+          width: 100% !important;
+          height: 18px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          cursor: grab !important;
+          margin-top: -2px !important;
+          margin-bottom: 2px !important;
+          user-select: none !important;
+          -moz-user-select: none !important;
+        }
+
+        .ztg-drag-handle:active {
+          cursor: grabbing !important;
+        }
+
+        .ztg-drag-pill {
+          width: 32px !important;
+          height: 4px !important;
+          border-radius: 2px !important;
+          background: color-mix(in srgb, currentColor 22%, transparent) !important;
+          transition: background 0.15s ease, width 0.15s ease !important;
+          pointer-events: none !important;
+        }
+
+        .ztg-drag-handle:hover .ztg-drag-pill {
+          background: color-mix(in srgb, currentColor 45%, transparent) !important;
+          width: 40px !important;
+        }
+      `;
+      try {
+        const styleEl = document.createElement("style");
+        styleEl.id = "zentral-tabgroups-styles";
+        styleEl.textContent = css;
+        (document.head || document.documentElement).appendChild(styleEl);
+      } catch (e) {
+        console.error("[Zentral] Error injecting tabgroups styles:", e);
+      }
+    }
 
     /* --------------------------------------------------------------------------
      * 4.1 Initialization & Observers
@@ -3738,7 +4133,6 @@
         e.preventDefault();
       });
 
-      let _panelDragAF;
       window.addEventListener("mousemove", (e) => {
         if (!isDragging) return;
         const deltaX = e.screenX - startX;
@@ -3746,12 +4140,9 @@
         startX = e.screenX;
         startY = e.screenY;
 
-        if (_panelDragAF) cancelAnimationFrame(_panelDragAF);
-        _panelDragAF = requestAnimationFrame(() => {
-          const currentX = parseInt(panel.getAttribute("left")) || panel.screenX || 0;
-          const currentY = parseInt(panel.getAttribute("top")) || panel.screenY || 0;
-          panel.moveTo(currentX + deltaX, currentY + deltaY);
-        });
+        const currentX = parseInt(panel.getAttribute("left")) || panel.screenX || 0;
+        const currentY = parseInt(panel.getAttribute("top")) || panel.screenY || 0;
+        panel.moveTo(currentX + deltaX, currentY + deltaY);
       });
 
       window.addEventListener("mouseup", (e) => {
@@ -4666,11 +5057,7 @@
       this.updatePosition();
 
       if (!this._resizeHandler) {
-        let _resizeAF;
-        this._resizeHandler = () => {
-          if (_resizeAF) cancelAnimationFrame(_resizeAF);
-          _resizeAF = requestAnimationFrame(() => this.updatePosition());
-        };
+        this._resizeHandler = () => this.updatePosition();
         window.addEventListener("resize", this._resizeHandler, { passive: true });
       }
     }
@@ -4858,7 +5245,436 @@
       }
     }
 
-    injectStyles() { /* Extracted to chrome.css */ }
+    injectStyles() {
+      const existing = document.getElementById("zentral-settings-styles");
+      if (existing) existing.remove();
+      this._stylesInjected = true;
+      const css = `
+        #zentral-settings-modal {
+          position: fixed;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 100vh;
+          background: rgba(0, 0, 0, 0.62);
+          backdrop-filter: blur(16px) saturate(140%);
+          -webkit-backdrop-filter: blur(16px) saturate(140%);
+          z-index: 2147483647;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          animation: zsFadeIn 0.18s ease-out;
+        }
+
+        @keyframes zsFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes zsModalPop {
+          from { opacity: 0; transform: scale(0.96) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .zs-dialog {
+          background: #18181c !important;
+          color: #f2f2f7 !important;
+          width: 480px;
+          max-width: 92vw;
+          border-radius: 16px;
+          box-shadow: 0 28px 70px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          animation: zsModalPop 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+        }
+
+        .zs-header {
+          padding: 16px 22px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: rgba(255, 255, 255, 0.02);
+          color: #ffffff !important;
+        }
+
+        .zs-title-group {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .zs-title {
+          margin: 0;
+          font-size: 15px;
+          font-weight: 600;
+          letter-spacing: -0.2px;
+          color: #ffffff !important;
+        }
+
+        .zs-close-btn {
+          background: transparent;
+          border: none;
+          color: #f2f2f7 !important;
+          cursor: pointer;
+          width: 28px;
+          height: 28px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0.7;
+          transition: all 0.15s ease;
+          padding: 0;
+        }
+
+        .zs-close-btn:hover {
+          opacity: 1;
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .zs-body {
+          padding: 20px 22px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          overflow-y: auto;
+          max-height: 72vh;
+          scrollbar-width: thin;
+          background: #18181c !important;
+          color: #f2f2f7 !important;
+        }
+
+        .zs-section-title {
+          font-size: 11px;
+          text-transform: uppercase;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          color: var(--zen-primary-color, #ff5555) !important;
+          opacity: 0.95;
+          margin: 6px 0 2px 0;
+        }
+
+        .zs-card {
+          background: rgba(255, 255, 255, 0.04) !important;
+          border: 1px solid rgba(255, 255, 255, 0.07) !important;
+          border-radius: 12px;
+          padding: 12px 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .zs-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .zs-label-container {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .zs-label {
+          font-size: 13px;
+          font-weight: 500;
+          color: #f2f2f7 !important;
+        }
+
+        .zs-sublabel {
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.6) !important;
+          margin-top: 2px;
+        }
+
+        /* Integrated Dark Stepper Container */
+        .zs-stepper {
+          display: inline-flex;
+          align-items: center;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          border-radius: 8px;
+          overflow: hidden;
+          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+          width: 86px;
+          height: 32px;
+        }
+
+        .zs-stepper:focus-within {
+          border-color: var(--zen-primary-color, #ff5555) !important;
+          box-shadow: 0 0 0 2px rgba(255, 85, 85, 0.3) !important;
+        }
+
+        .zs-stepper .zs-input-number {
+          flex: 1;
+          width: 54px !important;
+          background: transparent !important;
+          border: none !important;
+          color: #ffffff !important;
+          padding: 4px 6px 4px 10px !important;
+          font-size: 13px !important;
+          text-align: left !important;
+          font-weight: 600 !important;
+          outline: none !important;
+          -moz-appearance: textfield !important;
+          appearance: textfield !important;
+        }
+
+        .zs-stepper .zs-input-number::-webkit-outer-spin-button,
+        .zs-stepper .zs-input-number::-webkit-inner-spin-button {
+          -webkit-appearance: none !important;
+          margin: 0 !important;
+        }
+
+        .zs-stepper-btns {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          border-left: 1px solid rgba(255, 255, 255, 0.1);
+          width: 22px;
+        }
+
+        .zs-stepper-btn {
+          flex: 1;
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.7);
+          cursor: pointer;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.12s ease;
+          user-select: none;
+        }
+
+        .zs-stepper-btn:hover {
+          background: rgba(255, 255, 255, 0.15);
+          color: #ffffff;
+        }
+
+        .zs-stepper-btn:active {
+          background: var(--zen-primary-color, #ff5555);
+          color: #ffffff;
+        }
+
+        .zs-stepper-up {
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Sleek select box */
+        .zs-select {
+          width: 155px;
+          background: #242429 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>') no-repeat right 10px center !important;
+          -moz-appearance: none !important;
+          appearance: none !important;
+          border: 1px solid rgba(255, 255, 255, 0.16) !important;
+          border-radius: 8px;
+          color: #ffffff !important;
+          padding: 6px 28px 6px 10px;
+          font-size: 13px;
+          font-weight: 500;
+          outline: none;
+          cursor: pointer;
+          transition: border-color 0.15s ease;
+        }
+
+        .zs-select:hover {
+          border-color: rgba(255, 255, 255, 0.35) !important;
+        }
+
+        .zs-select:focus {
+          border-color: var(--zen-primary-color, #ff5555) !important;
+        }
+
+        .zs-select option {
+          background-color: #242429 !important;
+          color: #f2f2f7 !important;
+        }
+
+        .zs-switch {
+          position: relative;
+          display: inline-block;
+          width: 38px;
+          height: 22px;
+          flex-shrink: 0;
+        }
+
+        .zs-switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+
+        .zs-slider {
+          position: absolute;
+          cursor: pointer;
+          inset: 0;
+          background-color: rgba(255, 255, 255, 0.16) !important;
+          transition: background-color 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+          border-radius: 22px;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .zs-slider:before {
+          position: absolute;
+          content: "";
+          height: 16px;
+          width: 16px;
+          left: 2px;
+          bottom: 2px;
+          background-color: #ffffff;
+          transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+          border-radius: 50%;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        .zs-switch input:checked + .zs-slider {
+          background-color: var(--zen-primary-color, #ff5555) !important;
+          border-color: transparent !important;
+        }
+
+        .zs-switch input:checked + .zs-slider:before {
+          transform: translateX(16px);
+        }
+
+        .zs-range-container {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 180px;
+        }
+
+        .zs-range-slider {
+          flex: 1;
+          appearance: none;
+          -webkit-appearance: none;
+          height: 6px;
+          border-radius: 3px;
+          background: rgba(255, 255, 255, 0.16) !important;
+          outline: none;
+          cursor: pointer;
+        }
+
+        .zs-range-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: var(--zen-primary-color, #ff5555) !important;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+          cursor: pointer;
+          transition: transform 0.15s ease;
+        }
+
+        .zs-range-slider::-webkit-slider-thumb:hover {
+          transform: scale(1.15);
+        }
+
+        .zs-range-value {
+          font-size: 12px;
+          font-weight: 600;
+          width: 40px;
+          text-align: right;
+          color: #f2f2f7 !important;
+          opacity: 0.9;
+        }
+
+        .zs-reset-btn {
+          padding: 5px 12px;
+          font-size: 11px;
+          font-weight: 500;
+          border-radius: 6px;
+          background: rgba(255, 255, 255, 0.08) !important;
+          border: 1px solid rgba(255, 255, 255, 0.12) !important;
+          color: #f2f2f7 !important;
+          cursor: pointer;
+          opacity: 0.85;
+          transition: all 0.15s ease;
+          align-self: flex-end;
+        }
+
+        .zs-reset-btn:hover {
+          opacity: 1;
+          background: rgba(255, 255, 255, 0.14) !important;
+        }
+
+        .zs-footer {
+          padding: 14px 22px;
+          background: rgba(255, 255, 255, 0.02) !important;
+          border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+        }
+
+        .zs-btn-cancel {
+          padding: 7px 16px;
+          border-radius: 8px;
+          background: transparent !important;
+          border: 1px solid rgba(255, 255, 255, 0.16) !important;
+          color: #f2f2f7 !important;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          opacity: 0.85;
+          transition: all 0.15s ease;
+        }
+
+        .zs-btn-cancel:hover {
+          opacity: 1;
+          background: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .zs-btn-save {
+          padding: 7px 18px;
+          border-radius: 8px;
+          background: var(--zen-primary-color, #ff5555) !important;
+          border: none;
+          color: #ffffff !important;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          box-shadow: 0 2px 8px color-mix(in srgb, var(--zen-primary-color, #ff5555) 40%, transparent);
+          transition: all 0.15s ease;
+        }
+
+        .zs-btn-save:hover {
+          filter: brightness(1.1);
+          transform: translateY(-1px);
+        }
+
+        .zs-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          background: rgba(255, 85, 85, 0.15);
+          color: #ff6b6b;
+          border: 1px solid rgba(255, 85, 85, 0.25);
+          margin-left: 6px;
+        }
+      `;
+      try {
+        const style = document.createElement("style");
+        style.id = "zentral-settings-styles";
+        style.textContent = css;
+        (document.head || document.documentElement).appendChild(style);
+      } catch (e) {
+        console.error("[Zentral] Error injecting settings styles:", e);
+      }
+    }
 
     createModal() {
       this.injectStyles();
