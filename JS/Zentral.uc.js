@@ -1,4 +1,4 @@
-﻿
+
 // ==UserScript==
 // @name           Zentral
 // @description    Unified Apps Grid and Tabs Groups
@@ -2839,6 +2839,48 @@
     }
 
     /**
+     * Retrieves only the direct tabs belonging to a group, excluding tabs inside nested child groups.
+     * @param {Element} group - Tab group DOM element.
+     * @returns {Array<Element>} Array of direct tab elements.
+     */
+    getDirectTabs(group) {
+      if (!group) return [];
+      
+      const domTabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab, [is='tabbrowser-tab']"));
+      const nativeTabs = group.tabs ? Array.from(group.tabs) : [];
+      const combined = Array.from(new Set([...domTabs, ...nativeTabs]));
+      
+      let directTabs = combined.filter(t => {
+        if (!t) return false;
+        
+        // Exclude if physically located inside a nested child tab-group
+        const closest = t.closest ? t.closest("tab-group") : null;
+        if (closest && closest !== group) return false;
+        
+        // Exclude if tab references a different group
+        if (t.group && t.group !== group) return false;
+        const tGId = t.getAttribute?.("group") || t.getAttribute?.("zen-group") || t.getAttribute?.("data-zentral-group-id");
+        if (tGId && group.id && tGId !== group.id) return false;
+        
+        return true;
+      });
+
+      if (directTabs.length === 0 && window.gBrowser?.tabs) {
+        directTabs = Array.from(gBrowser.tabs).filter(t => {
+          if (!t) return false;
+          const closest = t.closest ? t.closest("tab-group") : null;
+          if (closest && closest !== group) return false;
+          if (t.group && t.group !== group) return false;
+          const tGId = t.getAttribute?.("group") || t.getAttribute?.("zen-group") || t.getAttribute?.("data-zentral-group-id");
+          if (tGId && group.id && tGId !== group.id) return false;
+          return t.group === group || (group.id && tGId === group.id) || (closest === group);
+        });
+      }
+
+      return directTabs;
+    }
+
+    /**
      * Initializes Tab Groups module observers, styles, color palettes, and tooltip containers.
      */
     init() {
@@ -3679,7 +3721,7 @@
             const panel = document.getElementById("zentral-tabgroup-tooltip");
             const container = document.getElementById("zentral-tabgroup-tooltip-container");
             if (panel && container && group) {
-              let tabs = group.tabs ? Array.from(group.tabs) : [];
+              let tabs = this.getDirectTabs(group);
               container.replaceChildren();
               if (tabs.length === 0) {
                 const div = document.createElement("div");
