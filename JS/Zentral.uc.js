@@ -617,7 +617,7 @@
       if (document.getElementById("zen-apps-sidebar-styles") || this._stylesInjected) return;
       this._stylesInjected = true;
       const css = `
-                /* Morphing Autohide Apps Grid */
+        /* Morphing Autohide Apps Grid */
         #zen-apps-sidebar-grid .zen-apps-autohide-dots {
           display: none;
           position: absolute;
@@ -629,7 +629,7 @@
           gap: 4px;
           pointer-events: none;
           opacity: 0;
-          transition: opacity 0.30s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: opacity 0.20s ease, transform 0.24s cubic-bezier(0.25, 1, 0.5, 1);
           z-index: 5;
         }
         #zen-apps-sidebar-grid .zen-apps-autohide-dot {
@@ -638,7 +638,7 @@
           border-radius: 50%;
           background-color: currentColor;
           opacity: 0.65;
-          transition: transform 0.25s ease, opacity 0.25s ease;
+          transition: transform 0.2s ease, opacity 0.2s ease;
         }
         #zen-apps-sidebar-grid:hover .zen-apps-autohide-dot {
           opacity: 1;
@@ -652,7 +652,8 @@
           cursor: pointer;
           overflow: hidden !important;
           border-radius: var(--toolbarbutton-border-radius, 6px);
-          transition: max-height 0.44s cubic-bezier(0.16, 1, 0.3, 1), padding 0.38s ease, background 0.25s ease !important;
+          will-change: max-height, padding, background-color;
+          transition: max-height 0.28s cubic-bezier(0.25, 1, 0.5, 1), padding 0.28s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.2s ease !important;
         }
 
         /* Collapsed Strip State: Show 3 dots, hide app tiles */
@@ -663,6 +664,7 @@
           display: flex;
           opacity: 0.75;
           transform: translate(-50%, -50%) scale(1);
+          transition: opacity 0.22s ease 0.06s, transform 0.24s cubic-bezier(0.25, 1, 0.5, 1) 0.06s;
         }
         :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover):hover .zen-apps-autohide-dots {
           opacity: 1;
@@ -672,8 +674,8 @@
         :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) .zen-app-add-btn {
           opacity: 0 !important;
           pointer-events: none !important;
-          transform: translateY(-8px) scale(0.94);
-          transition: opacity 0.25s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          transform: translateY(-6px) scale(0.96);
+          transition: opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
 
         /* Keep Apps Grid expanded while an App Panel is open */
@@ -709,6 +711,7 @@
           opacity: 0;
           transform: translate(-50%, -50%) scale(0.5);
           pointer-events: none;
+          transition: opacity 0.16s ease, transform 0.20s cubic-bezier(0.25, 1, 0.5, 1);
         }
         :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-apps-scroll-box,
         :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-app-tile,
@@ -719,7 +722,7 @@
           opacity: 1 !important;
           pointer-events: auto !important;
           transform: translateY(0) scale(1);
-          transition: opacity 0.35s ease 0.05s, transform 0.42s cubic-bezier(0.16, 1, 0.3, 1) 0.05s !important;
+          transition: opacity 0.26s cubic-bezier(0.25, 1, 0.5, 1), transform 0.28s cubic-bezier(0.25, 1, 0.5, 1) !important;
         }
 
         #zen-apps-sidebar-grid { display: grid; grid-template-columns: repeat(var(--zentral-grid-cols, 7), minmax(0, 1fr)); justify-items: center; align-items: center; gap: 6px; padding: 4px 10px 0px 10px; margin: 0; width: 100%; box-sizing: border-box; position: relative; z-index: 10; max-height: calc(var(--zentral-max-rows, 3) * 42px - 2px); overflow-y: auto; scrollbar-width: none; }
@@ -1112,7 +1115,7 @@
      * Schedules delayed collapse after cursor leaves apps grid.
      * @param {number} [delay=280] - Delay in milliseconds.
      */
-    scheduleAutohideCollapse(delay = 280) {
+    scheduleAutohideCollapse(delay = 180) {
       if (this.#state.autohideCollapseTimer) clearTimeout(this.#state.autohideCollapseTimer);
       this.#state.autohideCollapseTimer = setTimeout(() => {
         this.#state.autohideCollapseTimer = null;
