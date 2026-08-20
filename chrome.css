@@ -881,3 +881,31 @@ panel[id*="tabgroup-editor"] {
   -webkit-appearance: none !important;
   margin: 0 !important;
 }
+
+/* Extracted from ZentralApps */
+`
+                /* Morphing Autohide Apps Grid */
+        #zen-apps-sidebar-grid .zen-apps-autohide-dots {
+          display: none
+
+
+/* Extracted from ZentralTabGroups */
+`
+
+        /* Suppress Native Firefox/Zen Tab Group Editor Popups */
+        #tab-group-editor,
+        #tabgroup-editor-panel,
+        #tabGroupEditor,
+        tabgroup-editor-panel,
+        .tab-group-editor,
+        #tabGroupContextMenu,
+        tabgroup-meu,
+        panel[id*="tab-group-editor"],
+        panel[id*="tabgroup-editor"] {
+          display: none !important
+
+
+/* Extracted from ZentralSettings */
+`
+        #zentral-settings-modal {
+          position: fixed
