@@ -408,8 +408,8 @@ tab-group .tab-group-icon::after {
   width: 15.5px !important;
   height: 15.5px !important;
   background-color: currentColor !important;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='10.6' stroke='black' stroke-width='2.6'/%3E%3Ccircle cx='12' cy='12' r='6.2' stroke='black' stroke-width='1.8'/%3E%3Ccircle cx='12' cy='12' r='1.6' fill='black'/%3E%3C/svg%3E") !important;
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='10.6' stroke='black' stroke-width='2.6'/%3E%3Ccircle cx='12' cy='12' r='6.2' stroke='black' stroke-width='1.8'/%3E%3Ccircle cx='12' cy='12' r='1.6' fill='black'/%3E%3C/svg%3E") !important;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='10.6' stroke='black' stroke-width='2.0'/%3E%3Ccircle cx='12' cy='12' r='6.2' stroke='black' stroke-width='1.8'/%3E%3Ccircle cx='12' cy='12' r='1.6' fill='black'/%3E%3C/svg%3E") !important;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='10.6' stroke='black' stroke-width='2.0'/%3E%3Ccircle cx='12' cy='12' r='6.2' stroke='black' stroke-width='1.8'/%3E%3Ccircle cx='12' cy='12' r='1.6' fill='black'/%3E%3C/svg%3E") !important;
   -webkit-mask-size: contain !important;
   mask-size: contain !important;
   -webkit-mask-repeat: no-repeat !important;
