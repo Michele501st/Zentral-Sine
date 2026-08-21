@@ -91,7 +91,7 @@
   align-items: center !important;
   justify-content: flex-start !important;
   height: 28px !important;
-  padding: 0 14px 0 7px !important;
+  padding: 0 14px 0 6px !important;
   border-radius: 14px !important;
   background-color: color-mix(in srgb, var(--zentral-custom-color, var(--tab-group-color, #777777)) calc(var(--zentral-tabgroup-label-opacity, 0.85) * 100%), transparent) !important;
   backdrop-filter: blur(16px) saturate(140%) !important;
@@ -277,17 +277,18 @@ html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-con
   align-items: center !important;
   justify-content: center !important;
   position: relative !important;
-  width: 14px !important;
-  height: 14px !important;
-  min-width: 14px !important;
-  min-height: 14px !important;
-  max-width: 14px !important;
-  max-height: 14px !important;
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
   margin-right: 6px !important;
   margin-left: 0 !important;
   padding: 0 !important;
   flex-shrink: 0 !important;
   order: 1 !important;
+  overflow: visible !important;
 }
 
 /* Circular Group State Indicator - Dynamically Auto-Contrast (Black or White) based on Label Color */
@@ -303,12 +304,12 @@ tab-group[collapsed] .tab-group-icon {
   color: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
   fill: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
   stroke: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
-  width: 14px !important;
-  height: 14px !important;
-  min-width: 14px !important;
-  min-height: 14px !important;
-  max-width: 14px !important;
-  max-height: 14px !important;
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
   margin: 0 !important;
   padding: 0 !important;
   flex-shrink: 0 !important;
@@ -322,6 +323,7 @@ tab-group[collapsed] .tab-group-icon {
   -webkit-appearance: none !important;
   appearance: none !important;
   cursor: pointer !important;
+  overflow: visible !important;
 }
 
 /* 1. Closed State: Small Solid full dot (Fixed size, pure opacity fade - zero zoom bounce) */
@@ -405,11 +407,11 @@ tab-group .tab-group-icon::after {
   inset: 0 !important;
   margin: auto !important;
   display: block !important;
-  width: 15.5px !important;
-  height: 15.5px !important;
+  width: 16px !important;
+  height: 16px !important;
   background-color: currentColor !important;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='10.6' stroke='black' stroke-width='2.0'/%3E%3Ccircle cx='12' cy='12' r='6.2' stroke='black' stroke-width='1.8'/%3E%3Ccircle cx='12' cy='12' r='1.6' fill='black'/%3E%3C/svg%3E") !important;
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='10.6' stroke='black' stroke-width='2.0'/%3E%3Ccircle cx='12' cy='12' r='6.2' stroke='black' stroke-width='1.8'/%3E%3Ccircle cx='12' cy='12' r='1.6' fill='black'/%3E%3C/svg%3E") !important;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='10.4' stroke='black' stroke-width='2.0'/%3E%3Ccircle cx='12' cy='12' r='6.2' stroke='black' stroke-width='1.8'/%3E%3Ccircle cx='12' cy='12' r='1.6' fill='black'/%3E%3C/svg%3E") !important;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='10.4' stroke='black' stroke-width='2.0'/%3E%3Ccircle cx='12' cy='12' r='6.2' stroke='black' stroke-width='1.8'/%3E%3Ccircle cx='12' cy='12' r='1.6' fill='black'/%3E%3C/svg%3E") !important;
   -webkit-mask-size: contain !important;
   mask-size: contain !important;
   -webkit-mask-repeat: no-repeat !important;
@@ -420,11 +422,12 @@ tab-group .tab-group-icon::after {
   transform: scale(1) !important;
   transition: opacity 0.22s ease, transform 0.24s cubic-bezier(0.25, 1, 0.5, 1) !important;
   pointer-events: none !important;
+  overflow: visible !important;
 }
 
 tab-group[collapsed] .tab-group-icon::after {
   opacity: 0 !important;
-  transform: scale(0.42) !important;
+  transform: scale(0.41) !important;
   transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
@@ -928,30 +931,3 @@ panel[id*="tabgroup-editor"] {
   margin: 0 !important;
 }
 
-/* Extracted from ZentralApps */
-`
-                /* Morphing Autohide Apps Grid */
-        #zen-apps-sidebar-grid .zen-apps-autohide-dots {
-          display: none
-
-
-/* Extracted from ZentralTabGroups */
-`
-
-        /* Suppress Native Firefox/Zen Tab Group Editor Popups */
-        #tab-group-editor,
-        #tabgroup-editor-panel,
-        #tabGroupEditor,
-        tabgroup-editor-panel,
-        .tab-group-editor,
-        #tabGroupContextMenu,
-        tabgroup-meu,
-        panel[id*="tab-group-editor"],
-        panel[id*="tabgroup-editor"] {
-          display: none !important
-
-
-/* Extracted from ZentralSettings */
-`
-        #zentral-settings-modal {
-          position: fixed
