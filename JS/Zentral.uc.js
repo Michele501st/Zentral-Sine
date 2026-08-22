@@ -778,7 +778,7 @@
         .zen-app-badge { position: absolute; top: 2px; right: 2px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; background-color: #ff3b30; color: #ffffff; font-size: 9px; font-weight: 700; line-height: 14px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3); pointer-events: none; z-index: 10; box-sizing: border-box; }
         .zen-app-badge[data-dot="true"] { min-width: 8px; width: 8px; height: 8px; padding: 0; border-radius: 50%; top: 3px; right: 3px; font-size: 0; }
 
-        #zen-app-panel-root { position: fixed; display: none; pointer-events: none; overflow: visible; z-index: 1 !important; }
+        #zen-app-panel-root { position: fixed; display: none; pointer-events: none; overflow: visible; z-index: 2147483600 !important; }
         #zen-app-panel-root[open] { display: block; }
         #zen-app-panel-root:not([open]) #zen-app-panel-slider, #zen-app-panel-root[closing] #zen-app-panel-slider { box-shadow: none !important; }
         #zen-app-panel-clip { position: absolute; inset: 0; overflow: hidden; border-radius: var(--zen-native-inner-radius, 8px); pointer-events: none; }
@@ -856,9 +856,11 @@
           flex-direction: column !important;
           align-items: center !important;
           width: 100% !important;
+          height: 100% !important;
+          flex: 1 1 100% !important;
           padding: 0 4px !important;
           max-height: 100% !important;
-          min-height: auto !important;
+          min-height: 100% !important;
           gap: 6px !important;
           overflow-y: auto !important;
           overflow-x: hidden !important;
@@ -874,6 +876,7 @@
           opacity: 1 !important;
           transform: none !important;
           pointer-events: auto !important;
+          visibility: visible !important;
         }
 
         #zentral-apps-vertical-bar .zen-app-tile {
@@ -887,19 +890,24 @@
           opacity: 1 !important;
           transform: none !important;
           pointer-events: auto !important;
+          visibility: visible !important;
         }
 
         #zentral-apps-vertical-bar .zen-app-add-btn {
           opacity: 1 !important;
           transform: none !important;
           pointer-events: auto !important;
+          visibility: visible !important;
         }
 
         #zentral-apps-vertical-bar .zen-apps-autohide-dots {
           display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
         }
 
-        /* Autohide behavior when placed in Vertical Bar: Completely hide the bar when not revealed/active */
+        /* Autohide behavior when placed in Vertical Bar: Completely hide the bar with NO strip and NO dots */
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
           width: 0px !important;
           min-width: 0px !important;
@@ -908,6 +916,23 @@
           border: none !important;
           opacity: 0 !important;
           pointer-events: none !important;
+          visibility: hidden !important;
+        }
+
+        :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
+          visibility: visible;
+        }
+
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar[data-revealed="true"],
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:hover,
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar[zentral-app-panel-open="true"] {
+          width: 44px !important;
+          min-width: 44px !important;
+          max-width: 44px !important;
+          opacity: 1 !important;
+          padding: 8px 0 !important;
+          pointer-events: auto !important;
+          visibility: visible !important;
         }
 
         #zentral-apps-vertical-bar-trigger {
@@ -915,7 +940,7 @@
           position: fixed;
           top: 0;
           bottom: 0;
-          width: 12px;
+          width: 14px;
           z-index: 2147483640;
           pointer-events: auto;
           background: transparent;
@@ -1022,10 +1047,14 @@
         this.#dom.scrollBox = scrollBox;
 
         this.#dom.grid.addEventListener("mouseenter", () => {
-          this.setAutohideHovered(true);
+          if (!this.isPlacementVerticalBar()) {
+            this.setAutohideHovered(true);
+          }
         });
         this.#dom.grid.addEventListener("mouseleave", () => {
-          this.scheduleAutohideCollapse();
+          if (!this.isPlacementVerticalBar()) {
+            this.scheduleAutohideCollapse();
+          }
         });
 
         scrollBox.addEventListener("wheel", (e) => {
@@ -1061,10 +1090,16 @@
           vb.id = "zentral-apps-vertical-bar";
         }
         vb.addEventListener("mouseenter", () => {
-          this.setAutohideHovered(true);
+          if (this.isPlacementVerticalBar()) {
+            this.setAutohideHovered(true);
+          }
         });
-        vb.addEventListener("mouseleave", () => {
-          this.scheduleAutohideCollapse();
+        vb.addEventListener("mouseleave", (e) => {
+          if (this.isPlacementVerticalBar()) {
+            if (!vb.contains(e.relatedTarget)) {
+              this.scheduleAutohideCollapse();
+            }
+          }
         });
         this.#dom.verticalBar = vb;
 
@@ -1079,9 +1114,11 @@
             this.setAutohideHovered(true);
           }
         });
-        trigger.addEventListener("mouseleave", () => {
+        trigger.addEventListener("mouseleave", (e) => {
           if (this.isPlacementVerticalBar()) {
-            this.scheduleAutohideCollapse();
+            if (e.relatedTarget !== vb && !vb.contains(e.relatedTarget)) {
+              this.scheduleAutohideCollapse();
+            }
           }
         });
         this.#dom.verticalBarTrigger = trigger;
@@ -1089,7 +1126,7 @@
         window.addEventListener("mousemove", (e) => {
           if (!this.isPlacementVerticalBar() || Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) !== true) return;
           const isRight = this.isVerticalBarOnRight();
-          const isNearEdge = isRight ? (e.clientX >= window.innerWidth - 12) : (e.clientX <= 12);
+          const isNearEdge = isRight ? (e.clientX >= window.innerWidth - 14) : (e.clientX <= 14);
           if (isNearEdge) {
             this.setAutohideHovered(true);
           }
@@ -1394,8 +1431,7 @@
           btn.appendChild(badge);
         }
 
-        let isDraggingTile = false;
-        let clickTimer = null;
+        let wasDragged = false;
         let startX = 0;
         let startY = 0;
 
@@ -1407,54 +1443,31 @@
           }
         };
 
-        const cancelClickTimer = () => {
-          if (clickTimer) {
-            clearTimeout(clickTimer);
-            clickTimer = null;
-          }
-        };
-
         btn.addEventListener("mousedown", (e) => {
           if (e.button !== 0) return;
-          isDraggingTile = false;
+          wasDragged = false;
           startX = e.clientX;
           startY = e.clientY;
-          
-          cancelClickTimer();
-          if (this.isCollapsedSidebar()) {
-            clickTimer = setTimeout(() => {
-              clickTimer = null;
-              if (!isDraggingTile) togglePanel();
-            }, 400);
-          }
         });
 
         btn.addEventListener("mousemove", (e) => {
           if (e.buttons === 1) {
             const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
-            if (dist > 4) {
-              isDraggingTile = true;
-              cancelClickTimer();
+            if (dist > 6) {
+              wasDragged = true;
             }
           }
         });
 
-        btn.addEventListener("mouseup", (e) => {
+        btn.addEventListener("click", (e) => {
           if (e.button !== 0) return;
-          if (isDraggingTile) {
-            cancelClickTimer();
+          e.preventDefault();
+          e.stopPropagation();
+          if (wasDragged) {
+            wasDragged = false;
             return;
           }
-          
-          cancelClickTimer();
           togglePanel();
-        });
-        
-        btn.addEventListener("click", (e) => {
-          if (e.button === 0) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
         });
 
         // Context menu and drag/drop logic
@@ -1466,14 +1479,18 @@
         
         btn.draggable = true;
         btn.addEventListener("dragstart", (e) => { 
-          isDraggingTile = true; 
-          if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+          wasDragged = true; 
           draggedAppId = app.id; 
           e.dataTransfer.effectAllowed = "move"; 
           e.dataTransfer.setData("text/plain", app.id); 
           btn.style.opacity = "0.4"; 
         });
-        btn.addEventListener("dragend", () => { draggedAppId = null; btn.style.opacity = "1"; this.renderGrid(); });
+        btn.addEventListener("dragend", () => { 
+          draggedAppId = null; 
+          btn.style.opacity = "1"; 
+          setTimeout(() => { wasDragged = false; }, 60);
+          this.renderGrid(); 
+        });
         btn.addEventListener("dragover", (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (draggedAppId && draggedAppId !== app.id) { btn.style.transform = "scale(1.15)"; btn.style.zIndex = "5"; } });
         btn.addEventListener("dragleave", () => { btn.style.transform = ""; btn.style.zIndex = ""; });
         btn.addEventListener("drop", (e) => {

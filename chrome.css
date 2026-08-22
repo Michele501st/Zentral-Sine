@@ -965,14 +965,19 @@ panel[id*="tabgroup-editor"] {
   border-right: none;
 }
 
+#zen-app-panel-root { position: fixed; display: none; pointer-events: none; overflow: visible; z-index: 2147483600 !important; }
+#zen-app-panel-root[open] { display: block; }
+
 #zentral-apps-vertical-bar #zen-apps-sidebar-grid {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   width: 100% !important;
+  height: 100% !important;
+  flex: 1 1 100% !important;
   padding: 0 4px !important;
   max-height: 100% !important;
-  min-height: auto !important;
+  min-height: 100% !important;
   gap: 6px !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
@@ -988,6 +993,7 @@ panel[id*="tabgroup-editor"] {
   opacity: 1 !important;
   transform: none !important;
   pointer-events: auto !important;
+  visibility: visible !important;
 }
 
 #zentral-apps-vertical-bar .zen-app-tile {
@@ -1001,19 +1007,24 @@ panel[id*="tabgroup-editor"] {
   opacity: 1 !important;
   transform: none !important;
   pointer-events: auto !important;
+  visibility: visible !important;
 }
 
 #zentral-apps-vertical-bar .zen-app-add-btn {
   opacity: 1 !important;
   transform: none !important;
   pointer-events: auto !important;
+  visibility: visible !important;
 }
 
 #zentral-apps-vertical-bar .zen-apps-autohide-dots {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
-/* Autohide behavior when placed in Vertical Bar: Completely hide the bar when not revealed/active */
+/* Autohide behavior when placed in Vertical Bar: Completely hide the bar with NO strip and NO dots */
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
   width: 0px !important;
   min-width: 0px !important;
@@ -1022,6 +1033,23 @@ panel[id*="tabgroup-editor"] {
   border: none !important;
   opacity: 0 !important;
   pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+:root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
+  visibility: visible;
+}
+
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar[data-revealed="true"],
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:hover,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar[zentral-app-panel-open="true"] {
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  opacity: 1 !important;
+  padding: 8px 0 !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
 }
 
 #zentral-apps-vertical-bar-trigger {
@@ -1029,7 +1057,7 @@ panel[id*="tabgroup-editor"] {
   position: fixed;
   top: 0;
   bottom: 0;
-  width: 12px;
+  width: 14px;
   z-index: 2147483640;
   pointer-events: auto;
   background: transparent;
@@ -1055,5 +1083,6 @@ panel[id*="tabgroup-editor"] {
 #zen-app-panel-root[data-panel-side="left"] .zen-app-hover-zone { right: -22px !important; left: auto !important; }
 #zen-app-panel-root[data-panel-side="right"] .zen-app-resize-strip { left: -5px !important; right: auto !important; }
 #zen-app-panel-root[data-panel-side="left"] .zen-app-resize-strip { right: -5px !important; left: auto !important; }
+
 
 
