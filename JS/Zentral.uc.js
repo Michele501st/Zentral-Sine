@@ -80,6 +80,7 @@
       PREF_MAX_ROWS: "zen.workspace.apps.sidebar.max_rows",
       PREF_COMPACT_DRAWER_ENABLED: "zen.workspace.apps.sidebar.compact_drawer_enabled",
       PREF_AUTOHIDE: "zen.workspace.apps.sidebar.autohide",
+      PREF_PLACEMENT: "zen.workspace.apps.sidebar.placement",
       MIN_WIDTH_PX: 280,
       MAX_WIDTH_RATIO: 0.80,
       DEFAULT_SLIDE_MS: 450,
@@ -108,7 +109,7 @@
       PREF_LOGGER_ENABLED: "zentral.logger.enabled",
       PREF_LOGGER_PATH: "zentral.logger.path"
     },
-    /** Debug logging preference Ã¢â‚¬â€ set true in about:config to enable verbose console output */
+    /** Debug logging preference — set true in about:config to enable verbose console output */
     DEBUG_PREF: "zen.workspace.zentral.debug"
   };
 
@@ -140,6 +141,7 @@
         [Constants.Apps.PREF_MAX_ROWS]: Constants.Apps.DEFAULT_MAX_ROWS,
         [Constants.Apps.PREF_COMPACT_DRAWER_ENABLED]: false,
         [Constants.Apps.PREF_AUTOHIDE]: false,
+        [Constants.Apps.PREF_PLACEMENT]: "sidebar",
         [Constants.TabGroups.PREF_COLORS]: "{}",
         [Constants.TabGroups.PREF_STATE]: "{}",
         [Constants.TabGroups.PREF_ENABLED]: true,
@@ -318,6 +320,7 @@
           "zen-compact-apps-trigger",
           "zen-apps-autohide-trigger",
           "zen-apps-sidebar-tile-context",
+          "zentral-apps-vertical-bar",
           "context_zenAppsSidebarAdd_sep",
           "context_zenAppsSidebarAdd"
         ];
@@ -327,7 +330,7 @@
         });
 
         // 5. Clean up floating panels and browser frames
-        document.querySelectorAll(".zs-app-panel, .zen-app-floating-panel, #zen-app-panel-root").forEach(p => p.remove());
+        document.querySelectorAll(".zs-app-panel, .zen-app-floating-panel, #zen-app-panel-root, #zentral-apps-vertical-bar").forEach(p => p.remove());
         if (this.#state && this.#state.appBrowsers) {
           this.#state.appBrowsers.forEach(b => { if (b && b.remove) b.remove(); });
           this.#state.appBrowsers.clear();
@@ -336,6 +339,7 @@
         // 6. Reset DOM references and state
         this.#dom = {
           grid: null,
+          verticalBar: null,
           root: null,
           clip: null,
           panel: null,
@@ -374,6 +378,7 @@
      */
     #dom = {
       grid: null,
+      verticalBar: null,
       root: null,
       clip: null,
       panel: null,
@@ -538,6 +543,34 @@
         if (rect.width > 0 && rect.left > window.innerWidth / 2) return true;
       }
       return false;
+    }
+
+    /**
+     * Determines whether the Apps grid is configured to be placed in the opposite Vertical Bar.
+     * @returns {boolean} True if apps placement is set to 'vertical-bar'.
+     */
+    isPlacementVerticalBar() {
+      return Core.getPref(Constants.Apps.PREF_PLACEMENT, "sidebar") === "vertical-bar";
+    }
+
+    /**
+     * Determines whether the opposite Vertical Bar is on the right side of the screen.
+     * (Attached to the screen edge opposite to the native Zen sidebar).
+     * @returns {boolean} True if the Vertical Bar is on the right.
+     */
+    isVerticalBarOnRight() {
+      return !this.isSidebarRight();
+    }
+
+    /**
+     * Determines whether the active floating app panel should attach to and slide from the right.
+     * @returns {boolean} True if panel attaches to the right edge.
+     */
+    isPanelAttachedToRight() {
+      if (this.isPlacementVerticalBar() && !this.isCollapsedLayoutMode()) {
+        return this.isVerticalBarOnRight();
+      }
+      return this.isSidebarRight();
     }
 
     /**
@@ -752,10 +785,16 @@
         #zen-app-panel-root:not([open]) #zen-app-panel-pill, #zen-app-panel-root[closing] #zen-app-panel-pill { display: none !important; opacity: 0 !important; pointer-events: none !important; }
         :root[zen-right-side="true"] #zen-app-panel-pill { left: 0; transform: translate(-50%, -50%); }
         :root:not([zen-right-side="true"]) #zen-app-panel-pill { right: 0; transform: translate(50%, -50%); }
+        #zen-app-panel-root[data-panel-side="right"] #zen-app-panel-pill { left: 0 !important; right: auto !important; transform: translate(-50%, -50%) !important; }
+        #zen-app-panel-root[data-panel-side="left"] #zen-app-panel-pill { right: 0 !important; left: auto !important; transform: translate(50%, -50%) !important; }
+
         .zen-app-hover-zone { position: absolute; top: 0; bottom: 0; width: 44px; z-index: 10; pointer-events: none; background: transparent; }
         #zen-app-panel-root[open] .zen-app-hover-zone { pointer-events: auto; }
         :root[zen-right-side="true"] .zen-app-hover-zone { left: -22px; right: auto; }
         :root:not([zen-right-side="true"]) .zen-app-hover-zone { right: -22px; left: auto; }
+        #zen-app-panel-root[data-panel-side="right"] .zen-app-hover-zone { left: -22px !important; right: auto !important; }
+        #zen-app-panel-root[data-panel-side="left"] .zen-app-hover-zone { right: -22px !important; left: auto !important; }
+
         .zen-app-hover-zone:hover ~ #zen-app-panel-pill, #zen-app-panel-pill:hover, .zen-app-resize-strip:hover ~ #zen-app-panel-pill { opacity: 1; pointer-events: auto; transition-delay: 0s; }
         .zen-app-btn { appearance: none; background: transparent; border: none; border-radius: 8px; color: inherit; padding: 4px; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.15s ease; }
         .zen-app-btn:hover { background-color: color-mix(in srgb, currentColor 15%, transparent); }
@@ -773,6 +812,95 @@
         #zen-app-panel-root[open] .zen-app-resize-strip { pointer-events: auto; }
         :root[zen-right-side="true"] .zen-app-resize-strip { left: -5px; right: auto; }
         :root:not([zen-right-side="true"]) .zen-app-resize-strip { right: -5px; left: auto; }
+        #zen-app-panel-root[data-panel-side="right"] .zen-app-resize-strip { left: -5px !important; right: auto !important; }
+        #zen-app-panel-root[data-panel-side="left"] .zen-app-resize-strip { right: -5px !important; left: auto !important; }
+
+        /* ==========================================================================
+         * Zentral Apps Vertical Bar (Opposite Edge Dock)
+         * ========================================================================== */
+        #zentral-apps-vertical-bar {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 44px;
+          min-width: 44px;
+          max-width: 44px;
+          height: 100%;
+          position: relative;
+          z-index: 10;
+          box-sizing: border-box;
+          background: var(--zen-colors-tertiary, var(--tabpanels-background-color, #18181c));
+          border-left: 1px solid rgba(255, 255, 255, 0.08);
+          border-right: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 8px 0;
+          gap: 6px;
+          overflow: hidden;
+          user-select: none;
+          transition: width 0.28s cubic-bezier(0.25, 1, 0.5, 1), min-width 0.28s cubic-bezier(0.25, 1, 0.5, 1), max-width 0.28s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
+        }
+
+        :root[zen-right-side="true"] #zentral-apps-vertical-bar {
+          border-right: 1px solid rgba(255, 255, 255, 0.08);
+          border-left: none;
+        }
+
+        :root:not([zen-right-side="true"]) #zentral-apps-vertical-bar {
+          border-left: 1px solid rgba(255, 255, 255, 0.08);
+          border-right: none;
+        }
+
+        #zentral-apps-vertical-bar #zen-apps-sidebar-grid {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          width: 100% !important;
+          padding: 0 4px !important;
+          max-height: 100% !important;
+          gap: 6px !important;
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+        }
+
+        #zentral-apps-vertical-bar #zen-apps-sidebar-grid .zen-apps-scroll-box {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 6px !important;
+          width: 100% !important;
+        }
+
+        #zentral-apps-vertical-bar .zen-app-tile {
+          width: 34px !important;
+          height: 34px !important;
+          min-width: 34px !important;
+          min-height: 34px !important;
+          max-width: 34px !important;
+          max-height: 34px !important;
+          flex-shrink: 0 !important;
+        }
+
+        /* Autohide behavior when placed in Vertical Bar */
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
+          width: 22px !important;
+          min-width: 22px !important;
+          max-width: 22px !important;
+          cursor: pointer;
+        }
+
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) .zen-apps-autohide-dots {
+          display: flex !important;
+          flex-direction: column !important;
+          opacity: 0.75 !important;
+          transform: translate(-50%, -50%) scale(1) !important;
+        }
+
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) .zen-apps-scroll-box,
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) .zen-app-tile,
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) .zen-app-add-btn {
+          opacity: 0 !important;
+          pointer-events: none !important;
+          transform: scale(0.9) !important;
+        }
       `;
       try {
         const style = document.createElement("style");
@@ -891,6 +1019,21 @@
             popup.openPopupAtScreen(e.screenX, e.screenY, true);
           }
         });
+      }
+
+      if (!this.#dom.verticalBar) {
+        let vb = document.getElementById("zentral-apps-vertical-bar");
+        if (!vb) {
+          vb = document.createElement("div");
+          vb.id = "zentral-apps-vertical-bar";
+        }
+        vb.addEventListener("mouseenter", () => {
+          this.setAutohideHovered(true);
+        });
+        vb.addEventListener("mouseleave", () => {
+          this.scheduleAutohideCollapse();
+        });
+        this.#dom.verticalBar = vb;
       }
 
       if (!this.#dom.root) {
@@ -1078,18 +1221,20 @@
     /**
      * Renders or updates the app tiles grid using DocumentFragment for maximum DOM performance.
      * Filters apps based on workspace isolation rules (All Spaces vs Current Space).
-     */
-    /**
+      /**
      * Updates documentElement and trigger state based on autohide preference.
      */
     updateAutohideState() {
       const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
       const isCollapsed = this.isPhysicallySidebarCollapsed();
-      const activeAutohide = isAutohide && !isCollapsed;
+      const isVerticalBar = this.isPlacementVerticalBar();
+      const activeAutohide = isAutohide && (isVerticalBar || !isCollapsed);
 
       document.documentElement.setAttribute("zentral-apps-autohide", activeAutohide ? "true" : "false");
-      if (!activeAutohide && this.#dom.grid) {
-        this.#dom.grid.removeAttribute("data-revealed");
+      document.documentElement.setAttribute("zentral-apps-placement", isVerticalBar ? "vertical-bar" : "sidebar");
+      if (!activeAutohide) {
+        if (this.#dom.grid) this.#dom.grid.removeAttribute("data-revealed");
+        if (this.#dom.verticalBar) this.#dom.verticalBar.removeAttribute("data-revealed");
       }
     }
 
@@ -1107,6 +1252,13 @@
           this.#dom.grid.setAttribute("data-revealed", "true");
         } else if (!this.#state.activeAppId) {
           this.#dom.grid.removeAttribute("data-revealed");
+        }
+      }
+      if (this.#dom.verticalBar) {
+        if (hovered) {
+          this.#dom.verticalBar.setAttribute("data-revealed", "true");
+        } else if (!this.#state.activeAppId) {
+          this.#dom.verticalBar.removeAttribute("data-revealed");
         }
       }
     }
@@ -1130,12 +1282,17 @@
       const oldAddBtn = this.#dom.grid.querySelector(".zen-app-add-btn");
       if (oldAddBtn) oldAddBtn.remove();
       const targetContainer = this.#dom.scrollBox || this.#dom.grid;
-      targetContainer.replaceChildren(); // Faster than innerHTML = '' Ã¢â‚¬â€ avoids serialization
+      targetContainer.replaceChildren(); // Faster than innerHTML = '' — avoids serialization
       
-      const sidebarRight = this.isSidebarRight();
-      const isCollapsed = this.isCollapsedSidebar();
-      const shouldFlip = !sidebarRight && !isCollapsed;
-      this.#dom.grid.style.direction = shouldFlip ? "rtl" : "ltr";
+      const isVerticalBar = this.isPlacementVerticalBar();
+      if (isVerticalBar) {
+        this.#dom.grid.style.direction = "ltr";
+      } else {
+        const sidebarRight = this.isSidebarRight();
+        const isCollapsed = this.isCollapsedSidebar();
+        const shouldFlip = !sidebarRight && !isCollapsed;
+        this.#dom.grid.style.direction = shouldFlip ? "rtl" : "ltr";
+      }
       this.#dom.grid.style.setProperty("--zentral-grid-cols", Core.getPref(Constants.Apps.PREF_APPS_PER_ROW));
       this.#dom.grid.style.setProperty("--zentral-max-rows", Core.getPref(Constants.Apps.PREF_MAX_ROWS));
 
@@ -1468,9 +1625,10 @@
       }
 
       const isTopSlide = this.isCollapsedLayoutMode();
+      const isFromRight = this.isPanelAttachedToRight();
       const slideFrom = isTopSlide 
         ? "translateY(-100%)" 
-        : (this.isSidebarRight() ? "translateX(100%)" : "translateX(-100%)");
+        : (isFromRight ? "translateX(100%)" : "translateX(-100%)");
       this.#dom.panel.style.transition = "none";
       this.#dom.panel.style.transform  = slideFrom;
       if (this.#dom.root) {
@@ -1527,9 +1685,10 @@
       tiles.forEach(tile => tile.dataset.active = "false");
 
       const isTopSlide = this.isCollapsedLayoutMode();
+      const isToRight = this.isPanelAttachedToRight();
       const slideTo = isTopSlide 
         ? "translateY(-100%)" 
-        : (this.isSidebarRight() ? "translateX(100%)" : "translateX(-100%)");
+        : (isToRight ? "translateX(100%)" : "translateX(-100%)");
       
       const slideMs = Core.getPref(Constants.Apps.PREF_ANIMATION_SPEED);
       const animType = Core.getPref(Constants.Apps.PREF_ANIMATION_TYPE);
@@ -1765,9 +1924,7 @@
     }
 
     /**
-     * Recalculates and positions the floating app panel relative to sidebar bounds and top navigation bar.
-     */
-    positionPanel() {
+     * Recalculates and positions the floating app panel relative to sidebar bounds an    positionPanel() {
       const root = this.#dom.root;
       if (!root || !gBrowser?.tabContainer) return;
       const tcRect = gBrowser.tabContainer.getBoundingClientRect();
@@ -1788,8 +1945,24 @@
       const sideGap = isCollapsed ? 7 : gap;
 
       let top = 0;
-      let targetLeft = Math.max(gap, Math.round(sidebarRect.right) + sideGap);
-      let targetRight = Math.max(gap, Math.round(window.innerWidth - sidebarRect.left) + sideGap);
+      let targetLeft = gap;
+      let targetRight = gap;
+
+      if (this.isPlacementVerticalBar() && !this.isCollapsedLayoutMode()) {
+        const vb = this.#dom.verticalBar;
+        const vbRect = vb ? vb.getBoundingClientRect() : null;
+        const vbWidth = (vbRect && vbRect.width > 0) ? vbRect.width : 44;
+        const isVbRight = this.isVerticalBarOnRight();
+
+        if (isVbRight) {
+          targetRight = Math.max(gap, Math.round(window.innerWidth - (vbRect ? vbRect.left : (window.innerWidth - vbWidth))) + sideGap);
+        } else {
+          targetLeft = Math.max(gap, Math.round(vbRect ? vbRect.right : vbWidth) + sideGap);
+        }
+      } else {
+        targetLeft = Math.max(gap, Math.round(sidebarRect.right) + sideGap);
+        targetRight = Math.max(gap, Math.round(window.innerWidth - sidebarRect.left) + sideGap);
+      }
 
       try {
         let maxBottom = 0;
@@ -1811,16 +1984,17 @@
       root.style.top = top + "px";
       root.style.bottom = gap + "px";
 
-      if (this.isSidebarRight()) {
+      if (this.isPanelAttachedToRight()) {
         root.style.left = "auto";
         root.style.right = targetRight + "px";
         root.style.transform = "translateX(0)";
+        root.setAttribute("data-panel-side", "right");
       } else {
         root.style.right = "auto";
         root.style.left = targetLeft + "px";
         root.style.transform = "translateX(0)";
+        root.setAttribute("data-panel-side", "left");
       }
-      // console.log removed ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â was firing at 60fps causing console spam (C-04)
     }
 
     /**
@@ -1845,9 +2019,14 @@
         
         const gap = 12;
         let fullWidth = window.innerWidth - (gap * 2);
-        if (gBrowser?.tabContainer) {
+        if (this.isPlacementVerticalBar() && !this.isCollapsedLayoutMode()) {
+          const vb = this.#dom.verticalBar;
+          const vbRect = vb ? vb.getBoundingClientRect() : null;
+          const vbWidth = (vbRect && vbRect.width > 0) ? vbRect.width : 44;
+          fullWidth = window.innerWidth - vbWidth - (gap * 2);
+        } else if (gBrowser?.tabContainer) {
           const tcRect = gBrowser.tabContainer.getBoundingClientRect();
-          if (this.isSidebarRight()) {
+          if (this.isPanelAttachedToRight()) {
             const targetRight = Math.max(gap, Math.round(window.innerWidth - tcRect.left) + gap);
             fullWidth = window.innerWidth - targetRight - gap;
           } else {
@@ -1909,7 +2088,7 @@
         }
       }
       const diff = e.clientX - this._startX;
-      let newW = this.isSidebarRight() ? (this._startW - diff) : (this._startW + diff);
+      let newW = this.isPanelAttachedToRight() ? (this._startW - diff) : (this._startW + diff);
       newW = Math.max(Constants.Apps.MIN_WIDTH_PX, Math.min(newW, window.innerWidth * Constants.Apps.MAX_WIDTH_RATIO));
       this.updateWidthVar(newW);
     }
@@ -2088,20 +2267,20 @@
       }
       
       const path = e.composedPath ? e.composedPath() : [];
-      if (path.some(el => el.id === "zen-app-panel-root" || el.id === "zen-apps-sidebar-grid" || (el.classList && el.classList.contains("zen-app-tile")))) return;
+      if (path.some(el => el.id === "zen-app-panel-root" || el.id === "zen-apps-sidebar-grid" || el.id === "zentral-apps-vertical-bar" || (el.classList && el.classList.contains("zen-app-tile")))) return;
       if (path.some(el => el.id === "navigator-toolbox" || el.id === "sidebar-box" || el.id === "PersonalToolbar" || el.id === "nav-bar")) return;
       if (path.some(el => (el.id && el.id.includes("sine")) || (el.className && typeof el.className === "string" && el.className.includes("sine")))) return;
-      if (e.target.closest && (e.target.closest("#zen-app-panel-root") || e.target.closest("#zen-apps-sidebar-grid") || e.target.closest(".zen-app-tile"))) return;
+      if (e.target.closest && (e.target.closest("#zen-app-panel-root") || e.target.closest("#zen-apps-sidebar-grid") || e.target.closest("#zentral-apps-vertical-bar") || e.target.closest(".zen-app-tile"))) return;
       if (e.target.closest && (e.target.closest("#navigator-toolbox") || e.target.closest("#sidebar-box") || e.target.closest("#PersonalToolbar") || e.target.closest("#nav-bar"))) return;
       if (e.target.closest && (e.target.closest("[id*='sine']") || e.target.closest("[class*='sine']"))) return;
       
-        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] handleOutsideClick closing panel due to click target:", e.target?.tagName, e.target?.id, e.target?.className);
+      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] handleOutsideClick closing panel due to click target:", e.target?.tagName, e.target?.id, e.target?.className);
       this.closePanel();
     }
 
     /**
-     * Debounces repositionGrid() calls Ã¢â‚¬â€ cancels any pending call and reschedules.
-     * This prevents the 2Ã¢â‚¬â€œ4Ãƒâ€” redundant DOM moves that fire when multiple observers
+     * Debounces repositionGrid() calls — cancels any pending call and reschedules.
+     * This prevents the 2–4× redundant DOM moves that fire when multiple observers
      * (MutationObserver + Services.prefs + ResizeObserver) all trigger simultaneously
      * during a single layout mode switch.
      * @param {number} [delay=120] - Debounce delay in milliseconds.
@@ -2115,51 +2294,87 @@
     }
 
     /**
-     * Repositions app grid container between vertical sidebar or horizontal toolbar based on Zen layout mode.
+     * Repositions app grid container between vertical sidebar, horizontal toolbar, or opposite vertical bar based on configuration.
      * Correctly handles:
-     *   - Normal Sidebar (expanded) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ grid in sidebar
-     *   - Collapsed Sidebar layout mode ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ grid in top toolbar
-     *   - Compact Mode (sidebar-expanded=true but sidebar is visually icon-only) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ grid in top toolbar
+     *   - Opposite Vertical Bar mode -> grid placed in dedicated vertical bar on screen edge opposite to sidebar
+     *   - Normal Sidebar (expanded) -> grid in sidebar
+     *   - Collapsed Sidebar layout mode -> grid in top toolbar
+     *   - Compact Mode (sidebar-expanded=true but sidebar is visually icon-only) -> grid in top toolbar
      */
     repositionGrid() {
       const grid = this.#dom.grid;
       if (!grid) return;
       try {
-        // Use the comprehensive physical collapse check to handle both
-        // standard Collapsed Sidebar and Compact Mode edge cases.
+        const placement = Core.getPref(Constants.Apps.PREF_PLACEMENT, "sidebar");
+        const isVerticalBar = placement === "vertical-bar";
         const shouldUseToolbar = this.isPhysicallySidebarCollapsed();
 
-        if (shouldUseToolbar) {
-          const bookmarksContainer = document.getElementById("personal-bookmarks") || document.getElementById("PlacesToolbarItems");
-          const topToolbar = document.getElementById("nav-bar-customization-target") || document.getElementById("nav-bar");
+        document.documentElement.setAttribute("zentral-apps-placement", placement);
 
-          grid.classList.add("zen-apps-horizontal");
-          grid.style.order = "initial";
-          if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Collapsed/Compact mode \u2192 grid placed in toolbar.");
-
-          if (bookmarksContainer && bookmarksContainer.parentNode) {
-            const targetParent = bookmarksContainer.parentNode;
-            if (grid.parentNode !== targetParent || grid.previousSibling !== bookmarksContainer) {
-              targetParent.insertBefore(grid, bookmarksContainer.nextSibling);
-            }
-          } else if (topToolbar) {
-            const targetBtn = document.getElementById("unified-extensions-button") || document.getElementById("PanelUI-button");
-            if (targetBtn && targetBtn.parentNode) {
-              if (grid.nextSibling !== targetBtn) targetBtn.parentNode.insertBefore(grid, targetBtn);
-            } else if (grid.parentNode !== topToolbar) {
-              topToolbar.appendChild(grid);
-            }
-          }
-        } else {
+        if (isVerticalBar) {
           grid.classList.remove("zen-apps-horizontal");
-          const sidebarContainer = gBrowser?.tabContainer?.parentNode;
-          if (sidebarContainer) {
-            if (grid.parentNode !== sidebarContainer || grid.nextSibling !== gBrowser.tabContainer) {
-              sidebarContainer.insertBefore(grid, gBrowser.tabContainer);
+          grid.style.order = "initial";
+
+          const vb = this.#dom.verticalBar;
+          if (vb) {
+            if (grid.parentNode !== vb) {
+              vb.appendChild(grid);
             }
-            grid.style.order = "-1";
+
+            const browserEl = document.getElementById("browser") || document.body || document.documentElement;
+            const isRightSidebar = this.isSidebarRight();
+
+            if (isRightSidebar) {
+              // Sidebar is on right -> Vertical Bar on LEFT (first child of #browser)
+              if (vb.parentNode !== browserEl || browserEl.firstChild !== vb) {
+                browserEl.insertBefore(vb, browserEl.firstChild);
+              }
+            } else {
+              // Sidebar is on left -> Vertical Bar on RIGHT (last child of #browser)
+              if (vb.parentNode !== browserEl || vb.nextSibling !== null) {
+                browserEl.appendChild(vb);
+              }
+            }
+            vb.style.display = "flex";
           }
-          if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Expanded sidebar mode \u2192 grid placed in sidebar.");
+          if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Vertical Bar mode placed on opposite edge.");
+        } else {
+          if (this.#dom.verticalBar) {
+            this.#dom.verticalBar.style.display = "none";
+          }
+
+          if (shouldUseToolbar) {
+            const bookmarksContainer = document.getElementById("personal-bookmarks") || document.getElementById("PlacesToolbarItems");
+            const topToolbar = document.getElementById("nav-bar-customization-target") || document.getElementById("nav-bar");
+
+            grid.classList.add("zen-apps-horizontal");
+            grid.style.order = "initial";
+            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Collapsed/Compact mode \u2192 grid placed in toolbar.");
+
+            if (bookmarksContainer && bookmarksContainer.parentNode) {
+              const targetParent = bookmarksContainer.parentNode;
+              if (grid.parentNode !== targetParent || grid.previousSibling !== bookmarksContainer) {
+                targetParent.insertBefore(grid, bookmarksContainer.nextSibling);
+              }
+            } else if (topToolbar) {
+              const targetBtn = document.getElementById("unified-extensions-button") || document.getElementById("PanelUI-button");
+              if (targetBtn && targetBtn.parentNode) {
+                if (grid.nextSibling !== targetBtn) targetBtn.parentNode.insertBefore(grid, targetBtn);
+              } else if (grid.parentNode !== topToolbar) {
+                topToolbar.appendChild(grid);
+              }
+            }
+          } else {
+            grid.classList.remove("zen-apps-horizontal");
+            const sidebarContainer = gBrowser?.tabContainer?.parentNode;
+            if (sidebarContainer) {
+              if (grid.parentNode !== sidebarContainer || grid.nextSibling !== gBrowser.tabContainer) {
+                sidebarContainer.insertBefore(grid, gBrowser.tabContainer);
+              }
+              grid.style.order = "-1";
+            }
+            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Expanded sidebar mode \u2192 grid placed in sidebar.");
+          }
         }
         this.updateScrollMask();
       } catch (e) {
@@ -2200,20 +2415,17 @@
       };
       window.addEventListener("TabSelect", this.#tabSelectListener);
 
-      // Note: gZenWorkspaces monkey-patch removed (H-02) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â the TabSelect listener
-      // above already handles workspace switches reliably without fragile function wrapping.
-
       // Observer 1: DOM attribute changes (zen-right-side, zen-sidebar-collapsed)
-      // zen-sidebar-collapsed fires when the user toggles Collapsed Sidebar mode or Compact Mode.
       this.#sideObserver = new window.MutationObserver((mutations) => {
         for (const m of mutations) {
           if (m.attributeName === "zen-right-side") {
+            this.repositionGrid();
             this.renderGrid();
             if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) this.positionPanel();
           }
           if (m.attributeName === "zen-sidebar-collapsed") {
             if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] zen-sidebar-collapsed attribute changed \u2192 triggering repositionGrid");
-            // Debounced Ã¢â‚¬â€ collapses simultaneous observer firings into one call
+            // Debounced — collapses simultaneous observer firings into one call
             this.scheduleRepositionGrid(80);
           }
         }
@@ -5212,6 +5424,9 @@
       if (!get("zs-anim-speed")) return;
       
       get("zs-ag-enabled").checked = Core.getPref(Constants.Apps.PREF_ENABLED, true) !== false;
+      if (get("zs-ag-placement")) {
+        get("zs-ag-placement").value = Core.getPref(Constants.Apps.PREF_PLACEMENT, "sidebar") || "sidebar";
+      }
       if (get("zs-ag-compact-drawer")) {
         get("zs-ag-compact-drawer").checked = Core.getPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, false) === true;
       }
@@ -5252,6 +5467,9 @@
       if (!this.modal) return;
       const get = (id) => this.modal.querySelector("#" + id);
       Core.setPref(Constants.Apps.PREF_ENABLED, get("zs-ag-enabled").checked);
+      if (get("zs-ag-placement")) {
+        Core.setPref(Constants.Apps.PREF_PLACEMENT, get("zs-ag-placement").value);
+      }
       if (get("zs-ag-compact-drawer")) {
         Core.setPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, get("zs-ag-compact-drawer").checked);
       }
@@ -5281,6 +5499,7 @@
       
       this.close();
       if (window.Zentral?.Apps) {
+        window.Zentral.Apps.repositionGrid();
         window.Zentral.Apps.updateAutohideState();
         window.Zentral.Apps.renderGrid();
       }
@@ -5754,6 +5973,17 @@
 
             <div class="zs-row">
               <div class="zs-label-container">
+                <span class="zs-label">Apps placement</span>
+                <span class="zs-sublabel">Dock in Sidebar or in a dedicated Vertical Bar on the opposite edge</span>
+              </div>
+              <select id="zs-ag-placement" class="zs-select">
+                <option value="sidebar">Sidebar</option>
+                <option value="vertical-bar">Vertical Bar (Opposite Edge)</option>
+              </select>
+            </div>
+
+            <div class="zs-row">
+              <div class="zs-label-container">
                 <span class="zs-label">Compact Sidebar Apps Drawer <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: color-mix(in srgb, #ff6b6b 20%, transparent); color: #ff6b6b; font-weight: 600; margin-left: 6px; text-transform: uppercase;">Experimental</span></span>
                 <span class="zs-sublabel">Hover top 1/3 screen edge in compact mode to reveal vertical Apps drawer</span>
               </div>
@@ -6072,6 +6302,7 @@
       this.modal.querySelector("#zs-ag-reset").addEventListener("click", () => {
         const get = (id) => this.modal.querySelector("#" + id);
         get("zs-ag-enabled").checked = true;
+        if (get("zs-ag-placement")) get("zs-ag-placement").value = "sidebar";
         if (get("zs-ag-compact-drawer")) get("zs-ag-compact-drawer").checked = false;
         get("zs-anim-type").value = "slide";
         get("zs-anim-speed").value = 450;
