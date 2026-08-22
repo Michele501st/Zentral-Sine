@@ -321,6 +321,7 @@
           "zen-apps-autohide-trigger",
           "zen-apps-sidebar-tile-context",
           "zentral-apps-vertical-bar",
+          "zentral-apps-vertical-bar-trigger",
           "context_zenAppsSidebarAdd_sep",
           "context_zenAppsSidebarAdd"
         ];
@@ -330,7 +331,7 @@
         });
 
         // 5. Clean up floating panels and browser frames
-        document.querySelectorAll(".zs-app-panel, .zen-app-floating-panel, #zen-app-panel-root, #zentral-apps-vertical-bar").forEach(p => p.remove());
+        document.querySelectorAll(".zs-app-panel, .zen-app-floating-panel, #zen-app-panel-root, #zentral-apps-vertical-bar, #zentral-apps-vertical-bar-trigger").forEach(p => p.remove());
         if (this.#state && this.#state.appBrowsers) {
           this.#state.appBrowsers.forEach(b => { if (b && b.remove) b.remove(); });
           this.#state.appBrowsers.clear();
@@ -340,6 +341,7 @@
         this.#dom = {
           grid: null,
           verticalBar: null,
+          verticalBarTrigger: null,
           root: null,
           clip: null,
           panel: null,
@@ -678,7 +680,7 @@
         }
 
         /* When Autohide is active in expanded vertical sidebar */
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) {
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) {
           min-height: 22px;
           max-height: 22px;
           padding: 0 10px !important;
@@ -690,21 +692,21 @@
         }
 
         /* Collapsed Strip State: Show 3 dots, hide app tiles */
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) {
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) {
           background: transparent;
         }
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) .zen-apps-autohide-dots {
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) .zen-apps-autohide-dots {
           display: flex;
           opacity: 0.75;
           transform: translate(-50%, -50%) scale(1);
           transition: opacity 0.22s ease 0.06s, transform 0.24s cubic-bezier(0.25, 1, 0.5, 1) 0.06s;
         }
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover):hover .zen-apps-autohide-dots {
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover):hover .zen-apps-autohide-dots {
           opacity: 1;
         }
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) .zen-apps-scroll-box,
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) .zen-app-tile,
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) .zen-app-add-btn {
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) .zen-apps-scroll-box,
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) .zen-app-tile,
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) .zen-app-add-btn {
           opacity: 0 !important;
           pointer-events: none !important;
           transform: translateY(-6px) scale(0.96);
@@ -712,46 +714,46 @@
         }
 
         /* Keep Apps Grid expanded while an App Panel is open */
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) {
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) {
           max-height: calc(var(--zentral-max-rows, 3) * 42px - 2px) !important;
           padding: 4px 10px 0px 10px !important;
           margin: 0 !important;
           overflow-y: auto !important;
         }
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-apps-autohide-dots {
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-apps-autohide-dots {
           opacity: 0 !important;
           transform: translate(-50%, -50%) scale(0.5) !important;
           pointer-events: none !important;
         }
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-apps-scroll-box,
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-tile,
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-add-btn {
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-apps-scroll-box,
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-tile,
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-add-btn {
           opacity: 1 !important;
           pointer-events: auto !important;
           transform: translateY(0) scale(1) !important;
         }
 
         /* Expanded Grid State: Hide 3 dots, reveal app tiles with smooth slide-down */
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"],
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover {
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"],
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover {
           max-height: calc(var(--zentral-max-rows, 3) * 42px - 2px) !important;
           padding: 4px 10px 0px 10px !important;
           margin: 0 !important;
           overflow-y: auto !important;
         }
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-apps-autohide-dots,
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zen-apps-autohide-dots {
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-apps-autohide-dots,
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zen-apps-autohide-dots {
           opacity: 0;
           transform: translate(-50%, -50%) scale(0.5);
           pointer-events: none;
           transition: opacity 0.16s ease, transform 0.20s cubic-bezier(0.25, 1, 0.5, 1);
         }
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-apps-scroll-box,
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-app-tile,
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-app-add-btn,
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zen-apps-scroll-box,
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zen-app-tile,
-        :root[zentral-apps-autohide="true"]:not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zen-app-add-btn {
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-apps-scroll-box,
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-app-tile,
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-app-add-btn,
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zen-apps-scroll-box,
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zen-app-tile,
+        :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zen-app-add-btn {
           opacity: 1 !important;
           pointer-events: auto !important;
           transform: translateY(0) scale(1);
@@ -836,7 +838,7 @@
           gap: 6px;
           overflow: hidden;
           user-select: none;
-          transition: width 0.28s cubic-bezier(0.25, 1, 0.5, 1), min-width 0.28s cubic-bezier(0.25, 1, 0.5, 1), max-width 0.28s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
+          transition: width 0.25s cubic-bezier(0.25, 1, 0.5, 1), min-width 0.25s cubic-bezier(0.25, 1, 0.5, 1), max-width 0.25s cubic-bezier(0.25, 1, 0.5, 1), padding 0.25s ease, opacity 0.2s ease, border 0.25s ease;
         }
 
         :root[zen-right-side="true"] #zentral-apps-vertical-bar {
@@ -856,9 +858,11 @@
           width: 100% !important;
           padding: 0 4px !important;
           max-height: 100% !important;
+          min-height: auto !important;
           gap: 6px !important;
           overflow-y: auto !important;
           overflow-x: hidden !important;
+          background: transparent !important;
         }
 
         #zentral-apps-vertical-bar #zen-apps-sidebar-grid .zen-apps-scroll-box {
@@ -867,6 +871,9 @@
           align-items: center !important;
           gap: 6px !important;
           width: 100% !important;
+          opacity: 1 !important;
+          transform: none !important;
+          pointer-events: auto !important;
         }
 
         #zentral-apps-vertical-bar .zen-app-tile {
@@ -877,29 +884,55 @@
           max-width: 34px !important;
           max-height: 34px !important;
           flex-shrink: 0 !important;
+          opacity: 1 !important;
+          transform: none !important;
+          pointer-events: auto !important;
         }
 
-        /* Autohide behavior when placed in Vertical Bar */
+        #zentral-apps-vertical-bar .zen-app-add-btn {
+          opacity: 1 !important;
+          transform: none !important;
+          pointer-events: auto !important;
+        }
+
+        #zentral-apps-vertical-bar .zen-apps-autohide-dots {
+          display: none !important;
+        }
+
+        /* Autohide behavior when placed in Vertical Bar: Completely hide the bar when not revealed/active */
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
-          width: 22px !important;
-          min-width: 22px !important;
-          max-width: 22px !important;
-          cursor: pointer;
-        }
-
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) .zen-apps-autohide-dots {
-          display: flex !important;
-          flex-direction: column !important;
-          opacity: 0.75 !important;
-          transform: translate(-50%, -50%) scale(1) !important;
-        }
-
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) .zen-apps-scroll-box,
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) .zen-app-tile,
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) .zen-app-add-btn {
+          width: 0px !important;
+          min-width: 0px !important;
+          max-width: 0px !important;
+          padding: 0 !important;
+          border: none !important;
           opacity: 0 !important;
           pointer-events: none !important;
-          transform: scale(0.9) !important;
+        }
+
+        #zentral-apps-vertical-bar-trigger {
+          display: none;
+          position: fixed;
+          top: 0;
+          bottom: 0;
+          width: 12px;
+          z-index: 2147483640;
+          pointer-events: auto;
+          background: transparent;
+        }
+
+        :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar-trigger {
+          display: block;
+        }
+
+        :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar-trigger {
+          left: 0;
+          right: auto;
+        }
+
+        :root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]) #zentral-apps-vertical-bar-trigger {
+          right: 0;
+          left: auto;
         }
       `;
       try {
@@ -1034,6 +1067,33 @@
           this.scheduleAutohideCollapse();
         });
         this.#dom.verticalBar = vb;
+
+        let trigger = document.getElementById("zentral-apps-vertical-bar-trigger");
+        if (!trigger) {
+          trigger = document.createElement("div");
+          trigger.id = "zentral-apps-vertical-bar-trigger";
+          (document.body || document.documentElement).appendChild(trigger);
+        }
+        trigger.addEventListener("mouseenter", () => {
+          if (this.isPlacementVerticalBar()) {
+            this.setAutohideHovered(true);
+          }
+        });
+        trigger.addEventListener("mouseleave", () => {
+          if (this.isPlacementVerticalBar()) {
+            this.scheduleAutohideCollapse();
+          }
+        });
+        this.#dom.verticalBarTrigger = trigger;
+
+        window.addEventListener("mousemove", (e) => {
+          if (!this.isPlacementVerticalBar() || Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) !== true) return;
+          const isRight = this.isVerticalBarOnRight();
+          const isNearEdge = isRight ? (e.clientX >= window.innerWidth - 12) : (e.clientX <= 12);
+          if (isNearEdge) {
+            this.setAutohideHovered(true);
+          }
+        }, { passive: true });
       }
 
       if (!this.#dom.root) {
@@ -1924,7 +1984,9 @@
     }
 
     /**
-     * Recalculates and positions the floating app panel relative to sidebar bounds an    positionPanel() {
+     * Recalculates and positions the floating app panel relative to sidebar bounds and top navigation bar.
+     */
+    positionPanel() {
       const root = this.#dom.root;
       if (!root || !gBrowser?.tabContainer) return;
       const tcRect = gBrowser.tabContainer.getBoundingClientRect();

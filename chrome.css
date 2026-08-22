@@ -952,7 +952,7 @@ panel[id*="tabgroup-editor"] {
   gap: 6px;
   overflow: hidden;
   user-select: none;
-  transition: width 0.28s cubic-bezier(0.25, 1, 0.5, 1), min-width 0.28s cubic-bezier(0.25, 1, 0.5, 1), max-width 0.28s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
+  transition: width 0.25s cubic-bezier(0.25, 1, 0.5, 1), min-width 0.25s cubic-bezier(0.25, 1, 0.5, 1), max-width 0.25s cubic-bezier(0.25, 1, 0.5, 1), padding 0.25s ease, opacity 0.2s ease, border 0.25s ease;
 }
 
 :root[zen-right-side="true"] #zentral-apps-vertical-bar {
@@ -972,9 +972,11 @@ panel[id*="tabgroup-editor"] {
   width: 100% !important;
   padding: 0 4px !important;
   max-height: 100% !important;
+  min-height: auto !important;
   gap: 6px !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+  background: transparent !important;
 }
 
 #zentral-apps-vertical-bar #zen-apps-sidebar-grid .zen-apps-scroll-box {
@@ -983,6 +985,9 @@ panel[id*="tabgroup-editor"] {
   align-items: center !important;
   gap: 6px !important;
   width: 100% !important;
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: auto !important;
 }
 
 #zentral-apps-vertical-bar .zen-app-tile {
@@ -993,29 +998,55 @@ panel[id*="tabgroup-editor"] {
   max-width: 34px !important;
   max-height: 34px !important;
   flex-shrink: 0 !important;
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: auto !important;
 }
 
-/* Autohide behavior when placed in Vertical Bar */
+#zentral-apps-vertical-bar .zen-app-add-btn {
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
+
+#zentral-apps-vertical-bar .zen-apps-autohide-dots {
+  display: none !important;
+}
+
+/* Autohide behavior when placed in Vertical Bar: Completely hide the bar when not revealed/active */
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
-  width: 22px !important;
-  min-width: 22px !important;
-  max-width: 22px !important;
-  cursor: pointer;
-}
-
-:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) .zen-apps-autohide-dots {
-  display: flex !important;
-  flex-direction: column !important;
-  opacity: 0.75 !important;
-  transform: translate(-50%, -50%) scale(1) !important;
-}
-
-:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) .zen-apps-scroll-box,
-:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) .zen-app-tile,
-:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) .zen-app-add-btn {
+  width: 0px !important;
+  min-width: 0px !important;
+  max-width: 0px !important;
+  padding: 0 !important;
+  border: none !important;
   opacity: 0 !important;
   pointer-events: none !important;
-  transform: scale(0.9) !important;
+}
+
+#zentral-apps-vertical-bar-trigger {
+  display: none;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  z-index: 2147483640;
+  pointer-events: auto;
+  background: transparent;
+}
+
+:root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar-trigger {
+  display: block;
+}
+
+:root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar-trigger {
+  left: 0;
+  right: auto;
+}
+
+:root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]) #zentral-apps-vertical-bar-trigger {
+  right: 0;
+  left: auto;
 }
 
 #zen-app-panel-root[data-panel-side="right"] #zen-app-panel-pill { left: 0 !important; right: auto !important; transform: translate(-50%, -50%) !important; }
@@ -1024,4 +1055,5 @@ panel[id*="tabgroup-editor"] {
 #zen-app-panel-root[data-panel-side="left"] .zen-app-hover-zone { right: -22px !important; left: auto !important; }
 #zen-app-panel-root[data-panel-side="right"] .zen-app-resize-strip { left: -5px !important; right: auto !important; }
 #zen-app-panel-root[data-panel-side="left"] .zen-app-resize-strip { right: -5px !important; left: auto !important; }
+
 
