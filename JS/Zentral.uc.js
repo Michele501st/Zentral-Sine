@@ -821,6 +821,10 @@
          * Zentral Apps Vertical Bar (Opposite Edge Dock - Floating Over Page)
          * ========================================================================== */
         #zentral-apps-vertical-bar {
+          display: none !important;
+        }
+
+        :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
           position: fixed !important;
           top: 0 !important;
           bottom: 0 !important;
@@ -943,7 +947,11 @@
         }
 
         #zentral-apps-vertical-bar-trigger {
-          display: none;
+          display: none !important;
+        }
+
+        :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar-trigger {
+          display: block !important;
           position: fixed;
           top: 0;
           bottom: 0;
@@ -951,10 +959,6 @@
           z-index: 2147483550;
           pointer-events: auto;
           background: transparent;
-        }
-
-        :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar-trigger {
-          display: block;
         }
 
         :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar-trigger {
@@ -2443,6 +2447,10 @@
         } else {
           if (this.#dom.verticalBar) {
             this.#dom.verticalBar.style.display = "none";
+            this.#dom.verticalBar.removeAttribute("data-revealed");
+          }
+          if (this.#dom.verticalBarTrigger) {
+            this.#dom.verticalBarTrigger.style.display = "none";
           }
 
           if (shouldUseToolbar) {
