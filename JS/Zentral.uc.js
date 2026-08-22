@@ -818,37 +818,72 @@
         #zen-app-panel-root[data-panel-side="left"] .zen-app-resize-strip { right: -5px !important; left: auto !important; }
 
         /* ==========================================================================
-         * Zentral Apps Vertical Bar (Opposite Edge Dock)
+         * Zentral Apps Vertical Bar (Opposite Edge Dock - Floating Over Page)
          * ========================================================================== */
         #zentral-apps-vertical-bar {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          width: 44px;
-          min-width: 44px;
-          max-width: 44px;
-          height: 100%;
-          position: relative;
-          z-index: 10;
-          box-sizing: border-box;
-          background: var(--zen-colors-tertiary, var(--tabpanels-background-color, #18181c));
-          border-left: 1px solid rgba(255, 255, 255, 0.08);
-          border-right: 1px solid rgba(255, 255, 255, 0.08);
-          padding: 8px 0;
-          gap: 6px;
-          overflow: hidden;
-          user-select: none;
-          transition: width 0.25s cubic-bezier(0.25, 1, 0.5, 1), min-width 0.25s cubic-bezier(0.25, 1, 0.5, 1), max-width 0.25s cubic-bezier(0.25, 1, 0.5, 1), padding 0.25s ease, opacity 0.2s ease, border 0.25s ease;
+          position: fixed !important;
+          top: 0 !important;
+          bottom: 0 !important;
+          height: 100vh !important;
+          width: 44px !important;
+          min-width: 44px !important;
+          max-width: 44px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          z-index: 2147483500 !important;
+          box-sizing: border-box !important;
+          background: var(--zen-colors-tertiary, var(--tabpanels-background-color, #18181c)) !important;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+          padding: 8px 0 !important;
+          gap: 6px !important;
+          overflow: hidden !important;
+          user-select: none !important;
+          transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, visibility 0.24s ease !important;
+          will-change: transform, opacity;
         }
 
-        :root[zen-right-side="true"] #zentral-apps-vertical-bar {
-          border-right: 1px solid rgba(255, 255, 255, 0.08);
-          border-left: none;
+        /* Position on Left (Sidebar is on Right) */
+        :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar {
+          left: 0 !important;
+          right: auto !important;
+          border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-left: none !important;
+          transform: translateX(0);
         }
 
-        :root:not([zen-right-side="true"]) #zentral-apps-vertical-bar {
-          border-left: 1px solid rgba(255, 255, 255, 0.08);
-          border-right: none;
+        /* Position on Right (Sidebar is on Left) */
+        :root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]) #zentral-apps-vertical-bar {
+          right: 0 !important;
+          left: auto !important;
+          border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-right: none !important;
+          transform: translateX(0);
+        }
+
+        /* Autohide - Slide out / Hidden state when idle */
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]) #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
+          transform: translateX(100%) !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          visibility: hidden !important;
+        }
+
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
+          transform: translateX(-100%) !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          visibility: hidden !important;
+        }
+
+        /* Autohide - Slide in / Revealed state */
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar[data-revealed="true"],
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:hover,
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar[zentral-app-panel-open="true"] {
+          transform: translateX(0) !important;
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          visibility: visible !important;
         }
 
         #zentral-apps-vertical-bar #zen-apps-sidebar-grid {
@@ -907,41 +942,13 @@
           pointer-events: none !important;
         }
 
-        /* Autohide behavior when placed in Vertical Bar: Completely hide the bar with NO strip and NO dots */
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
-          width: 0px !important;
-          min-width: 0px !important;
-          max-width: 0px !important;
-          padding: 0 !important;
-          border: none !important;
-          opacity: 0 !important;
-          pointer-events: none !important;
-          visibility: hidden !important;
-        }
-
-        :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
-          visibility: visible;
-        }
-
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar[data-revealed="true"],
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:hover,
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar[zentral-app-panel-open="true"] {
-          width: 44px !important;
-          min-width: 44px !important;
-          max-width: 44px !important;
-          opacity: 1 !important;
-          padding: 8px 0 !important;
-          pointer-events: auto !important;
-          visibility: visible !important;
-        }
-
         #zentral-apps-vertical-bar-trigger {
           display: none;
           position: fixed;
           top: 0;
           bottom: 0;
-          width: 14px;
-          z-index: 2147483640;
+          width: 16px;
+          z-index: 2147483550;
           pointer-events: auto;
           background: transparent;
         }
@@ -1089,15 +1096,20 @@
           vb = document.createElement("div");
           vb.id = "zentral-apps-vertical-bar";
         }
+
+        let vbHovered = false;
+
         vb.addEventListener("mouseenter", () => {
           if (this.isPlacementVerticalBar()) {
+            vbHovered = true;
             this.setAutohideHovered(true);
           }
         });
         vb.addEventListener("mouseleave", (e) => {
           if (this.isPlacementVerticalBar()) {
+            vbHovered = false;
             if (!vb.contains(e.relatedTarget)) {
-              this.scheduleAutohideCollapse();
+              this.scheduleAutohideCollapse(120);
             }
           }
         });
@@ -1111,13 +1123,15 @@
         }
         trigger.addEventListener("mouseenter", () => {
           if (this.isPlacementVerticalBar()) {
+            vbHovered = true;
             this.setAutohideHovered(true);
           }
         });
         trigger.addEventListener("mouseleave", (e) => {
           if (this.isPlacementVerticalBar()) {
             if (e.relatedTarget !== vb && !vb.contains(e.relatedTarget)) {
-              this.scheduleAutohideCollapse();
+              vbHovered = false;
+              this.scheduleAutohideCollapse(120);
             }
           }
         });
@@ -1125,10 +1139,21 @@
 
         window.addEventListener("mousemove", (e) => {
           if (!this.isPlacementVerticalBar() || Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) !== true) return;
+          if (this.#state.activeAppId) return; // Keep revealed while panel is open
+
           const isRight = this.isVerticalBarOnRight();
-          const isNearEdge = isRight ? (e.clientX >= window.innerWidth - 14) : (e.clientX <= 14);
+          const triggerDist = 16;
+          const barWidth = 60;
+
+          const isNearEdge = isRight ? (e.clientX >= window.innerWidth - triggerDist) : (e.clientX <= triggerDist);
+          const isInsideBar = isRight ? (e.clientX >= window.innerWidth - barWidth) : (e.clientX <= barWidth);
+
           if (isNearEdge) {
+            vbHovered = true;
             this.setAutohideHovered(true);
+          } else if (!isInsideBar && vbHovered) {
+            vbHovered = false;
+            this.scheduleAutohideCollapse(80);
           }
         }, { passive: true });
       }
@@ -2028,15 +2053,13 @@
       let targetRight = gap;
 
       if (this.isPlacementVerticalBar() && !this.isCollapsedLayoutMode()) {
-        const vb = this.#dom.verticalBar;
-        const vbRect = vb ? vb.getBoundingClientRect() : null;
-        const vbWidth = (vbRect && vbRect.width > 0) ? vbRect.width : 44;
         const isVbRight = this.isVerticalBarOnRight();
+        const vbOffset = 44 + sideGap;
 
         if (isVbRight) {
-          targetRight = Math.max(gap, Math.round(window.innerWidth - (vbRect ? vbRect.left : (window.innerWidth - vbWidth))) + sideGap);
+          targetRight = vbOffset;
         } else {
-          targetLeft = Math.max(gap, Math.round(vbRect ? vbRect.right : vbWidth) + sideGap);
+          targetLeft = vbOffset;
         }
       } else {
         targetLeft = Math.max(gap, Math.round(sidebarRect.right) + sideGap);
