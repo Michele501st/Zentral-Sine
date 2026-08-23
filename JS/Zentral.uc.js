@@ -569,7 +569,7 @@
      * @returns {boolean} True if panel attaches to the right edge.
      */
     isPanelAttachedToRight() {
-      if (this.isPlacementVerticalBar() && !this.isCollapsedLayoutMode()) {
+      if (this.isPlacementVerticalBar()) {
         return this.isVerticalBarOnRight();
       }
       return this.isSidebarRight();
@@ -1734,7 +1734,7 @@
         } catch (e) { console.error("[ZentralApps] Failed to load URL:", e); }
       }
 
-      const isTopSlide = this.isCollapsedLayoutMode();
+      const isTopSlide = this.isCollapsedLayoutMode() && !this.isPlacementVerticalBar();
       const isFromRight = this.isPanelAttachedToRight();
       const slideFrom = isTopSlide 
         ? "translateY(-100%)" 
@@ -1794,7 +1794,7 @@
       const tiles = document.querySelectorAll(".zen-app-tile[data-app-id]");
       tiles.forEach(tile => tile.dataset.active = "false");
 
-      const isTopSlide = this.isCollapsedLayoutMode();
+      const isTopSlide = this.isCollapsedLayoutMode() && !this.isPlacementVerticalBar();
       const isToRight = this.isPanelAttachedToRight();
       const slideTo = isTopSlide 
         ? "translateY(-100%)" 
@@ -2061,7 +2061,7 @@
       let targetLeft = gap;
       let targetRight = gap;
 
-      if (this.isPlacementVerticalBar() && !this.isCollapsedLayoutMode()) {
+      if (this.isPlacementVerticalBar()) {
         const isVbRight = this.isVerticalBarOnRight();
         const vbOffset = 44 + sideGap;
 
@@ -2165,7 +2165,7 @@
         
         const gap = 12;
         let fullWidth = window.innerWidth - (gap * 2);
-        if (this.isPlacementVerticalBar() && !this.isCollapsedLayoutMode()) {
+        if (this.isPlacementVerticalBar()) {
           const vb = this.#dom.verticalBar;
           const vbRect = vb ? vb.getBoundingClientRect() : null;
           const vbWidth = (vbRect && vbRect.width > 0) ? vbRect.width : 44;
