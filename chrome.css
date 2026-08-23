@@ -940,9 +940,8 @@ panel[id*="tabgroup-editor"] {
 
 :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
   position: fixed !important;
-  top: var(--zen-apps-vertical-bar-top, 0px) !important;
-  bottom: 0 !important;
-  height: calc(100vh - var(--zen-apps-vertical-bar-top, 0px)) !important;
+  top: 0;
+  bottom: 0;
   width: 44px !important;
   min-width: 44px !important;
   max-width: 44px !important;
@@ -1070,9 +1069,8 @@ panel[id*="tabgroup-editor"] {
 :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar-trigger {
   display: block !important;
   position: fixed;
-  top: var(--zen-apps-vertical-bar-top, 0px);
+  top: 0;
   bottom: 0;
-  height: calc(100vh - var(--zen-apps-vertical-bar-top, 0px));
   width: 16px;
   z-index: 2147483550;
   pointer-events: auto;
