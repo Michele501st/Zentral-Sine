@@ -439,7 +439,6 @@
       this.renderGrid();
       this.setupContextMenu();
       this.setupObservers();
-      this.startPositionTracking();
       
       // Expose legacy/debug global helper
       window.ZenApps = {
@@ -850,8 +849,8 @@
           gap: 6px !important;
           overflow: hidden !important;
           user-select: none !important;
-          transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), top 0.2s ease, height 0.2s ease, opacity 0.2s ease, visibility 0.24s ease !important;
-          will-change: transform, opacity, top, height;
+          transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, visibility 0.24s ease !important;
+          will-change: transform, opacity;
         }
 
         /* Position on Left (Sidebar is on Right) */
@@ -967,7 +966,6 @@
           z-index: 2147483550;
           pointer-events: auto;
           background: transparent;
-          transition: top 0.2s ease, height 0.2s ease !important;
         }
 
         :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar-trigger {
@@ -1821,9 +1819,7 @@
           this.#dom.root.removeAttribute("closing");
           this.#dom.root.style.pointerEvents = "";
         }
-        if (!this.isPlacementVerticalBar()) {
-          this.stopPositionTracking();
-        }
+        this.stopPositionTracking();
         return;
       }
 
@@ -1837,9 +1833,7 @@
           this.#dom.root.removeAttribute("closing");
           this.#dom.root.style.pointerEvents = "";
         }
-        if (!this.isPlacementVerticalBar()) {
-          this.stopPositionTracking();
-        }
+        this.stopPositionTracking();
       }, slideMs + 20);
     }
 
@@ -1925,14 +1919,13 @@
       if (this._isTrackingPosition) return;
       this._isTrackingPosition = true;
 
+      this.positionPanel(); // Immediate initial positioning
+
       const reposition = () => {
-        this.updateVerticalBarPosition();
         if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) {
           this.positionPanel();
         }
       };
-
-      reposition(); // Immediate initial positioning
 
       // --- Vector 1: RAF Burst (Smooth tracking for transforms/hovers) ---
       let rafId = null;
@@ -1950,8 +1943,8 @@
       };
 
       const triggerBurst = () => {
-        // Run RAF burst when panel is open OR when in vertical bar placement
-        if (!this.#dom.root?.hasAttribute("open") && !this.isPlacementVerticalBar()) return;
+        // Skip RAF burst entirely when panel is closed â€” avoids BCR reads at 60fps while idle
+        if (!this.#dom.root?.hasAttribute("open")) return;
         lastActivityTime = Date.now();
         if (!rafId) {
           rafId = requestAnimationFrame(rafLoop);
@@ -1965,7 +1958,6 @@
         reposition();
         triggerBurst();
       };
-      window.addEventListener("transitionrun", this._globalTransitionHandler, { passive: true });
       window.addEventListener("transitionstart", this._globalTransitionHandler, { passive: true });
       window.addEventListener("transitionend", this._globalTransitionHandler, { passive: true });
 
@@ -1974,7 +1966,7 @@
       this._sidebarResizeObserver = new ResizeObserver(reposition);
       const idsToObserve = [
         "sidebar-box", "sidebar-container", "vertical-tabs", 
-        "navigator-toolbox", "nav-bar", "PersonalToolbar", "zen-appcontent-navbar-wrapper"
+        "navigator-toolbox", "zen-appcontent-navbar-wrapper"
       ];
       idsToObserve.forEach(id => {
         const el = document.getElementById(id);
@@ -1997,7 +1989,6 @@
           "zen-compact-mode",
           "zen-sidebar-hidden",
           "zen-right-side",
-          "zen-has-hover",
           "style",
         ],
       });
@@ -2050,43 +2041,39 @@
     }
 
     /**
-     * Calculates the bottom boundary offset of active top toolbars (navigation bar, bookmarks toolbar)
-     * that physically float above the web page and overlap horizontally with the app panel or vertical bar.
-     * Toolbars located inside the sidebar or translated offscreen (autohidden) are excluded.
-     * @returns {number} Top offset in pixels (0 if no top toolbar is visible).
+     * Calculates the bottom boundary offset of top toolbars (navigation bar, bookmarks toolbar, etc.)
+     * to ensure the vertical bar and floating panels never overlap browser controls.
+     * @returns {number} Top offset in pixels.
      */
     getTopBarBottom() {
       let maxBottom = 0;
-
-      // Only check actual toolbar strips, NOT outer static wrappers like navigator-toolbox or zen-appcontent-navbar-wrapper
-      const toolbarIds = [
+      const idsToCheck = [
+        "zen-appcontent-navbar-wrapper",
+        "navigator-toolbox",
         "nav-bar",
         "PersonalToolbar",
-        "TabsToolbar"
+        "zen-sidebar-top-buttons",
+        "TabsToolbar",
+        "titlebar"
       ];
         
-      toolbarIds.forEach(id => {
+      idsToCheck.forEach(id => {
         const el = document.getElementById(id);
-        if (el && el.isConnected) {
-          // If the toolbar is docked inside the sidebar, it does not sit over the top of web content / vertical bar
-          if (el.closest && el.closest("#sidebar-box, #sidebar-container, #vertical-tabs, #zen-sidebar-top-buttons, #tabbrowser-tabbox")) {
-            return;
-          }
-
-          if (el.getAttribute("collapsed") === "true" || el.getAttribute("hidden") === "true") return;
-
-          try {
-            const style = window.getComputedStyle(el);
-            if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") return;
-          } catch (_) {}
-
+        if (el) {
           const rect = el.getBoundingClientRect();
-          // Must be visible on screen and not translated offscreen above viewport (rect.bottom > 2 and rect.top >= -2)
-          if (rect.width <= 0 || rect.height <= 0 || rect.bottom <= 2 || rect.top < -2 || rect.height > 300) return;
-
-          maxBottom = Math.max(maxBottom, rect.bottom);
+          if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.height < 300) {
+            maxBottom = Math.max(maxBottom, rect.bottom);
+          }
         }
       });
+
+      const browserEl = document.getElementById("browser") || document.getElementById("appcontent") || document.getElementById("tabbrowser-tabbox");
+      if (browserEl) {
+        const bRect = browserEl.getBoundingClientRect();
+        if (bRect.top > 0 && bRect.top < 300) {
+          maxBottom = Math.max(maxBottom, bRect.top);
+        }
+      }
 
       return Math.round(maxBottom);
     }
@@ -2148,11 +2135,10 @@
       }
 
       const top = this.getTopBarBottom();
-      const topOffset = top > 0 ? top : gap;
 
-      root.style.top = topOffset + "px";
+      root.style.top = top + "px";
       root.style.bottom = gap + "px";
-      root.style.height = `calc(100vh - ${topOffset + gap}px)`;
+      root.style.height = `calc(100vh - ${top + gap}px)`;
 
       if (this.isPanelAttachedToRight()) {
         root.style.left = "auto";
