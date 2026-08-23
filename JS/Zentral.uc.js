@@ -264,6 +264,8 @@
     #resizeObs = null;
     /** @private TabSelect event listener */
     #tabSelectListener = null;
+    /** @private MutationObserver on top toolbars */
+    #toolboxObserver = null;
 
     /**
      * Module tear down for Sine hot unloading
@@ -300,6 +302,10 @@
           try { Services.prefs.removeObserver("zen.view.use-single-toolbar", this.#layoutObserver); } catch (_) {}
           try { Services.prefs.removeObserver("zen.view.sidebar-expanded", this.#layoutObserver); } catch (_) {}
           this.#layoutObserver = null;
+        }
+        if (this.#toolboxObserver) {
+          try { this.#toolboxObserver.disconnect(); } catch (_) {}
+          this.#toolboxObserver = null;
         }
 
         // 3. Remove window / document event listeners
@@ -826,9 +832,9 @@
 
         :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
           position: fixed !important;
-          top: 0 !important;
+          top: var(--zen-apps-vertical-bar-top, 0px) !important;
           bottom: 0 !important;
-          height: 100vh !important;
+          height: calc(100vh - var(--zen-apps-vertical-bar-top, 0px)) !important;
           width: 44px !important;
           min-width: 44px !important;
           max-width: 44px !important;
@@ -953,8 +959,9 @@
         :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar-trigger {
           display: block !important;
           position: fixed;
-          top: 0;
-          bottom: 0;
+          top: var(--zen-apps-vertical-bar-top, 0px) !important;
+          bottom: 0 !important;
+          height: calc(100vh - var(--zen-apps-vertical-bar-top, 0px)) !important;
           width: 16px;
           z-index: 2147483550;
           pointer-events: auto;
@@ -1145,6 +1152,9 @@
           if (!this.isPlacementVerticalBar() || Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) !== true) return;
           if (this.#state.activeAppId) return; // Keep revealed while panel is open
 
+          const topOffset = this.getTopBarBottom();
+          if (e.clientY < topOffset) return; // Ignore hover events over top toolbars
+
           const isRight = this.isVerticalBarOnRight();
           const triggerDist = 16;
           const barWidth = 60;
@@ -1305,6 +1315,7 @@
 
       this.updateAutohideState();
       this.updateCompactDrawerState();
+      this.updateVerticalBarPosition();
     }
 
     /**
@@ -2030,6 +2041,60 @@
     }
 
     /**
+     * Calculates the bottom boundary offset of top toolbars (navigation bar, bookmarks toolbar, etc.)
+     * to ensure the vertical bar and floating panels never overlap browser controls.
+     * @returns {number} Top offset in pixels.
+     */
+    getTopBarBottom() {
+      let maxBottom = 0;
+      const idsToCheck = [
+        "zen-appcontent-navbar-wrapper",
+        "navigator-toolbox",
+        "nav-bar",
+        "PersonalToolbar",
+        "zen-sidebar-top-buttons",
+        "TabsToolbar",
+        "titlebar"
+      ];
+        
+      idsToCheck.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.height < 300) {
+            maxBottom = Math.max(maxBottom, rect.bottom);
+          }
+        }
+      });
+
+      const browserEl = document.getElementById("browser") || document.getElementById("appcontent") || document.getElementById("tabbrowser-tabbox");
+      if (browserEl) {
+        const bRect = browserEl.getBoundingClientRect();
+        if (bRect.top > 0 && bRect.top < 300) {
+          maxBottom = Math.max(maxBottom, bRect.top);
+        }
+      }
+
+      return Math.round(maxBottom);
+    }
+
+    /**
+     * Updates the vertical bar and trigger element top offset and height so they strictly float below the top toolbars.
+     */
+    updateVerticalBarPosition() {
+      const top = this.getTopBarBottom();
+      document.documentElement.style.setProperty("--zen-apps-vertical-bar-top", `${top}px`);
+      if (this.#dom.verticalBar) {
+        this.#dom.verticalBar.style.top = `${top}px`;
+        this.#dom.verticalBar.style.height = `calc(100vh - ${top}px)`;
+      }
+      if (this.#dom.verticalBarTrigger) {
+        this.#dom.verticalBarTrigger.style.top = `${top}px`;
+        this.#dom.verticalBarTrigger.style.height = `calc(100vh - ${top}px)`;
+      }
+    }
+
+    /**
      * Recalculates and positions the floating app panel relative to sidebar bounds and top navigation bar.
      */
     positionPanel() {
@@ -2052,7 +2117,6 @@
       const isCollapsed = this.isCollapsedSidebar() || (sidebarRect.width > 0 && sidebarRect.width <= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD);
       const sideGap = isCollapsed ? 7 : gap;
 
-      let top = 0;
       let targetLeft = gap;
       let targetRight = gap;
 
@@ -2070,25 +2134,11 @@
         targetRight = Math.max(gap, Math.round(window.innerWidth - sidebarRect.left) + sideGap);
       }
 
-      try {
-        let maxBottom = 0;
-        const idsToCheck = ["zen-appcontent-navbar-wrapper", "navigator-toolbox"];
-          
-        idsToCheck.forEach(id => {
-          const el = document.getElementById(id);
-          if (el) {
-            const rect = el.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.height < 200) {
-              maxBottom = Math.max(maxBottom, rect.bottom);
-            }
-          }
-        });
-        
-        top = Math.round(maxBottom);
-      } catch(e) {}
+      const top = this.getTopBarBottom();
 
       root.style.top = top + "px";
       root.style.bottom = gap + "px";
+      root.style.height = `calc(100vh - ${top + gap}px)`;
 
       if (this.isPanelAttachedToRight()) {
         root.style.left = "auto";
@@ -2442,6 +2492,7 @@
               }
             }
             vb.style.display = "flex";
+            this.updateVerticalBarPosition();
           }
           if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Vertical Bar mode placed on opposite edge.");
         } else {
@@ -2573,10 +2624,25 @@
         this.#resizeObs.observe(sidebarBox);
       }
 
+      window.addEventListener("resize", () => {
+        this.updateVerticalBarPosition();
+        if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) this.positionPanel();
+      }, { passive: true });
+
+      const toolbox = document.getElementById("navigator-toolbox") || document.getElementById("PersonalToolbar");
+      if (toolbox) {
+        this.#toolboxObserver = new window.MutationObserver(() => {
+          this.updateVerticalBarPosition();
+          if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) this.positionPanel();
+        });
+        this.#toolboxObserver.observe(toolbox, { attributes: true, subtree: true, attributeFilter: ["collapsed", "hidden", "style", "class"] });
+      }
+
       // Clean up pref observers when window closes to prevent ghost observers (H-03)
       window.addEventListener("unload", () => {
         try { Services.prefs.removeObserver("zen.view.use-single-toolbar", layoutObserver); } catch (_) {}
         try { Services.prefs.removeObserver("zen.view.sidebar-expanded", layoutObserver); } catch (_) {}
+        if (this.#toolboxObserver) { try { this.#toolboxObserver.disconnect(); } catch (_) {} }
         this.stopPositionTracking();
       }, { once: true });
 
