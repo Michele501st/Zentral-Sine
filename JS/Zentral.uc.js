@@ -439,6 +439,7 @@
       this.renderGrid();
       this.setupContextMenu();
       this.setupObservers();
+      this.startPositionTracking();
       
       // Expose legacy/debug global helper
       window.ZenApps = {
@@ -849,8 +850,8 @@
           gap: 6px !important;
           overflow: hidden !important;
           user-select: none !important;
-          transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, visibility 0.24s ease !important;
-          will-change: transform, opacity;
+          transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), top 0.2s ease, height 0.2s ease, opacity 0.2s ease, visibility 0.24s ease !important;
+          will-change: transform, opacity, top, height;
         }
 
         /* Position on Left (Sidebar is on Right) */
@@ -966,6 +967,7 @@
           z-index: 2147483550;
           pointer-events: auto;
           background: transparent;
+          transition: top 0.2s ease, height 0.2s ease !important;
         }
 
         :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar-trigger {
@@ -1819,7 +1821,9 @@
           this.#dom.root.removeAttribute("closing");
           this.#dom.root.style.pointerEvents = "";
         }
-        this.stopPositionTracking();
+        if (!this.isPlacementVerticalBar()) {
+          this.stopPositionTracking();
+        }
         return;
       }
 
@@ -1833,7 +1837,9 @@
           this.#dom.root.removeAttribute("closing");
           this.#dom.root.style.pointerEvents = "";
         }
-        this.stopPositionTracking();
+        if (!this.isPlacementVerticalBar()) {
+          this.stopPositionTracking();
+        }
       }, slideMs + 20);
     }
 
@@ -1919,13 +1925,14 @@
       if (this._isTrackingPosition) return;
       this._isTrackingPosition = true;
 
-      this.positionPanel(); // Immediate initial positioning
-
       const reposition = () => {
+        this.updateVerticalBarPosition();
         if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) {
           this.positionPanel();
         }
       };
+
+      reposition(); // Immediate initial positioning
 
       // --- Vector 1: RAF Burst (Smooth tracking for transforms/hovers) ---
       let rafId = null;
@@ -1943,8 +1950,8 @@
       };
 
       const triggerBurst = () => {
-        // Skip RAF burst entirely when panel is closed â€” avoids BCR reads at 60fps while idle
-        if (!this.#dom.root?.hasAttribute("open")) return;
+        // Run RAF burst when panel is open OR when in vertical bar placement
+        if (!this.#dom.root?.hasAttribute("open") && !this.isPlacementVerticalBar()) return;
         lastActivityTime = Date.now();
         if (!rafId) {
           rafId = requestAnimationFrame(rafLoop);
@@ -1958,6 +1965,7 @@
         reposition();
         triggerBurst();
       };
+      window.addEventListener("transitionrun", this._globalTransitionHandler, { passive: true });
       window.addEventListener("transitionstart", this._globalTransitionHandler, { passive: true });
       window.addEventListener("transitionend", this._globalTransitionHandler, { passive: true });
 
@@ -1966,7 +1974,7 @@
       this._sidebarResizeObserver = new ResizeObserver(reposition);
       const idsToObserve = [
         "sidebar-box", "sidebar-container", "vertical-tabs", 
-        "navigator-toolbox", "zen-appcontent-navbar-wrapper"
+        "navigator-toolbox", "nav-bar", "PersonalToolbar", "zen-appcontent-navbar-wrapper"
       ];
       idsToObserve.forEach(id => {
         const el = document.getElementById(id);
@@ -1989,6 +1997,7 @@
           "zen-compact-mode",
           "zen-sidebar-hidden",
           "zen-right-side",
+          "zen-has-hover",
           "style",
         ],
       });
