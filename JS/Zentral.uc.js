@@ -826,9 +826,8 @@
 
         :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
           position: fixed !important;
-          top: 0 !important;
-          bottom: 0 !important;
-          height: 100vh !important;
+          top: 0;
+          bottom: 0;
           width: 44px !important;
           min-width: 44px !important;
           max-width: 44px !important;
@@ -1362,6 +1361,9 @@
         if (this.#dom.grid) this.#dom.grid.removeAttribute("data-revealed");
         if (this.#dom.verticalBar) this.#dom.verticalBar.removeAttribute("data-revealed");
       }
+      if (isVerticalBar) {
+        this.updateVerticalBarBounds();
+      }
     }
 
     /**
@@ -1712,6 +1714,7 @@
       const targetWidth = app.width || this.loadWidth();
       this.updateWidthVar(Math.max(Constants.Apps.MIN_WIDTH_PX, targetWidth));
       this.positionPanel();
+      this.updateVerticalBarBounds();
       this.startPositionTracking();
 
       const { browser, isNew } = this.getOrCreateAppBrowser(app);
@@ -1914,6 +1917,7 @@
       const reposition = () => {
         if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) {
           this.positionPanel();
+          this.updateVerticalBarBounds();
         }
       };
 
@@ -2112,6 +2116,7 @@
       const vb = this.#dom.verticalBar;
       if (!vb || !this.isPlacementVerticalBar()) return;
       
+      const gap = 12;
       let top = 0;
       try {
         let maxBottom = 0;
@@ -2131,6 +2136,11 @@
       } catch(e) {}
       
       vb.style.top = top + "px";
+      vb.style.bottom = gap + "px";
+      if (this.#dom.verticalBarTrigger) {
+        this.#dom.verticalBarTrigger.style.top = top + "px";
+        this.#dom.verticalBarTrigger.style.bottom = gap + "px";
+      }
     }
 
     /**
