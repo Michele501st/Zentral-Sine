@@ -2615,7 +2615,7 @@
         const el = document.getElementById(id);
         if (el && el.isConnected && window.getComputedStyle(el).display !== "none") {
           const rect = el.getBoundingClientRect();
-          if (rect.height > 0 && rect.bottom > lowestBottom) {
+          if (rect.height > 0 && rect.height < 200 && rect.bottom > lowestBottom) {
             lowestBottom = rect.bottom;
           }
         }
