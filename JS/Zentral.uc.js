@@ -2041,39 +2041,43 @@
     }
 
     /**
-     * Calculates the bottom boundary offset of top toolbars (navigation bar, bookmarks toolbar, etc.)
-     * to ensure the vertical bar and floating panels never overlap browser controls.
+     * Calculates the bottom boundary offset of top toolbars that actually overlap
+     * horizontally with the vertical bar on its designated screen edge.
      * @returns {number} Top offset in pixels.
      */
     getTopBarBottom() {
       let maxBottom = 0;
+      const isRight = this.isVerticalBarOnRight();
+      const vbEdgeLeft = isRight ? (window.innerWidth - 44) : 0;
+      const vbEdgeRight = isRight ? window.innerWidth : 44;
+
       const idsToCheck = [
         "zen-appcontent-navbar-wrapper",
         "navigator-toolbox",
         "nav-bar",
         "PersonalToolbar",
-        "zen-sidebar-top-buttons",
         "TabsToolbar",
-        "titlebar"
+        "toolbar-menubar"
       ];
         
       idsToCheck.forEach(id => {
         const el = document.getElementById(id);
-        if (el) {
+        if (el && el.isConnected) {
+          try {
+            const style = window.getComputedStyle(el);
+            if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") return;
+          } catch (_) {}
+
           const rect = el.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.height < 300) {
+          if (rect.width <= 0 || rect.height <= 0 || rect.bottom <= 0 || rect.height > 300) return;
+
+          // Only consider toolbars that physically overlap horizontally with the vertical bar on this edge
+          const overlapsHorizontally = (rect.left < vbEdgeRight && rect.right > vbEdgeLeft);
+          if (overlapsHorizontally) {
             maxBottom = Math.max(maxBottom, rect.bottom);
           }
         }
       });
-
-      const browserEl = document.getElementById("browser") || document.getElementById("appcontent") || document.getElementById("tabbrowser-tabbox");
-      if (browserEl) {
-        const bRect = browserEl.getBoundingClientRect();
-        if (bRect.top > 0 && bRect.top < 300) {
-          maxBottom = Math.max(maxBottom, bRect.top);
-        }
-      }
 
       return Math.round(maxBottom);
     }
