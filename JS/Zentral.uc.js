@@ -2050,41 +2050,41 @@
     }
 
     /**
-     * Calculates the bottom boundary offset of top toolbars that actually overlap
-     * horizontally with the vertical bar on its designated screen edge.
-     * @returns {number} Top offset in pixels.
+     * Calculates the bottom boundary offset of active top toolbars (navigation bar, bookmarks toolbar)
+     * that physically float above the web page and overlap horizontally with the app panel or vertical bar.
+     * Toolbars located inside the sidebar or translated offscreen (autohidden) are excluded.
+     * @returns {number} Top offset in pixels (0 if no top toolbar is visible).
      */
     getTopBarBottom() {
       let maxBottom = 0;
-      const isRight = this.isVerticalBarOnRight();
-      const vbEdgeLeft = isRight ? (window.innerWidth - 44) : 0;
-      const vbEdgeRight = isRight ? window.innerWidth : 44;
 
-      const idsToCheck = [
-        "zen-appcontent-navbar-wrapper",
-        "navigator-toolbox",
+      // Only check actual toolbar strips, NOT outer static wrappers like navigator-toolbox or zen-appcontent-navbar-wrapper
+      const toolbarIds = [
         "nav-bar",
         "PersonalToolbar",
-        "TabsToolbar",
-        "toolbar-menubar"
+        "TabsToolbar"
       ];
         
-      idsToCheck.forEach(id => {
+      toolbarIds.forEach(id => {
         const el = document.getElementById(id);
         if (el && el.isConnected) {
+          // If the toolbar is docked inside the sidebar, it does not sit over the top of web content / vertical bar
+          if (el.closest && el.closest("#sidebar-box, #sidebar-container, #vertical-tabs, #zen-sidebar-top-buttons, #tabbrowser-tabbox")) {
+            return;
+          }
+
+          if (el.getAttribute("collapsed") === "true" || el.getAttribute("hidden") === "true") return;
+
           try {
             const style = window.getComputedStyle(el);
             if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") return;
           } catch (_) {}
 
           const rect = el.getBoundingClientRect();
-          if (rect.width <= 0 || rect.height <= 0 || rect.bottom <= 0 || rect.height > 300) return;
+          // Must be visible on screen and not translated offscreen above viewport (rect.bottom > 2 and rect.top >= -2)
+          if (rect.width <= 0 || rect.height <= 0 || rect.bottom <= 2 || rect.top < -2 || rect.height > 300) return;
 
-          // Only consider toolbars that physically overlap horizontally with the vertical bar on this edge
-          const overlapsHorizontally = (rect.left < vbEdgeRight && rect.right > vbEdgeLeft);
-          if (overlapsHorizontally) {
-            maxBottom = Math.max(maxBottom, rect.bottom);
-          }
+          maxBottom = Math.max(maxBottom, rect.bottom);
         }
       });
 
@@ -2148,10 +2148,11 @@
       }
 
       const top = this.getTopBarBottom();
+      const topOffset = top > 0 ? top : gap;
 
-      root.style.top = top + "px";
+      root.style.top = topOffset + "px";
       root.style.bottom = gap + "px";
-      root.style.height = `calc(100vh - ${top + gap}px)`;
+      root.style.height = `calc(100vh - ${topOffset + gap}px)`;
 
       if (this.isPanelAttachedToRight()) {
         root.style.left = "auto";
