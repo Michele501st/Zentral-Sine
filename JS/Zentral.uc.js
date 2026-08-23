@@ -826,9 +826,9 @@
 
         :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
           position: fixed !important;
-          top: 0 !important;
+          top: var(--zen-apps-vertical-bar-top, 0px) !important;
           bottom: 0 !important;
-          height: 100vh !important;
+          height: calc(100vh - var(--zen-apps-vertical-bar-top, 0px)) !important;
           width: 44px !important;
           min-width: 44px !important;
           max-width: 44px !important;
@@ -953,8 +953,9 @@
         :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar-trigger {
           display: block !important;
           position: fixed;
-          top: 0;
+          top: var(--zen-apps-vertical-bar-top, 0px);
           bottom: 0;
+          height: calc(100vh - var(--zen-apps-vertical-bar-top, 0px));
           width: 16px;
           z-index: 2147483550;
           pointer-events: auto;
@@ -1144,6 +1145,16 @@
         window.addEventListener("mousemove", (e) => {
           if (!this.isPlacementVerticalBar() || Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) !== true) return;
           if (this.#state.activeAppId) return; // Keep revealed while panel is open
+
+          // Ignore hover in the top toolbar region
+          const topOffset = this.#state.verticalBarTopOffset || 0;
+          if (e.clientY < topOffset) {
+            if (vbHovered) {
+              vbHovered = false;
+              this.scheduleAutohideCollapse(80);
+            }
+            return;
+          }
 
           const isRight = this.isVerticalBarOnRight();
           const triggerDist = 16;
@@ -2071,20 +2082,7 @@
       }
 
       try {
-        let maxBottom = 0;
-        const idsToCheck = ["zen-appcontent-navbar-wrapper", "navigator-toolbox"];
-          
-        idsToCheck.forEach(id => {
-          const el = document.getElementById(id);
-          if (el) {
-            const rect = el.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.height < 200) {
-              maxBottom = Math.max(maxBottom, rect.bottom);
-            }
-          }
-        });
-        
-        top = Math.round(maxBottom);
+        top = this.getTopBarBottom();
       } catch(e) {}
 
       root.style.top = top + "px";
@@ -2442,6 +2440,7 @@
               }
             }
             vb.style.display = "flex";
+            this.updateVerticalBarPosition();
           }
           if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Vertical Bar mode placed on opposite edge.");
         } else {
@@ -2525,6 +2524,27 @@
       };
       window.addEventListener("TabSelect", this.#tabSelectListener);
 
+      // Vertical Bar Resize & Top Toolbar Observers
+      window.addEventListener("resize", () => {
+        if (this.isPlacementVerticalBar()) this.updateVerticalBarPosition();
+      }, { passive: true });
+
+      this._topBarObserver = new MutationObserver(() => {
+        if (this.isPlacementVerticalBar()) this.updateVerticalBarPosition();
+      });
+      
+      const topToolbars = [document.getElementById("navigator-toolbox"), document.getElementById("zen-appcontent-navbar-wrapper")];
+      topToolbars.forEach(el => {
+        if (el) {
+          this._topBarObserver.observe(el, { 
+            childList: true, 
+            subtree: true, 
+            attributes: true, 
+            attributeFilter: ["collapsed", "hidden", "style", "class", "zen-sidebar-collapsed", "zen-right-side"] 
+          });
+        }
+      });
+
       // Observer 1: DOM attribute changes (zen-right-side, zen-sidebar-collapsed)
       this.#sideObserver = new window.MutationObserver((mutations) => {
         for (const m of mutations) {
@@ -2581,6 +2601,59 @@
       }, { once: true });
 
       this.scheduleRepositionGrid(200);
+    }
+
+    /**
+     * Calculates the bottom boundary of all visible top toolbars.
+     * Evaluates various Zen and Firefox toolbars to determine where the page content actually begins.
+     * @returns {number} The bottom Y coordinate of the lowest visible top toolbar in pixels.
+     */
+    getTopBarBottom() {
+      let lowestBottom = 0;
+      
+      const inspectElement = (id) => {
+        const el = document.getElementById(id);
+        if (el && el.isConnected && window.getComputedStyle(el).display !== "none") {
+          const rect = el.getBoundingClientRect();
+          if (rect.height > 0 && rect.bottom > lowestBottom) {
+            lowestBottom = rect.bottom;
+          }
+        }
+      };
+
+      // Check standard Firefox/Zen top toolbars
+      inspectElement("zen-appcontent-navbar-wrapper");
+      inspectElement("navigator-toolbox");
+      inspectElement("PersonalToolbar");
+      inspectElement("nav-bar");
+      inspectElement("titlebar");
+
+      // Handle fullscreen mode where toolbars might be hidden
+      if (document.fullscreenElement) {
+        return 0;
+      }
+
+      return lowestBottom;
+    }
+
+    /**
+     * Updates the Vertical Bar top position to prevent overlapping with top toolbars.
+     */
+    updateVerticalBarPosition() {
+      if (!this.isPlacementVerticalBar()) return;
+      
+      const topOffset = this.getTopBarBottom();
+      document.documentElement.style.setProperty("--zen-apps-vertical-bar-top", `${topOffset}px`);
+      
+      if (this.#dom.verticalBar) {
+        this.#dom.verticalBar.style.top = `${topOffset}px`;
+        this.#dom.verticalBar.style.height = `calc(100vh - ${topOffset}px)`;
+      }
+      if (this.#dom.verticalBarTrigger) {
+        this.#dom.verticalBarTrigger.style.top = `${topOffset}px`;
+        this.#dom.verticalBarTrigger.style.height = `calc(100vh - ${topOffset}px)`;
+      }
+      this.#state.verticalBarTopOffset = topOffset;
     }
   }
   /* ====
