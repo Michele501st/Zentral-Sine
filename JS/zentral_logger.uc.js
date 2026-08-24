@@ -197,6 +197,105 @@
     const modal = document.getElementById("zentral-settings-modal");
     lines.push(`Settings Modal: ${modal ? "Present in DOM" : "Not open"}`);
 
+    // =========================================================================
+    // Sidebar & Compact Mode Material / Theme Inspector
+    // =========================================================================
+    lines.push(`\n=== SIDEBAR & COMPACT MODE MATERIAL / THEME INSPECTOR ===`);
+    
+    // 1. All relevant CSS Custom Properties on :root
+    try {
+      const rootCS = window.getComputedStyle(document.documentElement);
+      const cssVars = [];
+      for (let i = 0; i < rootCS.length; i++) {
+        const prop = rootCS[i];
+        if (prop.startsWith("--zen-") || prop.startsWith("--toolbox-") || prop.startsWith("--toolbar-") || prop.startsWith("--tab-") || prop.startsWith("--arrowpanel-")) {
+          const val = rootCS.getPropertyValue(prop)?.trim();
+          if (val) cssVars.push(`  ${prop}: ${val}`);
+        }
+      }
+      lines.push(`CSS Variables on :root (${cssVars.length}):\n${cssVars.join("\n") || "  (none)"}`);
+    } catch (e) {
+      lines.push(`CSS Variables on :root: Error reading variables (${e.message})`);
+    }
+
+    // 2. Element-by-Element Computed Style Dumps
+    const inspectIds = [
+      "main-window",
+      "navigator-toolbox",
+      "sidebar-box",
+      "browserSidebarContainer",
+      "sidebar-container",
+      "vertical-tabs",
+      "tabbrowser-tabbox",
+      "tabbrowser-tabs",
+      "browser",
+      "appcontent",
+      "tabbrowser-tabpanels",
+      "TabsToolbar",
+      "nav-bar",
+      "zentral-apps-vertical-bar",
+      "zen-apps-sidebar-grid"
+    ];
+
+    inspectIds.forEach(id => {
+      try {
+        let el = (id === "main-window") ? document.documentElement : document.getElementById(id);
+        if (!el) el = document.querySelector("." + id);
+        if (!el) {
+          lines.push(`\n[Element: #${id}] Not found in DOM`);
+          return;
+        }
+
+        const cs = window.getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        const attrs = Array.from(el.attributes).map(a => `${a.name}="${a.value}"`).join(" ");
+
+        lines.push(`\n[Element: <${el.tagName.toLowerCase()} id="${el.id || id}" class="${el.className}">]`);
+        lines.push(`  Rect: ${Math.round(rect.width)}x${Math.round(rect.height)} at (${Math.round(rect.left)},${Math.round(rect.top)})`);
+        lines.push(`  Attributes: ${attrs || "(none)"}`);
+        lines.push(`  -moz-appearance: ${cs.MozAppearance || cs.appearance}`);
+        lines.push(`  background: ${cs.background}`);
+        lines.push(`  background-color: ${cs.backgroundColor}`);
+        lines.push(`  background-image: ${cs.backgroundImage}`);
+        lines.push(`  background-attachment: ${cs.backgroundAttachment}`);
+        lines.push(`  background-position: ${cs.backgroundPosition}`);
+        lines.push(`  background-size: ${cs.backgroundSize}`);
+        lines.push(`  background-repeat: ${cs.backgroundRepeat}`);
+        lines.push(`  background-clip: ${cs.backgroundClip}`);
+        lines.push(`  backdrop-filter: ${cs.backdropFilter}`);
+        lines.push(`  -webkit-backdrop-filter: ${cs.webkitBackdropFilter}`);
+        lines.push(`  box-shadow: ${cs.boxShadow}`);
+        lines.push(`  border: ${cs.border}`);
+        lines.push(`  border-radius: ${cs.borderRadius}`);
+        lines.push(`  opacity: ${cs.opacity}`);
+        lines.push(`  mix-blend-mode: ${cs.mixBlendMode}`);
+        lines.push(`  filter: ${cs.filter}`);
+        lines.push(`  position: ${cs.position} | z-index: ${cs.zIndex}`);
+
+        // Check ::before pseudo-element
+        try {
+          const csBefore = window.getComputedStyle(el, "::before");
+          if (csBefore && csBefore.content && csBefore.content !== "none" && csBefore.content !== '""') {
+            lines.push(`  ::before -> content: ${csBefore.content} | bg: ${csBefore.background} | bg-color: ${csBefore.backgroundColor} | bg-image: ${csBefore.backgroundImage} | backdrop: ${csBefore.backdropFilter} | pos: ${csBefore.position}`);
+          } else if (csBefore && csBefore.backgroundImage && csBefore.backgroundImage !== "none") {
+            lines.push(`  ::before (with bg) -> bg-image: ${csBefore.backgroundImage} | bg-color: ${csBefore.backgroundColor} | backdrop: ${csBefore.backdropFilter}`);
+          }
+        } catch (_) {}
+
+        // Check ::after pseudo-element
+        try {
+          const csAfter = window.getComputedStyle(el, "::after");
+          if (csAfter && csAfter.content && csAfter.content !== "none" && csAfter.content !== '""') {
+            lines.push(`  ::after -> content: ${csAfter.content} | bg: ${csAfter.background} | bg-color: ${csAfter.backgroundColor} | bg-image: ${csAfter.backgroundImage} | backdrop: ${csAfter.backdropFilter} | pos: ${csAfter.position}`);
+          } else if (csAfter && csAfter.backgroundImage && csAfter.backgroundImage !== "none") {
+            lines.push(`  ::after (with bg) -> bg-image: ${csAfter.backgroundImage} | bg-color: ${csAfter.backgroundColor} | backdrop: ${csAfter.backdropFilter}`);
+          }
+        } catch (_) {}
+      } catch (elemErr) {
+        lines.push(`\n[Element: #${id}] Error inspecting element: ${elemErr.message}`);
+      }
+    });
+
     return lines.join("\n");
   }
 
