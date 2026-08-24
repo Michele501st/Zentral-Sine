@@ -1047,8 +1047,8 @@
           max-width: 36px !important;
           max-height: 36px !important;
           border-radius: var(--toolbarbutton-border-radius, 8px) !important;
-          background-color: color-mix(in srgb, var(--zen-colors-base, #131313) 22%, transparent) !important;
-          border: 1px solid color-mix(in srgb, currentColor 8%, transparent) !important;
+          background-color: color-mix(in srgb, currentColor 8%, transparent) !important;
+          border: none !important;
           box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
           flex-shrink: 0 !important;
           opacity: 1 !important;
@@ -1061,8 +1061,8 @@
 
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile img,
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile svg {
-          width: 20px !important;
-          height: 20px !important;
+          width: 18px !important;
+          height: 18px !important;
           object-fit: contain !important;
           filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
           transition: transform 0.15s ease, filter 0.15s ease !important;
@@ -1070,7 +1070,7 @@
 
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:hover {
           background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, currentColor 14%, transparent)) !important;
-          border-color: color-mix(in srgb, currentColor 20%, transparent) !important;
+          border: none !important;
           transform: translateY(-1px) scale(1.04) !important;
           box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2) !important;
         }
@@ -1086,7 +1086,7 @@
 
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-active="true"] {
           background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 32%, var(--zen-colors-base, #131313)) !important;
-          border-color: var(--zen-primary-color, #707ac2) !important;
+          border: none !important;
           box-shadow: 0 0 0 1px var(--zen-primary-color, #707ac2), 0 2px 8px rgba(0, 0, 0, 0.25) !important;
         }
 
@@ -1098,8 +1098,8 @@
           max-width: 36px !important;
           max-height: 36px !important;
           border-radius: var(--toolbarbutton-border-radius, 8px) !important;
-          background-color: color-mix(in srgb, var(--zen-colors-base, #131313) 22%, transparent) !important;
-          border: 1.5px dashed color-mix(in srgb, currentColor 35%, transparent) !important;
+          background-color: color-mix(in srgb, currentColor 8%, transparent) !important;
+          border: 1.5px dashed color-mix(in srgb, currentColor 25%, transparent) !important;
           opacity: 0.85 !important;
           transform: none !important;
           pointer-events: auto !important;
