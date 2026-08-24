@@ -874,7 +874,7 @@
           visibility: visible !important;
           box-sizing: border-box !important;
           overflow: hidden !important;
-          transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease !important;
+          transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease, margin-top 0.18s cubic-bezier(0.25, 1, 0.5, 1), height 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
         }
 
         /* Mode B: Autohide ENABLED (Compact Floating Panel) */
@@ -885,8 +885,8 @@
           border-radius: var(--zen-native-inner-radius, 10px) !important;
           box-shadow: var(--zen-big-shadow, rgba(0, 0, 0, 0.24) 0px 3px 8px 0px) !important;
           border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-          transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, visibility 0.24s ease !important;
-          will-change: transform, opacity;
+          transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, visibility 0.24s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
+          will-change: transform, opacity, top;
           overflow: hidden !important;
         }
 
@@ -2254,8 +2254,8 @@
       };
 
       const triggerBurst = () => {
-        // Skip RAF burst entirely when panel is closed â€” avoids BCR reads at 60fps while idle
-        if (!this.#dom.root?.hasAttribute("open")) return;
+        // Run burst when floating panel is open OR when vertical bar is active
+        if (!this.isPlacementVerticalBar() && !this.#dom.root?.hasAttribute("open")) return;
         lastActivityTime = Date.now();
         if (!rafId) {
           rafId = requestAnimationFrame(rafLoop);
@@ -2270,17 +2270,20 @@
         triggerBurst();
       };
       window.addEventListener("transitionstart", this._globalTransitionHandler, { passive: true });
+      window.addEventListener("transitionrun", this._globalTransitionHandler, { passive: true });
       window.addEventListener("transitionend", this._globalTransitionHandler, { passive: true });
 
       // --- Vector 2: ResizeObserver ---
-      // Catches structural layout box changes (like window resize or sidebar toggle)
+      // Catches structural layout box changes (like window resize or sidebar/toolbar toggle)
       this._sidebarResizeObserver = new ResizeObserver(reposition);
       const idsToObserve = [
         "sidebar-box", "sidebar-container", "vertical-tabs", 
-        "navigator-toolbox", "zen-appcontent-navbar-wrapper"
+        "navigator-toolbox", "zen-appcontent-navbar-wrapper",
+        "nav-bar", "TabsToolbar", "titlebar", "zen-window-controls",
+        "titlebar-buttonbox-container", "zen-appcontent-wrapper"
       ];
       idsToObserve.forEach(id => {
-        const el = document.getElementById(id);
+        const el = document.getElementById(id) || document.querySelector("." + id);
         if (el) this._sidebarResizeObserver.observe(el);
       });
       if (gBrowser?.tabContainer) {
@@ -2301,6 +2304,7 @@
           "zen-sidebar-hidden",
           "zen-right-side",
           "style",
+          "zen-compact-navbar-visible",
         ],
       });
 
@@ -2325,6 +2329,7 @@
       }
       if (this._globalTransitionHandler) {
         window.removeEventListener("transitionstart", this._globalTransitionHandler);
+        window.removeEventListener("transitionrun", this._globalTransitionHandler);
         window.removeEventListener("transitionend", this._globalTransitionHandler);
         this._globalTransitionHandler = null;
       }
@@ -2394,13 +2399,21 @@
 
       try {
         let maxBottom = 0;
-        const idsToCheck = ["zen-appcontent-navbar-wrapper", "navigator-toolbox"];
+        const idsToCheck = [
+          "zen-appcontent-navbar-wrapper", 
+          "navigator-toolbox",
+          "nav-bar",
+          "TabsToolbar",
+          "titlebar",
+          "zen-window-controls",
+          "titlebar-buttonbox-container"
+        ];
           
         idsToCheck.forEach(id => {
-          const el = document.getElementById(id);
+          const el = document.getElementById(id) || document.querySelector("." + id);
           if (el) {
             const rect = el.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.height < 200) {
+            if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.bottom < window.innerHeight / 2) {
               maxBottom = Math.max(maxBottom, rect.bottom);
             }
           }
@@ -2427,7 +2440,8 @@
 
     /**
      * Dynamically calculates and applies the top offset for the Vertical Bar
-     * so it mirrors the floating App Panels' height constraints, avoiding toolbars.
+     * so it always starts under the top bar / toolbar / window controls,
+     * sliding down seamlessly whenever the toolbar expands or moves.
      */
     updateVerticalBarBounds() {
       const vb = this.#dom.verticalBar;
@@ -2437,13 +2451,21 @@
       let top = gap;
       try {
         let maxBottom = 0;
-        const idsToCheck = ["zen-appcontent-navbar-wrapper", "navigator-toolbox"];
+        const idsToCheck = [
+          "zen-appcontent-navbar-wrapper", 
+          "navigator-toolbox",
+          "nav-bar",
+          "TabsToolbar",
+          "titlebar",
+          "zen-window-controls",
+          "titlebar-buttonbox-container"
+        ];
           
         idsToCheck.forEach(id => {
-          const el = document.getElementById(id);
+          const el = document.getElementById(id) || document.querySelector("." + id);
           if (el) {
             const rect = el.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.height < 200) {
+            if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.bottom < window.innerHeight / 2) {
               maxBottom = Math.max(maxBottom, rect.bottom);
             }
           }
@@ -2456,9 +2478,15 @@
       if (isAutohide) {
         vb.style.top = top + "px";
         vb.style.bottom = gap + "px";
+        vb.style.marginTop = "";
+        vb.style.height = "";
+        vb.style.maxHeight = "";
       } else {
         vb.style.top = "";
         vb.style.bottom = "";
+        vb.style.marginTop = top + "px";
+        vb.style.height = "calc(100% - " + top + "px)";
+        vb.style.maxHeight = "calc(100% - " + top + "px)";
       }
       if (this.#dom.verticalBarTrigger) {
         this.#dom.verticalBarTrigger.style.top = top + "px";

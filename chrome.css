@@ -983,7 +983,7 @@ panel[id*="tabgroup-editor"] {
   visibility: visible !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
-  transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease !important;
+  transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease, margin-top 0.18s cubic-bezier(0.25, 1, 0.5, 1), height 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
 }
 
 /* ==========================================================================
@@ -999,8 +999,8 @@ panel[id*="tabgroup-editor"] {
   border-radius: var(--zen-native-inner-radius, 10px) !important;
   box-shadow: var(--zen-big-shadow, rgba(0, 0, 0, 0.24) 0px 3px 8px 0px) !important;
   border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-  transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, visibility 0.24s ease !important;
-  will-change: transform, opacity;
+  transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, visibility 0.24s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
+  will-change: transform, opacity, top;
   overflow: hidden !important;
 }
 
