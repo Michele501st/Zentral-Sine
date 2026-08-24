@@ -863,14 +863,13 @@
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
           position: fixed !important;
           z-index: 2147483500 !important;
-          background-image: var(--zen-theme-gradient, linear-gradient(to bottom, var(--zen-colors-primary, var(--zen-colors-base, #1e1e24)), var(--zen-colors-secondary, var(--zen-colors-base, #18181c)))) !important;
-          background-color: var(--zen-colors-base, #1e1e24) !important;
-          background-size: cover !important;
-          background-repeat: no-repeat !important;
+          background: color-mix(in srgb, var(--zen-colors-base, #18181c) 20%, transparent) !important;
+          background-color: color-mix(in srgb, var(--zen-colors-base, #18181c) 20%, transparent) !important;
+          background-image: none !important;
           backdrop-filter: blur(24px) saturate(140%) !important;
           -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
           border-radius: var(--zen-native-inner-radius, 10px) !important;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.25) !important;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 2px 10px rgba(0, 0, 0, 0.15) !important;
           border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
           transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, visibility 0.24s ease !important;
           will-change: transform, opacity;
@@ -2200,54 +2199,14 @@
     }
 
     /**
-     * Synchronizes theme background gradient, color, and filters from the native sidebar
-     * to the Vertical Bar in autohide (compact) mode so it matches the Compact Sidebar.
+     * Resets inline background styles so the Vertical Bar uses native frosted glass.
      */
     syncVerticalBarTheme() {
       const vb = this.#dom.verticalBar;
       if (!vb) return;
-      const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
-      if (!isAutohide) {
-        vb.style.backgroundImage = "";
-        vb.style.backgroundColor = "";
-        vb.style.background = "";
-        vb.style.backdropFilter = "";
-        return;
-      }
-
-      // 1. First attempt: Read explicit CSS variables from root / window
-      const rootStyle = window.getComputedStyle(document.documentElement);
-      const themeGradient = rootStyle.getPropertyValue("--zen-theme-gradient")?.trim();
-      const primary = rootStyle.getPropertyValue("--zen-colors-primary")?.trim();
-      const secondary = rootStyle.getPropertyValue("--zen-colors-secondary")?.trim();
-      const base = rootStyle.getPropertyValue("--zen-colors-base")?.trim() || "#1e1e24";
-
-      // 2. Second attempt: Check candidate DOM elements for custom theme background
-      const candidateIds = ["navigator-toolbox", "sidebar-box", "browserSidebarContainer", "TabsToolbar"];
-      let matchedBg = "";
-      for (const id of candidateIds) {
-        const el = document.getElementById(id) || document.querySelector("." + id);
-        if (el) {
-          const cs = window.getComputedStyle(el);
-          if (cs.backgroundImage && cs.backgroundImage !== "none" && !matchedBg) {
-            matchedBg = cs.backgroundImage;
-          }
-        }
-      }
-
-      if (matchedBg) {
-        vb.style.backgroundImage = matchedBg;
-      } else if (themeGradient && themeGradient !== "none" && themeGradient !== "initial") {
-        vb.style.backgroundImage = themeGradient;
-      } else if (primary && secondary) {
-        vb.style.backgroundImage = `linear-gradient(to bottom, ${primary}, ${secondary})`;
-      } else {
-        vb.style.backgroundImage = "";
-      }
-
-      vb.style.backgroundColor = base;
-      vb.style.backgroundSize = "cover";
-      vb.style.backgroundRepeat = "no-repeat";
+      vb.style.backgroundImage = "";
+      vb.style.backgroundColor = "";
+      vb.style.background = "";
     }
 
     /**
