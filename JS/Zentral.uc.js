@@ -863,9 +863,11 @@
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
           position: fixed !important;
           z-index: 2147483500 !important;
-          background: color-mix(in srgb, var(--zen-colors-base, #18181c) 20%, transparent) !important;
           background-color: color-mix(in srgb, var(--zen-colors-base, #18181c) 20%, transparent) !important;
-          background-image: none !important;
+          background-image: var(--zen-theme-gradient, var(--zen-main-browser-background, none)) !important;
+          background-attachment: fixed !important;
+          background-size: cover !important;
+          background-repeat: no-repeat !important;
           backdrop-filter: blur(24px) saturate(140%) !important;
           -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
           border-radius: var(--zen-native-inner-radius, 10px) !important;
@@ -2199,14 +2201,70 @@
     }
 
     /**
-     * Resets inline background styles so the Vertical Bar uses native frosted glass.
+     * Synchronizes theme background gradient, color, and filters from the native sidebar
+     * to the Vertical Bar in autohide (compact) mode so it matches the Compact Sidebar.
      */
     syncVerticalBarTheme() {
       const vb = this.#dom.verticalBar;
       if (!vb) return;
-      vb.style.backgroundImage = "";
-      vb.style.backgroundColor = "";
-      vb.style.background = "";
+      
+      const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
+      if (!isAutohide) {
+        vb.style.removeProperty("background-image");
+        vb.style.removeProperty("background-color");
+        vb.style.removeProperty("background-attachment");
+        vb.style.removeProperty("background-size");
+        vb.style.removeProperty("background-position");
+        vb.style.removeProperty("backdrop-filter");
+        return;
+      }
+
+      // 1. Check candidate DOM elements for custom theme background
+      const candidateIds = ["navigator-toolbox", "sidebar-box", "browserSidebarContainer", "TabsToolbar"];
+      let matchedEl = null;
+      for (const id of candidateIds) {
+        const el = document.getElementById(id) || document.querySelector("." + id);
+        if (el) {
+          const cs = window.getComputedStyle(el);
+          if (cs.backgroundImage && cs.backgroundImage !== "none" && cs.backgroundImage !== "initial") {
+            matchedEl = el;
+            break;
+          }
+        }
+      }
+
+      if (matchedEl) {
+        const cs = window.getComputedStyle(matchedEl);
+        vb.style.setProperty("background-image", cs.backgroundImage, "important");
+        vb.style.setProperty("background-attachment", "fixed", "important"); // Force fixed so gradients align
+        vb.style.setProperty("background-size", cs.backgroundSize, "important");
+        vb.style.setProperty("background-position", cs.backgroundPosition, "important");
+        vb.style.setProperty("background-color", cs.backgroundColor, "important");
+        
+        if (cs.backdropFilter && cs.backdropFilter !== "none") {
+            vb.style.setProperty("backdrop-filter", cs.backdropFilter, "important");
+        }
+      } else {
+        // 2. Fallback to CSS variables
+        const rootStyle = window.getComputedStyle(document.documentElement);
+        const themeGradient = rootStyle.getPropertyValue("--zen-theme-gradient")?.trim();
+        const primary = rootStyle.getPropertyValue("--zen-colors-primary")?.trim();
+        const secondary = rootStyle.getPropertyValue("--zen-colors-secondary")?.trim();
+        const base = rootStyle.getPropertyValue("--zen-colors-base")?.trim() || "#1e1e24";
+
+        if (themeGradient && themeGradient !== "none" && themeGradient !== "initial") {
+          vb.style.setProperty("background-image", themeGradient, "important");
+          vb.style.setProperty("background-attachment", "fixed", "important");
+        } else if (primary && secondary) {
+          vb.style.setProperty("background-image", `linear-gradient(to bottom, ${primary}, ${secondary})`, "important");
+          vb.style.setProperty("background-attachment", "fixed", "important");
+        } else {
+          vb.style.removeProperty("background-image");
+          vb.style.removeProperty("background-attachment");
+        }
+        vb.style.setProperty("background-color", base, "important");
+        vb.style.setProperty("background-size", "cover", "important");
+      }
     }
 
     /**
