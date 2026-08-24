@@ -836,7 +836,7 @@
           align-items: center !important;
           z-index: 2147483500 !important;
           box-sizing: border-box !important;
-          background: var(--zen-sidebar-background, var(--zen-themed-toolbar-bg, var(--zen-colors-tertiary, var(--tabpanels-background-color, #18181c)))) !important;
+          background: var(--zen-sidebar-background, var(--lwt-sidebar-background-color, var(--zen-colors-tertiary, var(--zen-themed-toolbar-bg, #18181c)))) !important;
           backdrop-filter: blur(20px) saturate(140%) !important;
           -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
           box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
