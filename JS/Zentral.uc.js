@@ -818,73 +818,93 @@
         #zen-app-panel-root[data-panel-side="left"] .zen-app-resize-strip { right: -5px !important; left: auto !important; }
 
         /* ==========================================================================
-         * Zentral Apps Vertical Bar (Native Frame Docked on Opposite Edge)
+         * Zentral Apps Vertical Bar
          * ========================================================================== */
         #zentral-apps-vertical-bar {
           display: none !important;
         }
 
+        /* Base style */
         :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
-          position: relative !important;
           width: 44px !important;
           min-width: 44px !important;
           max-width: 44px !important;
-          height: 100% !important;
           display: flex !important;
           flex-direction: column !important;
           align-items: center !important;
-          z-index: 10 !important;
           box-sizing: border-box !important;
-          background: transparent !important;
-          background-color: transparent !important;
           color: var(--zen-colors-text, var(--arrowpanel-color, inherit)) !important;
           padding: 8px 0 !important;
           gap: 6px !important;
           overflow: hidden !important;
           user-select: none !important;
+          border: none !important;
+        }
+
+        /* Mode A: Autohide DISABLED (Pinned / Docked into Frame) */
+        :root[zentral-apps-placement="vertical-bar"]:not([zentral-apps-autohide="true"]) #zentral-apps-vertical-bar {
+          position: relative !important;
+          height: 100% !important;
           flex-shrink: 0 !important;
-          transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), min-width 0.22s cubic-bezier(0.25, 1, 0.5, 1), max-width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease, padding 0.22s ease !important;
+          z-index: 10 !important;
+          background: transparent !important;
+          background-color: transparent !important;
+          box-shadow: none !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          border: none !important;
+          transform: none !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+          transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease !important;
         }
 
-        /* Position on Left (Sidebar is on Right) */
-        :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar,
-        :root[zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar {
-          border-right: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-          border-left: none !important;
-          border-top: none !important;
-          border-bottom: none !important;
+        /* Mode B: Autohide ENABLED (Compact Floating Overlay) */
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
+          position: fixed !important;
+          top: 0;
+          bottom: 0;
+          z-index: 2147483500 !important;
+          background: var(--zen-themed-toolbar-bg, color-mix(in srgb, var(--zen-colors-base, #18181c) 80%, transparent)) !important;
+          backdrop-filter: blur(24px) saturate(140%) !important;
+          -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
+          border: none !important;
+          transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, visibility 0.24s ease !important;
+          will-change: transform, opacity;
         }
 
-        /* Position on Right (Sidebar is on Left) */
-        :root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar {
-          border-left: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-          border-right: none !important;
-          border-top: none !important;
-          border-bottom: none !important;
-        }
-
-        /* Autohide - Collapsed state when idle */
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
-          width: 0 !important;
-          min-width: 0 !important;
-          max-width: 0 !important;
-          padding-left: 0 !important;
-          padding-right: 0 !important;
+        /* Autohide Mode B: Position on Left (Sidebar on Right) */
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar,
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar {
+          left: 0 !important;
+          right: auto !important;
+          border-radius: 0 var(--zen-native-inner-radius, 10px) var(--zen-native-inner-radius, 10px) 0 !important;
+          transform: translateX(-100%) !important;
           opacity: 0 !important;
           pointer-events: none !important;
-          border-left-width: 0 !important;
-          border-right-width: 0 !important;
+          visibility: hidden !important;
         }
 
-        /* Autohide - Revealed state */
+        /* Autohide Mode B: Position on Right (Sidebar on Left) */
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar {
+          right: 0 !important;
+          left: auto !important;
+          border-radius: var(--zen-native-inner-radius, 10px) 0 0 var(--zen-native-inner-radius, 10px) !important;
+          transform: translateX(100%) !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          visibility: hidden !important;
+        }
+
+        /* Autohide Mode B: Revealed State on Hover / Active Panel */
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar[data-revealed="true"],
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:hover,
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar[zentral-app-panel-open="true"] {
-          width: 44px !important;
-          min-width: 44px !important;
-          max-width: 44px !important;
+          transform: translateX(0) !important;
           opacity: 1 !important;
           pointer-events: auto !important;
+          visibility: visible !important;
         }
 
         #zentral-apps-vertical-bar #zen-apps-sidebar-grid {
@@ -2153,8 +2173,14 @@
         top = Math.round(maxBottom);
       } catch(e) {}
       
-      vb.style.top = "";
-      vb.style.bottom = "";
+      const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
+      if (isAutohide) {
+        vb.style.top = top + "px";
+        vb.style.bottom = gap + "px";
+      } else {
+        vb.style.top = "";
+        vb.style.bottom = "";
+      }
       if (this.#dom.verticalBarTrigger) {
         this.#dom.verticalBarTrigger.style.top = top + "px";
         this.#dom.verticalBarTrigger.style.bottom = gap + "px";
