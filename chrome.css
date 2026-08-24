@@ -987,16 +987,6 @@ panel[id*="tabgroup-editor"] {
   transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease !important;
 }
 
-#tabbrowser-tabbox:has(> #zentral-apps-vertical-bar) {
-  display: flex !important;
-  flex-direction: row !important;
-}
-
-#tabbrowser-tabbox:has(> #zentral-apps-vertical-bar) #tabbrowser-tabpanels {
-  flex: 1 1 0px !important;
-  min-width: 0 !important;
-}
-
 /* ==========================================================================
  * Mode B: Autohide ENABLED (Compact Floating Panel)
  * - Fixed floating panel over webpage with rounded corners on all sides
@@ -1052,14 +1042,14 @@ panel[id*="tabgroup-editor"] {
 }
 
 /* Autohide Mode B: Position on Left (Sidebar on Right) */
-:root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar,
-:root[zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar {
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar {
   left: 8px !important;
   right: auto !important;
 }
 
 /* Autohide Mode B: Position on Right (Sidebar on Left) */
-:root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar {
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar {
   right: 8px !important;
   left: auto !important;
 }

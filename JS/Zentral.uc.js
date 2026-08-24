@@ -538,23 +538,28 @@
      * @returns {boolean} True if sidebar is on the right side.
      */
     isSidebarRight() {
-      // Fast path: trust the Zen DOM attribute — always up-to-date via MutationObserver.
-      // Returning early on "false" eliminates 2 pref reads on every call in left-sidebar mode.
-      const rightAttr = document.documentElement.getAttribute("zen-right-side");
-      if (rightAttr === "true") return true;
-      if (rightAttr === "false") return false;
-      // Fallback: secondary attribute and prefs (only when primary attr is absent)
+      // 1. Direct Zen root attributes
+      if (document.documentElement.getAttribute("zen-right-side") === "true") return true;
       if (document.documentElement.getAttribute("zen-sidebar-right") === "true") return true;
-      if (Core.getNativePref("zen.view.sidebar-on-right", false)) return true;
-      if (Core.getNativePref("zen.sidebar.right", false)) return true;
-      const sidebarEl = document.getElementById("sidebar-box") ||
-                        document.getElementById("sidebar-container") ||
-                        document.getElementById("vertical-tabs") ||
-                        gBrowser?.tabContainer;
-      if (sidebarEl && sidebarEl.isConnected) {
-        const rect = sidebarEl.getBoundingClientRect();
-        if (rect.width > 0 && rect.left > window.innerWidth / 2) return true;
+      if (document.documentElement.getAttribute("zen-right-side") === "false") return false;
+      if (document.documentElement.getAttribute("zen-sidebar-right") === "false") return false;
+
+      // 2. Physical DOM measurement of the sidebar container
+      const sidebarBox = document.getElementById("sidebar-box") ||
+                         document.getElementById("sidebar-container") ||
+                         document.getElementById("vertical-tabs");
+      if (sidebarBox && sidebarBox.isConnected) {
+        const rect = sidebarBox.getBoundingClientRect();
+        if (rect.width > 0) {
+          return (rect.left + rect.width / 2) > (window.innerWidth / 2);
+        }
       }
+
+      // 3. Fallback preferences
+      if (Core.getNativePref("zen.tabs.vertical.right-side", false)) return true;
+      if (Core.getNativePref("zen.view.sidebar-right", false)) return true;
+      if (Core.getNativePref("zen.view.sidebar-on-right", false)) return true;
+
       return false;
     }
 
@@ -878,16 +883,6 @@
           transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease !important;
         }
 
-        #tabbrowser-tabbox:has(> #zentral-apps-vertical-bar) {
-          display: flex !important;
-          flex-direction: row !important;
-        }
-
-        #tabbrowser-tabbox:has(> #zentral-apps-vertical-bar) #tabbrowser-tabpanels {
-          flex: 1 1 0px !important;
-          min-width: 0 !important;
-        }
-
         /* Mode B: Autohide ENABLED (Compact Floating Panel) */
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
           position: fixed !important;
@@ -938,14 +933,14 @@
         }
 
         /* Autohide Mode B: Position on Left (Sidebar on Right) */
-        :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar,
-        :root[zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar {
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar,
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar {
           left: 8px !important;
           right: auto !important;
         }
 
         /* Autohide Mode B: Position on Right (Sidebar on Left) */
-        :root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar {
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar {
           right: 8px !important;
           left: auto !important;
         }
@@ -2394,18 +2389,33 @@
       let targetLeft = gap;
       let targetRight = gap;
 
+      const panelWidth = this.#state.panelWidthPx || 420;
+      let panelLeft = 0;
+      let panelRight = window.innerWidth;
+
       if (this.isPlacementVerticalBar()) {
         const isVbRight = this.isVerticalBarOnRight();
         const vbOffset = 44 + sideGap;
 
         if (isVbRight) {
           targetRight = vbOffset;
+          panelRight = window.innerWidth - targetRight;
+          panelLeft = panelRight - panelWidth;
         } else {
           targetLeft = vbOffset;
+          panelLeft = targetLeft;
+          panelRight = panelLeft + panelWidth;
         }
       } else {
-        targetLeft = Math.max(gap, Math.round(sidebarRect.right) + sideGap);
-        targetRight = Math.max(gap, Math.round(window.innerWidth - sidebarRect.left) + sideGap);
+        if (this.isPanelAttachedToRight()) {
+          targetRight = Math.max(gap, Math.round(window.innerWidth - sidebarRect.left) + sideGap);
+          panelRight = window.innerWidth - targetRight;
+          panelLeft = panelRight - panelWidth;
+        } else {
+          targetLeft = Math.max(gap, Math.round(sidebarRect.right) + sideGap);
+          panelLeft = targetLeft;
+          panelRight = panelLeft + panelWidth;
+        }
       }
 
       try {
@@ -2415,6 +2425,7 @@
           "navigator-toolbox",
           "nav-bar",
           "TabsToolbar",
+          "PersonalToolbar",
           "titlebar",
           "zen-window-controls",
           "titlebar-buttonbox-container"
@@ -2425,12 +2436,15 @@
           if (el) {
             const rect = el.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.bottom < window.innerHeight / 2) {
-              maxBottom = Math.max(maxBottom, rect.bottom);
+              const overlapsHorizontally = rect.right > panelLeft && rect.left < panelRight;
+              if (overlapsHorizontally) {
+                maxBottom = Math.max(maxBottom, rect.bottom);
+              }
             }
           }
         });
         
-        top = Math.round(maxBottom);
+        top = Math.max(gap, Math.round(maxBottom));
       } catch(e) {}
 
       root.style.top = top + "px";
@@ -2460,6 +2474,10 @@
       
       const gap = 12;
       let top = gap;
+      const isVbRight = this.isVerticalBarOnRight();
+      const vbLeft = isVbRight ? window.innerWidth - 60 : 0;
+      const vbRight = isVbRight ? window.innerWidth : 60;
+
       try {
         let maxBottom = 0;
         const idsToCheck = [
@@ -2478,7 +2496,10 @@
           if (el) {
             const rect = el.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.bottom < window.innerHeight / 2) {
-              maxBottom = Math.max(maxBottom, rect.bottom);
+              const overlapsHorizontally = rect.right > vbLeft && rect.left < vbRight;
+              if (overlapsHorizontally) {
+                maxBottom = Math.max(maxBottom, rect.bottom);
+              }
             }
           }
         });
@@ -2919,18 +2940,18 @@
               vb.appendChild(this.#dom.vbFooter);
             }
 
-            const tabbox = document.getElementById("tabbrowser-tabbox") || document.getElementById("appcontent") || document.getElementById("browser") || document.body || document.documentElement;
+            const browserEl = document.getElementById("browser") || document.body || document.documentElement;
             const isRightSidebar = this.isSidebarRight();
 
             if (isRightSidebar) {
-              // Sidebar is on right -> Vertical Bar on LEFT (first child of tabbox)
-              if (vb.parentNode !== tabbox || tabbox.firstChild !== vb) {
-                tabbox.insertBefore(vb, tabbox.firstChild);
+              // Sidebar is on right -> Vertical Bar on LEFT (first child of #browser)
+              if (vb.parentNode !== browserEl || browserEl.firstChild !== vb) {
+                browserEl.insertBefore(vb, browserEl.firstChild);
               }
             } else {
-              // Sidebar is on left -> Vertical Bar on RIGHT (last child of tabbox)
-              if (vb.parentNode !== tabbox || vb.nextSibling !== null) {
-                tabbox.appendChild(vb);
+              // Sidebar is on left -> Vertical Bar on RIGHT (last child of #browser)
+              if (vb.parentNode !== browserEl || vb.nextSibling !== null) {
+                browserEl.appendChild(vb);
               }
             }
             vb.style.display = "flex";
