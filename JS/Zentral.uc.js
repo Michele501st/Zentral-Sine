@@ -879,7 +879,8 @@
           visibility: visible !important;
           box-sizing: border-box !important;
           overflow: hidden !important;
-          transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease, margin-top 0.18s cubic-bezier(0.25, 1, 0.5, 1), height 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
+          margin-top: 0 !important;
+          transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease !important;
         }
 
         /* Mode B: Autohide ENABLED (Compact Floating Panel) */
@@ -2362,50 +2363,6 @@
     }
 
     /**
-     * Calculates the bottom boundary coordinate (in viewport px) of all top bars,
-     * toolbars, and titlebar window controls, ensuring App panels and the Vertical Bar
-     * always start cleanly beneath them across all layout modes.
-     * @returns {number} Top offset in pixels (minimum 8px gap).
-     */
-    getTopBarBottomOffset() {
-      const minGap = 8;
-      let maxBottom = 0;
-      const selectorsToCheck = [
-        "#zen-appcontent-navbar-wrapper",
-        "#navigator-toolbox",
-        "#nav-bar",
-        "#TabsToolbar",
-        "#PersonalToolbar",
-        "#titlebar",
-        "#zen-window-controls",
-        "#zen-window-buttons",
-        "#window-controls",
-        ".titlebar-buttonbox-container",
-        ".titlebar-buttonbox",
-        ".titlebar-close",
-        "#titlebar-buttonbox-container"
-      ];
-
-      selectorsToCheck.forEach(sel => {
-        try {
-          const elements = document.querySelectorAll(sel);
-          elements.forEach(el => {
-            if (el) {
-              const rect = el.getBoundingClientRect();
-              if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.bottom < window.innerHeight / 2) {
-                if (rect.top < 100) {
-                  maxBottom = Math.max(maxBottom, rect.bottom);
-                }
-              }
-            }
-          });
-        } catch(e) {}
-      });
-
-      return Math.max(minGap, Math.round(maxBottom));
-    }
-
-    /**
      * Recalculates and positions the floating app panel relative to sidebar bounds and top navigation bar.
      */
     positionPanel() {
@@ -2428,8 +2385,13 @@
       const isCollapsed = this.isCollapsedSidebar() || (sidebarRect.width > 0 && sidebarRect.width <= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD);
       const sideGap = isCollapsed ? 7 : gap;
 
+      let top = 0;
       let targetLeft = gap;
       let targetRight = gap;
+
+      const panelWidth = this.#state.panelWidthPx || 420;
+      let panelLeft = 0;
+      let panelRight = window.innerWidth;
 
       if (this.isPlacementVerticalBar()) {
         const isVbRight = this.isVerticalBarOnRight();
@@ -2437,18 +2399,54 @@
 
         if (isVbRight) {
           targetRight = vbOffset;
+          panelRight = window.innerWidth - targetRight;
+          panelLeft = panelRight - panelWidth;
         } else {
           targetLeft = vbOffset;
+          panelLeft = targetLeft;
+          panelRight = panelLeft + panelWidth;
         }
       } else {
         if (this.isPanelAttachedToRight()) {
           targetRight = Math.max(gap, Math.round(window.innerWidth - sidebarRect.left) + sideGap);
+          panelRight = window.innerWidth - targetRight;
+          panelLeft = panelRight - panelWidth;
         } else {
           targetLeft = Math.max(gap, Math.round(sidebarRect.right) + sideGap);
+          panelLeft = targetLeft;
+          panelRight = panelLeft + panelWidth;
         }
       }
 
-      const top = this.getTopBarBottomOffset();
+      try {
+        let maxBottom = 0;
+        const idsToCheck = [
+          "zen-appcontent-navbar-wrapper", 
+          "navigator-toolbox",
+          "nav-bar",
+          "TabsToolbar",
+          "PersonalToolbar",
+          "titlebar",
+          "zen-window-controls",
+          "titlebar-buttonbox-container"
+        ];
+          
+        idsToCheck.forEach(id => {
+          const el = document.getElementById(id) || document.querySelector("." + id);
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.bottom < 200) {
+              const isInsideSidebar = el.closest && el.closest("#sidebar-box, #sidebar-container, #vertical-tabs");
+              if (!isInsideSidebar || el.id === "zen-window-controls" || el.id === "titlebar-buttonbox-container" || (el.classList && el.classList.contains("titlebar-buttonbox-container"))) {
+                maxBottom = Math.max(maxBottom, rect.bottom);
+              }
+            }
+          }
+        });
+        
+        top = Math.max(gap, Math.round(maxBottom));
+      } catch(e) {}
+
       root.style.top = top + "px";
       root.style.bottom = gap + "px";
 
@@ -2475,7 +2473,36 @@
       if (!vb || !this.isPlacementVerticalBar()) return;
       
       const gap = 12;
-      const top = this.getTopBarBottomOffset();
+      let top = gap;
+
+      try {
+        let maxBottom = 0;
+        const idsToCheck = [
+          "zen-appcontent-navbar-wrapper", 
+          "navigator-toolbox",
+          "nav-bar",
+          "TabsToolbar",
+          "PersonalToolbar",
+          "titlebar",
+          "zen-window-controls",
+          "titlebar-buttonbox-container"
+        ];
+          
+        idsToCheck.forEach(id => {
+          const el = document.getElementById(id) || document.querySelector("." + id);
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.bottom < 200) {
+              const isInsideSidebar = el.closest && el.closest("#sidebar-box, #sidebar-container, #vertical-tabs");
+              if (!isInsideSidebar || el.id === "zen-window-controls" || el.id === "titlebar-buttonbox-container" || (el.classList && el.classList.contains("titlebar-buttonbox-container"))) {
+                maxBottom = Math.max(maxBottom, rect.bottom);
+              }
+            }
+          }
+        });
+        
+        top = Math.max(gap, Math.round(maxBottom));
+      } catch(e) {}
       
       const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
       if (isAutohide) {
@@ -2487,9 +2514,9 @@
       } else {
         vb.style.top = "";
         vb.style.bottom = "";
-        vb.style.marginTop = top + "px";
-        vb.style.height = "calc(100% - " + top + "px)";
-        vb.style.maxHeight = "calc(100% - " + top + "px)";
+        vb.style.marginTop = "";
+        vb.style.height = "";
+        vb.style.maxHeight = "";
       }
       if (this.#dom.verticalBarTrigger) {
         this.#dom.verticalBarTrigger.style.top = top + "px";
