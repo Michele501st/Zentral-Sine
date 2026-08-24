@@ -988,7 +988,7 @@ panel[id*="tabgroup-editor"] {
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
   position: fixed !important;
   z-index: 2147483500 !important;
-  background-color: color-mix(in srgb, var(--zen-colors-base, #18181c) 20%, transparent) !important;
+  background-color: var(--zen-themed-toolbar-bg, var(--zen-colors-tertiary, color-mix(in srgb, var(--zen-primary-color, #707ac2) 18%, var(--zen-colors-base, #1e1e24)))) !important;
   background-image: var(--zen-theme-gradient, var(--zen-main-browser-background, none)) !important;
   background-attachment: fixed !important;
   background-size: cover !important;

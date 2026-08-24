@@ -863,7 +863,7 @@
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
           position: fixed !important;
           z-index: 2147483500 !important;
-          background-color: color-mix(in srgb, var(--zen-colors-base, #18181c) 20%, transparent) !important;
+          background-color: var(--zen-themed-toolbar-bg, var(--zen-colors-tertiary, color-mix(in srgb, var(--zen-primary-color, #707ac2) 18%, var(--zen-colors-base, #1e1e24)))) !important;
           background-image: var(--zen-theme-gradient, var(--zen-main-browser-background, none)) !important;
           background-attachment: fixed !important;
           background-size: cover !important;
@@ -2219,51 +2219,78 @@
         return;
       }
 
-      // 1. Check candidate DOM elements for custom theme background
-      const candidateIds = ["navigator-toolbox", "sidebar-box", "browserSidebarContainer", "TabsToolbar"];
-      let matchedEl = null;
+      // 1. Inspect candidate native sidebar & toolbar elements
+      const candidateIds = ["navigator-toolbox", "browserSidebarContainer", "sidebar-box", "TabsToolbar"];
+      let matchedBgImage = "";
+      let matchedBgColor = "";
+      let matchedBackdrop = "";
+
       for (const id of candidateIds) {
         const el = document.getElementById(id) || document.querySelector("." + id);
         if (el) {
           const cs = window.getComputedStyle(el);
-          if (cs.backgroundImage && cs.backgroundImage !== "none" && cs.backgroundImage !== "initial") {
-            matchedEl = el;
-            break;
+          if (!matchedBgImage && cs.backgroundImage && cs.backgroundImage !== "none" && cs.backgroundImage !== "initial") {
+            matchedBgImage = cs.backgroundImage;
+          }
+          if (!matchedBgColor && cs.backgroundColor && cs.backgroundColor !== "transparent" && cs.backgroundColor !== "rgba(0, 0, 0, 0)") {
+            matchedBgColor = cs.backgroundColor;
+          }
+          if (!matchedBackdrop && cs.backdropFilter && cs.backdropFilter !== "none") {
+            matchedBackdrop = cs.backdropFilter;
           }
         }
       }
 
-      if (matchedEl) {
-        const cs = window.getComputedStyle(matchedEl);
-        vb.style.setProperty("background-image", cs.backgroundImage, "important");
-        vb.style.setProperty("background-attachment", "fixed", "important"); // Force fixed so gradients align
-        vb.style.setProperty("background-size", cs.backgroundSize, "important");
-        vb.style.setProperty("background-position", cs.backgroundPosition, "important");
-        vb.style.setProperty("background-color", cs.backgroundColor, "important");
-        
-        if (cs.backdropFilter && cs.backdropFilter !== "none") {
-            vb.style.setProperty("backdrop-filter", cs.backdropFilter, "important");
-        }
-      } else {
-        // 2. Fallback to CSS variables
-        const rootStyle = window.getComputedStyle(document.documentElement);
-        const themeGradient = rootStyle.getPropertyValue("--zen-theme-gradient")?.trim();
-        const primary = rootStyle.getPropertyValue("--zen-colors-primary")?.trim();
-        const secondary = rootStyle.getPropertyValue("--zen-colors-secondary")?.trim();
-        const base = rootStyle.getPropertyValue("--zen-colors-base")?.trim() || "#1e1e24";
+      // 2. Read root theme variables
+      const rootStyle = window.getComputedStyle(document.documentElement);
+      const themeGradient = rootStyle.getPropertyValue("--zen-theme-gradient")?.trim();
+      const mainBrowserBg = rootStyle.getPropertyValue("--zen-main-browser-background")?.trim();
+      const primary = rootStyle.getPropertyValue("--zen-primary-color")?.trim() || rootStyle.getPropertyValue("--zen-colors-primary")?.trim();
+      const secondary = rootStyle.getPropertyValue("--zen-secondary-color")?.trim() || rootStyle.getPropertyValue("--zen-colors-secondary")?.trim();
+      const tertiary = rootStyle.getPropertyValue("--zen-colors-tertiary")?.trim();
+      const toolbarBg = rootStyle.getPropertyValue("--zen-themed-toolbar-bg")?.trim();
+      const base = rootStyle.getPropertyValue("--zen-colors-base")?.trim() || "#1e1e24";
 
-        if (themeGradient && themeGradient !== "none" && themeGradient !== "initial") {
-          vb.style.setProperty("background-image", themeGradient, "important");
-          vb.style.setProperty("background-attachment", "fixed", "important");
-        } else if (primary && secondary) {
-          vb.style.setProperty("background-image", `linear-gradient(to bottom, ${primary}, ${secondary})`, "important");
-          vb.style.setProperty("background-attachment", "fixed", "important");
-        } else {
-          vb.style.removeProperty("background-image");
-          vb.style.removeProperty("background-attachment");
-        }
-        vb.style.setProperty("background-color", base, "important");
+      // 3. Apply Background Image / Gradient with fixed window attachment
+      if (matchedBgImage) {
+        vb.style.setProperty("background-image", matchedBgImage, "important");
+        vb.style.setProperty("background-attachment", "fixed", "important");
         vb.style.setProperty("background-size", "cover", "important");
+      } else if (themeGradient && themeGradient !== "none" && themeGradient !== "initial") {
+        vb.style.setProperty("background-image", themeGradient, "important");
+        vb.style.setProperty("background-attachment", "fixed", "important");
+        vb.style.setProperty("background-size", "cover", "important");
+      } else if (mainBrowserBg && mainBrowserBg !== "none" && mainBrowserBg !== "initial") {
+        vb.style.setProperty("background-image", mainBrowserBg, "important");
+        vb.style.setProperty("background-attachment", "fixed", "important");
+        vb.style.setProperty("background-size", "cover", "important");
+      } else if (primary && secondary) {
+        vb.style.setProperty("background-image", `linear-gradient(to bottom, ${primary}, ${secondary})`, "important");
+        vb.style.setProperty("background-attachment", "fixed", "important");
+        vb.style.setProperty("background-size", "cover", "important");
+      } else {
+        vb.style.removeProperty("background-image");
+        vb.style.removeProperty("background-attachment");
+      }
+
+      // 4. Apply Background Color matching Sidebar
+      if (matchedBgColor) {
+        vb.style.setProperty("background-color", matchedBgColor, "important");
+      } else if (toolbarBg) {
+        vb.style.setProperty("background-color", toolbarBg, "important");
+      } else if (tertiary) {
+        vb.style.setProperty("background-color", tertiary, "important");
+      } else if (primary) {
+        vb.style.setProperty("background-color", `color-mix(in srgb, ${primary} 18%, ${base})`, "important");
+      } else {
+        vb.style.setProperty("background-color", base, "important");
+      }
+
+      // 5. Apply Backdrop Filter
+      if (matchedBackdrop) {
+        vb.style.setProperty("backdrop-filter", matchedBackdrop, "important");
+      } else {
+        vb.style.setProperty("backdrop-filter", "blur(24px) saturate(140%)", "important");
       }
     }
 
@@ -2690,7 +2717,7 @@
       };
       window.addEventListener("TabSelect", this.#tabSelectListener);
 
-      // Observer 1: DOM attribute changes (zen-right-side, zen-sidebar-collapsed)
+      // Observer 1: DOM attribute changes (zen-right-side, zen-sidebar-collapsed, zen-compact-mode, style)
       this.#sideObserver = new window.MutationObserver((mutations) => {
         for (const m of mutations) {
           if (m.attributeName === "zen-right-side") {
@@ -2698,16 +2725,20 @@
             this.renderGrid();
             if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) this.positionPanel();
           }
-          if (m.attributeName === "zen-sidebar-collapsed") {
-            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] zen-sidebar-collapsed attribute changed \u2192 triggering repositionGrid");
+          if (m.attributeName === "zen-sidebar-collapsed" || m.attributeName === "zen-compact-mode" || m.attributeName === "zen-sidebar-expanded") {
+            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] layout attribute changed \u2192 triggering repositionGrid");
             // Debounced — collapses simultaneous observer firings into one call
             this.scheduleRepositionGrid(80);
+          }
+          if (m.attributeName === "style" || m.attributeName === "zen-compact-mode") {
+            this.syncVerticalBarTheme();
+            this.updateVerticalBarBounds();
           }
         }
       });
       this.#sideObserver.observe(document.documentElement, {
         attributes: true,
-        attributeFilter: ["zen-right-side", "zen-sidebar-collapsed"]
+        attributeFilter: ["zen-right-side", "zen-sidebar-collapsed", "zen-compact-mode", "zen-sidebar-expanded", "zen-sidebar-hidden", "style"]
       });
 
       // Observer 2: Preference changes for toolbar/sidebar mode
