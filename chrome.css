@@ -988,9 +988,12 @@ panel[id*="tabgroup-editor"] {
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
   position: fixed !important;
   z-index: 2147483500 !important;
-  background-color: var(--zen-themed-toolbar-bg, var(--zen-colors-tertiary, #1e1e24));
-  backdrop-filter: blur(24px) saturate(140%);
-  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  background-image: var(--zen-theme-gradient, linear-gradient(to bottom, var(--zen-colors-primary, var(--zen-colors-base, #1e1e24)), var(--zen-colors-secondary, var(--zen-colors-base, #18181c)))) !important;
+  background-color: var(--zen-colors-base, #1e1e24) !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+  backdrop-filter: blur(24px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
   border-radius: var(--zen-native-inner-radius, 10px) !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.25) !important;
   border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
