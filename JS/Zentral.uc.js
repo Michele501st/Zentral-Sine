@@ -258,6 +258,8 @@
   class ZentralApps {
     /** @private Side attribute MutationObserver */
     #sideObserver = null;
+    /** @private Toolbox & theme mutation observer */
+    #toolboxThemeObserver = null;
     /** @private Pref observer callback */
     #layoutObserver = null;
     /** @private ResizeObserver on sidebar */
@@ -291,6 +293,10 @@
         if (this.#sideObserver) {
           try { this.#sideObserver.disconnect(); } catch (_) {}
           this.#sideObserver = null;
+        }
+        if (this.#toolboxThemeObserver) {
+          try { this.#toolboxThemeObserver.disconnect(); } catch (_) {}
+          this.#toolboxThemeObserver = null;
         }
         if (this.#resizeObs) {
           try { this.#resizeObs.disconnect(); } catch (_) {}
@@ -381,6 +387,7 @@
     #dom = {
       grid: null,
       verticalBar: null,
+      verticalBarTrigger: null,
       root: null,
       clip: null,
       panel: null,
