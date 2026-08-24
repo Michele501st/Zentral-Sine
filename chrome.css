@@ -1104,7 +1104,8 @@ panel[id*="tabgroup-editor"] {
   visibility: visible !important;
 }
 
-#zentral-apps-vertical-bar .zen-app-tile {
+/* Autohide Mode B: Tile Button Enhancements (Scoped ONLY to autohide mode) */
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile {
   width: 36px !important;
   height: 36px !important;
   min-width: 36px !important;
@@ -1124,8 +1125,8 @@ panel[id*="tabgroup-editor"] {
   transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease !important;
 }
 
-#zentral-apps-vertical-bar .zen-app-tile img,
-#zentral-apps-vertical-bar .zen-app-tile svg {
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile img,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile svg {
   width: 20px !important;
   height: 20px !important;
   object-fit: contain !important;
@@ -1133,29 +1134,29 @@ panel[id*="tabgroup-editor"] {
   transition: transform 0.15s ease, filter 0.15s ease !important;
 }
 
-#zentral-apps-vertical-bar .zen-app-tile:hover {
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:hover {
   background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, currentColor 14%, transparent)) !important;
   border-color: color-mix(in srgb, currentColor 20%, transparent) !important;
   transform: translateY(-1px) scale(1.04) !important;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
-#zentral-apps-vertical-bar .zen-app-tile:hover img,
-#zentral-apps-vertical-bar .zen-app-tile:hover svg {
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:hover img,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:hover svg {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
 }
 
-#zentral-apps-vertical-bar .zen-app-tile:active {
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:active {
   transform: scale(0.96) !important;
 }
 
-#zentral-apps-vertical-bar .zen-app-tile[data-active="true"] {
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-active="true"] {
   background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 32%, var(--zen-colors-base, #131313)) !important;
   border-color: var(--zen-primary-color, #707ac2) !important;
   box-shadow: 0 0 0 1px var(--zen-primary-color, #707ac2), 0 2px 8px rgba(0, 0, 0, 0.25) !important;
 }
 
-#zentral-apps-vertical-bar .zen-app-add-btn {
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn {
   background-color: color-mix(in srgb, var(--zen-colors-base, #131313) 15%, transparent) !important;
   border: 1.5px dashed color-mix(in srgb, currentColor 35%, transparent) !important;
   border-radius: var(--toolbarbutton-border-radius, 8px) !important;
@@ -1165,7 +1166,7 @@ panel[id*="tabgroup-editor"] {
   visibility: visible !important;
 }
 
-#zentral-apps-vertical-bar .zen-app-add-btn:hover {
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn:hover {
   opacity: 1 !important;
   border-style: solid !important;
   border-color: var(--zen-primary-color, currentColor) !important;
@@ -1174,8 +1175,52 @@ panel[id*="tabgroup-editor"] {
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
-#zentral-apps-vertical-bar .zen-app-badge {
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-badge {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4), 0 0 0 1.5px var(--zen-colors-base, #131313) !important;
+}
+
+/* Default / Non-autohide Vertical Bar (Clean standard tile styling) */
+:root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  max-width: 36px !important;
+  max-height: 36px !important;
+  border-radius: var(--toolbarbutton-border-radius, 8px) !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  flex-shrink: 0 !important;
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  color: inherit !important;
+}
+
+:root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:hover {
+  background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, currentColor 10%, transparent)) !important;
+}
+
+:root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-active="true"] {
+  background-color: var(--toolbarbutton-active-background, color-mix(in srgb, currentColor 15%, transparent)) !important;
+}
+
+:root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn {
+  background-color: transparent !important;
+  border: 1px dashed color-mix(in srgb, currentColor 30%, transparent) !important;
+  border-radius: var(--toolbarbutton-border-radius, 8px) !important;
+  opacity: 0.7 !important;
+  transform: none !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+}
+
+:root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn:hover {
+  opacity: 1 !important;
+  border-style: solid !important;
+  background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, currentColor 10%, transparent)) !important;
 }
 
 #zentral-apps-vertical-bar .zen-apps-autohide-dots {
