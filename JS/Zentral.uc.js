@@ -2420,30 +2420,28 @@
 
       try {
         let maxBottom = 0;
-        const idsToCheck = [
-          "zen-appcontent-navbar-wrapper", 
-          "navigator-toolbox",
-          "nav-bar",
-          "TabsToolbar",
-          "PersonalToolbar",
-          "titlebar",
-          "zen-window-controls",
-          "titlebar-buttonbox-container"
-        ];
-          
-        idsToCheck.forEach(id => {
-          const el = document.getElementById(id) || document.querySelector("." + id);
-          if (el) {
-            const rect = el.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.bottom < 200) {
-              const isInsideSidebar = el.closest && el.closest("#sidebar-box, #sidebar-container, #vertical-tabs");
-              if (!isInsideSidebar || el.id === "zen-window-controls" || el.id === "titlebar-buttonbox-container" || (el.classList && el.classList.contains("titlebar-buttonbox-container"))) {
-                maxBottom = Math.max(maxBottom, rect.bottom);
-              }
+        const contentBox = document.getElementById("tabbrowser-tabbox") || 
+                           document.getElementById("tabbrowser-tabpanels") || 
+                           gBrowser?.selectedBrowser || 
+                           document.getElementById("appcontent");
+        if (contentBox) {
+          const cRect = contentBox.getBoundingClientRect();
+          if (cRect.top > 0 && cRect.top < 200) {
+            maxBottom = Math.max(maxBottom, cRect.top);
+          }
+        }
+
+        const floatingNavbar = document.getElementById("zen-appcontent-navbar-wrapper");
+        if (floatingNavbar) {
+          const cs = window.getComputedStyle(floatingNavbar);
+          if (cs.display !== "none" && cs.visibility !== "hidden" && parseFloat(cs.opacity || "1") > 0.1) {
+            const navRect = floatingNavbar.getBoundingClientRect();
+            if (navRect.height > 0 && navRect.bottom > 0 && navRect.bottom < 200) {
+              maxBottom = Math.max(maxBottom, navRect.bottom);
             }
           }
-        });
-        
+        }
+
         top = Math.max(gap, Math.round(maxBottom));
       } catch(e) {}
 
@@ -2477,30 +2475,28 @@
 
       try {
         let maxBottom = 0;
-        const idsToCheck = [
-          "zen-appcontent-navbar-wrapper", 
-          "navigator-toolbox",
-          "nav-bar",
-          "TabsToolbar",
-          "PersonalToolbar",
-          "titlebar",
-          "zen-window-controls",
-          "titlebar-buttonbox-container"
-        ];
-          
-        idsToCheck.forEach(id => {
-          const el = document.getElementById(id) || document.querySelector("." + id);
-          if (el) {
-            const rect = el.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.bottom < 200) {
-              const isInsideSidebar = el.closest && el.closest("#sidebar-box, #sidebar-container, #vertical-tabs");
-              if (!isInsideSidebar || el.id === "zen-window-controls" || el.id === "titlebar-buttonbox-container" || (el.classList && el.classList.contains("titlebar-buttonbox-container"))) {
-                maxBottom = Math.max(maxBottom, rect.bottom);
-              }
+        const contentBox = document.getElementById("tabbrowser-tabbox") || 
+                           document.getElementById("tabbrowser-tabpanels") || 
+                           gBrowser?.selectedBrowser || 
+                           document.getElementById("appcontent");
+        if (contentBox) {
+          const cRect = contentBox.getBoundingClientRect();
+          if (cRect.top > 0 && cRect.top < 200) {
+            maxBottom = Math.max(maxBottom, cRect.top);
+          }
+        }
+
+        const floatingNavbar = document.getElementById("zen-appcontent-navbar-wrapper");
+        if (floatingNavbar) {
+          const cs = window.getComputedStyle(floatingNavbar);
+          if (cs.display !== "none" && cs.visibility !== "hidden" && parseFloat(cs.opacity || "1") > 0.1) {
+            const navRect = floatingNavbar.getBoundingClientRect();
+            if (navRect.height > 0 && navRect.bottom > 0 && navRect.bottom < 200) {
+              maxBottom = Math.max(maxBottom, navRect.bottom);
             }
           }
-        });
-        
+        }
+
         top = Math.max(gap, Math.round(maxBottom));
       } catch(e) {}
       
