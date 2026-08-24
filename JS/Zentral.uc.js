@@ -859,17 +859,16 @@
           transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease !important;
         }
 
-        /* Mode B: Autohide ENABLED (Compact Floating Overlay) */
+        /* Mode B: Autohide ENABLED (Compact Floating Panel) */
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
           position: fixed !important;
-          top: 0;
-          bottom: 0;
           z-index: 2147483500 !important;
-          background: var(--zen-themed-toolbar-bg, color-mix(in srgb, var(--zen-colors-base, #18181c) 80%, transparent)) !important;
+          background: var(--zen-main-browser-background, var(--zen-theme-gradient, var(--zen-colors-tertiary, var(--zen-themed-toolbar-bg, #18181c)))) !important;
           backdrop-filter: blur(24px) saturate(140%) !important;
           -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
-          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
-          border: none !important;
+          border-radius: var(--zen-native-inner-radius, 10px) !important;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.25) !important;
+          border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
           transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, visibility 0.24s ease !important;
           will-change: transform, opacity;
         }
@@ -877,10 +876,9 @@
         /* Autohide Mode B: Position on Left (Sidebar on Right) */
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar,
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar {
-          left: 0 !important;
+          left: 8px !important;
           right: auto !important;
-          border-radius: 0 var(--zen-native-inner-radius, 10px) var(--zen-native-inner-radius, 10px) 0 !important;
-          transform: translateX(-100%) !important;
+          transform: translateX(calc(-100% - 16px)) !important;
           opacity: 0 !important;
           pointer-events: none !important;
           visibility: hidden !important;
@@ -888,10 +886,9 @@
 
         /* Autohide Mode B: Position on Right (Sidebar on Left) */
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar {
-          right: 0 !important;
+          right: 8px !important;
           left: auto !important;
-          border-radius: var(--zen-native-inner-radius, 10px) 0 0 var(--zen-native-inner-radius, 10px) !important;
-          transform: translateX(100%) !important;
+          transform: translateX(calc(100% + 16px)) !important;
           opacity: 0 !important;
           pointer-events: none !important;
           visibility: hidden !important;
@@ -2155,7 +2152,7 @@
       if (!vb || !this.isPlacementVerticalBar()) return;
       
       const gap = 12;
-      let top = 0;
+      let top = gap;
       try {
         let maxBottom = 0;
         const idsToCheck = ["zen-appcontent-navbar-wrapper", "navigator-toolbox"];
@@ -2170,7 +2167,7 @@
           }
         });
         
-        top = Math.round(maxBottom);
+        top = Math.max(gap, Math.round(maxBottom));
       } catch(e) {}
       
       const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
