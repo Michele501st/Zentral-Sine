@@ -233,6 +233,12 @@
       "tabbrowser-tabpanels",
       "TabsToolbar",
       "nav-bar",
+      "zen-appcontent-navbar-wrapper",
+      "zen-main-app-wrapper",
+      "titlebar",
+      "zen-sidebar-top-buttons",
+      "zen-sidebar-bottom-buttons",
+      "zen-current-workspace-indicator",
       "zentral-apps-vertical-bar",
       "zen-apps-sidebar-grid"
     ];
@@ -275,26 +281,100 @@
         // Check ::before pseudo-element
         try {
           const csBefore = window.getComputedStyle(el, "::before");
-          if (csBefore && csBefore.content && csBefore.content !== "none" && csBefore.content !== '""') {
-            lines.push(`  ::before -> content: ${csBefore.content} | bg: ${csBefore.background} | bg-color: ${csBefore.backgroundColor} | bg-image: ${csBefore.backgroundImage} | backdrop: ${csBefore.backdropFilter} | pos: ${csBefore.position}`);
-          } else if (csBefore && csBefore.backgroundImage && csBefore.backgroundImage !== "none") {
-            lines.push(`  ::before (with bg) -> bg-image: ${csBefore.backgroundImage} | bg-color: ${csBefore.backgroundColor} | backdrop: ${csBefore.backdropFilter}`);
+          if (csBefore && csBefore.content && csBefore.content !== "none") {
+            lines.push(`  ::before -> content: ${csBefore.content} | bg: ${csBefore.background} | bg-color: ${csBefore.backgroundColor} | bg-image: ${csBefore.backgroundImage} | backdrop: ${csBefore.backdropFilter} | pos: ${csBefore.position} | inset: ${csBefore.inset}`);
           }
         } catch (_) {}
 
         // Check ::after pseudo-element
         try {
           const csAfter = window.getComputedStyle(el, "::after");
-          if (csAfter && csAfter.content && csAfter.content !== "none" && csAfter.content !== '""') {
-            lines.push(`  ::after -> content: ${csAfter.content} | bg: ${csAfter.background} | bg-color: ${csAfter.backgroundColor} | bg-image: ${csAfter.backgroundImage} | backdrop: ${csAfter.backdropFilter} | pos: ${csAfter.position}`);
-          } else if (csAfter && csAfter.backgroundImage && csAfter.backgroundImage !== "none") {
-            lines.push(`  ::after (with bg) -> bg-image: ${csAfter.backgroundImage} | bg-color: ${csAfter.backgroundColor} | backdrop: ${csAfter.backdropFilter}`);
+          if (csAfter && csAfter.content && csAfter.content !== "none") {
+            lines.push(`  ::after -> content: ${csAfter.content} | bg: ${csAfter.background} | bg-color: ${csAfter.backgroundColor} | bg-image: ${csAfter.backgroundImage} | backdrop: ${csAfter.backdropFilter} | pos: ${csAfter.position} | inset: ${csAfter.inset}`);
           }
         } catch (_) {}
       } catch (elemErr) {
         lines.push(`\n[Element: #${id}] Error inspecting element: ${elemErr.message}`);
       }
     });
+
+    // 3. Descendants of #navigator-toolbox with backgrounds / filters / pseudo-elements
+    try {
+      const toolbox = document.getElementById("navigator-toolbox");
+      if (toolbox) {
+        lines.push(`\n=== NAVIGATOR-TOOLBOX DESCENDANTS INSPECTION ===`);
+        const allDescendants = toolbox.querySelectorAll("*");
+        lines.push(`Total Descendants in #navigator-toolbox: ${allDescendants.length}`);
+        allDescendants.forEach(child => {
+          try {
+            const cs = window.getComputedStyle(child);
+            const hasBg = (cs.backgroundColor && cs.backgroundColor !== "transparent" && cs.backgroundColor !== "rgba(0, 0, 0, 0)") ||
+                          (cs.backgroundImage && cs.backgroundImage !== "none") ||
+                          (cs.backdropFilter && cs.backdropFilter !== "none") ||
+                          (cs.boxShadow && cs.boxShadow !== "none");
+            const csBefore = window.getComputedStyle(child, "::before");
+            const hasBefore = csBefore && csBefore.content && csBefore.content !== "none" && (
+              (csBefore.backgroundColor && csBefore.backgroundColor !== "transparent" && csBefore.backgroundColor !== "rgba(0, 0, 0, 0)") ||
+              (csBefore.backgroundImage && csBefore.backgroundImage !== "none") ||
+              (csBefore.backdropFilter && csBefore.backdropFilter !== "none")
+            );
+            const csAfter = window.getComputedStyle(child, "::after");
+            const hasAfter = csAfter && csAfter.content && csAfter.content !== "none" && (
+              (csAfter.backgroundColor && csAfter.backgroundColor !== "transparent" && csAfter.backgroundColor !== "rgba(0, 0, 0, 0)") ||
+              (csAfter.backgroundImage && csAfter.backgroundImage !== "none") ||
+              (csAfter.backdropFilter && csAfter.backdropFilter !== "none")
+            );
+
+            if (hasBg || hasBefore || hasAfter || child.id === "titlebar" || child.id === "TabsToolbar" || child.id === "nav-bar" || child.id === "vertical-tabs") {
+              lines.push(`  Child <${child.tagName.toLowerCase()} id="${child.id || 'no-id'}" class="${child.className}">`);
+              lines.push(`    bg: ${cs.background} | bg-color: ${cs.backgroundColor} | bg-image: ${cs.backgroundImage} | backdrop: ${cs.backdropFilter} | shadow: ${cs.boxShadow}`);
+              if (hasBefore) {
+                lines.push(`    ::before -> content: ${csBefore.content} | bg: ${csBefore.background} | bg-image: ${csBefore.backgroundImage} | backdrop: ${csBefore.backdropFilter}`);
+              }
+              if (hasAfter) {
+                lines.push(`    ::after -> content: ${csAfter.content} | bg: ${csAfter.background} | bg-image: ${csAfter.backgroundImage} | backdrop: ${csAfter.backdropFilter}`);
+              }
+            }
+          } catch (_) {}
+        });
+      }
+    } catch (e) {
+      lines.push(`Error inspecting descendants: ${e.message}`);
+    }
+
+    // 4. Matching CSS rules from styleSheets
+    try {
+      lines.push(`\n=== MATCHING CSS RULES FOR SIDEBAR & COMPACT MODE ===`);
+      const matchedRules = [];
+      for (const sheet of Array.from(document.styleSheets)) {
+        try {
+          const rules = sheet.cssRules || sheet.rules;
+          if (!rules) continue;
+          for (const rule of Array.from(rules)) {
+            if (rule.selectorText && (
+              rule.selectorText.includes("navigator-toolbox") ||
+              rule.selectorText.includes("zen-compact-mode") ||
+              rule.selectorText.includes("browserSidebarContainer") ||
+              rule.selectorText.includes("tabbrowser-tabbox") ||
+              rule.selectorText.includes("TabsToolbar")
+            )) {
+              if (rule.cssText && (
+                rule.cssText.includes("background") ||
+                rule.cssText.includes("backdrop-filter") ||
+                rule.cssText.includes("box-shadow") ||
+                rule.cssText.includes("border") ||
+                rule.cssText.includes("opacity")
+              )) {
+                matchedRules.push(`  ${rule.cssText}`);
+              }
+            }
+          }
+        } catch (_) {}
+      }
+      lines.push(`Matching CSS Rules (${matchedRules.length}):\n${matchedRules.slice(0, 100).join("\n") || "  (none)"}`);
+    } catch (e) {
+      lines.push(`Error reading stylesheets: ${e.message}`);
+    }
 
     return lines.join("\n");
   }
