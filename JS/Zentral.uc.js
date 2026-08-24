@@ -836,9 +836,9 @@
           align-items: center !important;
           z-index: 2147483500 !important;
           box-sizing: border-box !important;
-          background: var(--zen-colors-secondary, var(--zen-colors-tertiary, #1e1e24)) !important;
-          backdrop-filter: blur(20px) saturate(140%) !important;
-          -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+          background: var(--zen-themed-toolbar-bg, color-mix(in srgb, var(--zen-colors-base, #18181c) 75%, transparent)) !important;
+          backdrop-filter: blur(24px) saturate(140%) !important;
+          -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
           box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
           color: var(--zen-colors-text, var(--arrowpanel-color, inherit)) !important;
           padding: 8px 0 !important;
