@@ -940,8 +940,8 @@ panel[id*="tabgroup-editor"] {
 
 :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
   position: fixed !important;
-  top: 0;
-  bottom: 0;
+  top: 40px;
+  bottom: 12px;
   width: 44px !important;
   min-width: 44px !important;
   max-width: 44px !important;
@@ -950,10 +950,10 @@ panel[id*="tabgroup-editor"] {
   align-items: center !important;
   z-index: 2147483500 !important;
   box-sizing: border-box !important;
-  background: var(--zen-colors-tertiary, var(--tabpanels-background-color, color-mix(in srgb, var(--in-content-page-background, #16161a) 88%, transparent))) !important;
-  backdrop-filter: blur(20px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45) !important;
+  background: var(--zen-sidebar-background, var(--zen-themed-toolbar-bg, color-mix(in srgb, var(--in-content-page-background, #16161a) 65%, transparent))) !important;
+  backdrop-filter: blur(24px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(150%) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
   color: var(--zen-colors-text, var(--arrowpanel-color, inherit)) !important;
   padding: 8px 0 !important;
   gap: 6px !important;
@@ -966,31 +966,25 @@ panel[id*="tabgroup-editor"] {
 /* Position on Left (Sidebar is on Right) */
 :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar,
 :root[zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar {
-  left: 0 !important;
+  left: 8px !important;
   right: auto !important;
-  border-top: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-  border-bottom: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-  border-right: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-  border-left: none !important;
-  border-radius: 0 var(--zen-native-inner-radius, 10px) var(--zen-native-inner-radius, 10px) 0 !important;
+  border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 12%, transparent)) !important;
+  border-radius: var(--zen-native-inner-radius, 12px) !important;
   transform: translateX(0);
 }
 
 /* Position on Right (Sidebar is on Left) */
 :root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar {
-  right: 0 !important;
+  right: 8px !important;
   left: auto !important;
-  border-top: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-  border-bottom: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-  border-left: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-  border-right: none !important;
-  border-radius: var(--zen-native-inner-radius, 10px) 0 0 var(--zen-native-inner-radius, 10px) !important;
+  border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 12%, transparent)) !important;
+  border-radius: var(--zen-native-inner-radius, 12px) !important;
   transform: translateX(0);
 }
 
 /* Autohide - Slide out / Hidden state when idle */
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
-  transform: translateX(100%) !important;
+  transform: translateX(calc(100% + 16px)) !important;
   opacity: 0 !important;
   pointer-events: none !important;
   visibility: hidden !important;
@@ -998,7 +992,7 @@ panel[id*="tabgroup-editor"] {
 
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]),
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
-  transform: translateX(-100%) !important;
+  transform: translateX(calc(-100% - 16px)) !important;
   opacity: 0 !important;
   pointer-events: none !important;
   visibility: hidden !important;

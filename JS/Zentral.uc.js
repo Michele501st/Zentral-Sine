@@ -444,6 +444,9 @@
 
       // Preload apps sequentially after browser startup
       setTimeout(() => this.preloadAppsSequence(), 2000);
+      setTimeout(() => this.updateVerticalBarBounds(), 100);
+      setTimeout(() => this.updateVerticalBarBounds(), 500);
+      setTimeout(() => this.updateVerticalBarBounds(), 1500);
     }
 
     /**
@@ -826,8 +829,8 @@
 
         :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
           position: fixed !important;
-          top: 0;
-          bottom: 0;
+          top: 40px;
+          bottom: 12px;
           width: 44px !important;
           min-width: 44px !important;
           max-width: 44px !important;
@@ -836,10 +839,10 @@
           align-items: center !important;
           z-index: 2147483500 !important;
           box-sizing: border-box !important;
-          background: var(--zen-colors-tertiary, var(--tabpanels-background-color, color-mix(in srgb, var(--in-content-page-background, #16161a) 88%, transparent))) !important;
-          backdrop-filter: blur(20px) saturate(140%) !important;
-          -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45) !important;
+          background: var(--zen-sidebar-background, var(--zen-themed-toolbar-bg, color-mix(in srgb, var(--in-content-page-background, #16161a) 65%, transparent))) !important;
+          backdrop-filter: blur(24px) saturate(150%) !important;
+          -webkit-backdrop-filter: blur(24px) saturate(150%) !important;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
           color: var(--zen-colors-text, var(--arrowpanel-color, inherit)) !important;
           padding: 8px 0 !important;
           gap: 6px !important;
@@ -852,31 +855,25 @@
         /* Position on Left (Sidebar is on Right) */
         :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar,
         :root[zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar {
-          left: 0 !important;
+          left: 8px !important;
           right: auto !important;
-          border-top: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-          border-bottom: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-          border-right: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-          border-left: none !important;
-          border-radius: 0 var(--zen-native-inner-radius, 10px) var(--zen-native-inner-radius, 10px) 0 !important;
+          border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 12%, transparent)) !important;
+          border-radius: var(--zen-native-inner-radius, 12px) !important;
           transform: translateX(0);
         }
 
         /* Position on Right (Sidebar is on Left) */
         :root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar {
-          right: 0 !important;
+          right: 8px !important;
           left: auto !important;
-          border-top: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-          border-bottom: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-          border-left: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-          border-right: none !important;
-          border-radius: var(--zen-native-inner-radius, 10px) 0 0 var(--zen-native-inner-radius, 10px) !important;
+          border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 12%, transparent)) !important;
+          border-radius: var(--zen-native-inner-radius, 12px) !important;
           transform: translateX(0);
         }
 
         /* Autohide - Slide out / Hidden state when idle */
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
-          transform: translateX(100%) !important;
+          transform: translateX(calc(100% + 16px)) !important;
           opacity: 0 !important;
           pointer-events: none !important;
           visibility: hidden !important;
@@ -884,7 +881,7 @@
 
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]),
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
-          transform: translateX(-100%) !important;
+          transform: translateX(calc(-100% - 16px)) !important;
           opacity: 0 !important;
           pointer-events: none !important;
           visibility: hidden !important;
@@ -2093,7 +2090,7 @@
 
       if (this.isPlacementVerticalBar()) {
         const isVbRight = this.isVerticalBarOnRight();
-        const vbOffset = 44 + sideGap;
+        const vbOffset = 44 + 8 + sideGap;
 
         if (isVbRight) {
           targetRight = vbOffset;
@@ -2107,7 +2104,12 @@
 
       try {
         let maxBottom = 0;
-        const idsToCheck = ["zen-appcontent-navbar-wrapper", "navigator-toolbox"];
+        const idsToCheck = [
+          "zen-appcontent-navbar-wrapper",
+          "navigator-toolbox",
+          "nav-bar",
+          "PersonalToolbar"
+        ];
           
         idsToCheck.forEach(id => {
           const el = document.getElementById(id);
@@ -2119,7 +2121,7 @@
           }
         });
         
-        top = Math.round(maxBottom);
+        top = Math.max(36, Math.round(maxBottom));
       } catch(e) {}
 
       root.style.top = top + "px";
@@ -2147,10 +2149,15 @@
       if (!vb || !this.isPlacementVerticalBar()) return;
       
       const gap = 12;
-      let top = 0;
+      let top = 40;
       try {
         let maxBottom = 0;
-        const idsToCheck = ["zen-appcontent-navbar-wrapper", "navigator-toolbox"];
+        const idsToCheck = [
+          "zen-appcontent-navbar-wrapper",
+          "navigator-toolbox",
+          "nav-bar",
+          "PersonalToolbar"
+        ];
           
         idsToCheck.forEach(id => {
           const el = document.getElementById(id);
@@ -2162,7 +2169,9 @@
           }
         });
         
-        top = Math.round(maxBottom);
+        if (maxBottom > 0) {
+          top = Math.round(maxBottom);
+        }
       } catch(e) {}
       
       vb.style.top = top + "px";
@@ -2650,6 +2659,12 @@
         try { Services.prefs.removeObserver("zen.view.sidebar-expanded", layoutObserver); } catch (_) {}
         this.stopPositionTracking();
       }, { once: true });
+
+      window.addEventListener("resize", () => {
+        if (this.isPlacementVerticalBar()) {
+          this.updateVerticalBarBounds();
+        }
+      });
 
       this.scheduleRepositionGrid(200);
     }
