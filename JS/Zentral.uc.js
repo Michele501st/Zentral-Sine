@@ -972,13 +972,15 @@
           align-items: center !important;
           justify-content: flex-start !important;
           width: 100% !important;
-          height: auto !important;
+          height: 0 !important;
+          flex: 1 1 0px !important;
+          padding: 0 4px !important;
           max-height: 100% !important;
           min-height: 0 !important;
-          flex: 0 1 auto !important;
-          padding: 0 4px !important;
           gap: 6px !important;
-          overflow: hidden !important;
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+          scrollbar-width: none !important;
           background: transparent !important;
           box-sizing: border-box !important;
         }
@@ -994,20 +996,13 @@
           gap: 6px !important;
           width: 100% !important;
           height: auto !important;
-          min-height: 0 !important;
-          flex: 1 1 auto !important;
-          overflow-y: auto !important;
-          overflow-x: hidden !important;
-          scrollbar-width: none !important;
+          min-height: min-content !important;
+          flex-shrink: 0 !important;
           opacity: 1 !important;
           transform: none !important;
           pointer-events: auto !important;
           visibility: visible !important;
           box-sizing: border-box !important;
-        }
-
-        #zentral-apps-vertical-bar #zen-apps-sidebar-grid .zen-apps-scroll-box::-webkit-scrollbar {
-          display: none !important;
         }
 
         #zentral-apps-vertical-bar-footer {
@@ -1720,7 +1715,7 @@
 
     renderGrid() {
       if (!this.#dom.grid) return;
-      const oldAddBtn = this.#dom.grid.querySelector(".zen-app-add-btn");
+      const oldAddBtn = document.querySelector("#zentral-apps-vertical-bar .zen-app-add-btn") || this.#dom.grid.querySelector(".zen-app-add-btn");
       if (oldAddBtn) oldAddBtn.remove();
       const targetContainer = this.#dom.scrollBox || this.#dom.grid;
       targetContainer.replaceChildren(); // Faster than innerHTML = '' — avoids serialization
@@ -1875,6 +1870,7 @@
 
         if (isVerticalBar) {
           targetContainer.appendChild(addBtn);
+          this.updateVerticalBarAddBtnPlacement();
         } else {
           this.#dom.grid.appendChild(addBtn);
         }
@@ -1890,6 +1886,9 @@
 
       requestAnimationFrame(() => {
         this.updateScrollMask();
+        if (isVerticalBar) {
+          this.updateVerticalBarAddBtnPlacement();
+        }
         if (this.#dom.scrollBox && this.#dom.scrollBox.scrollWidth > this.#dom.scrollBox.clientWidth) {
           this.#dom.scrollBox.scrollLeft = this.#dom.scrollBox.scrollWidth - this.#dom.scrollBox.clientWidth;
           this.updateScrollMask();
@@ -2233,6 +2232,8 @@
       const reposition = () => {
         if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) {
           this.positionPanel();
+        }
+        if (this.isPlacementVerticalBar()) {
           this.updateVerticalBarBounds();
         }
       };
@@ -2465,6 +2466,50 @@
       }
 
       this.syncVerticalBarTheme();
+      this.updateVerticalBarAddBtnPlacement();
+    }
+
+    /**
+     * Checks if the Vertical Bar has reached its vertical capacity limit.
+     * When capacity is reached, moves the Add App (+) button into the fixed footer container (#zentral-apps-vertical-bar-footer)
+     * so that apps scroll cleanly underneath it.
+     * When there is remaining space, places the Add App button back in the natural flow immediately below the apps.
+     */
+    updateVerticalBarAddBtnPlacement() {
+      if (!this.isPlacementVerticalBar() || !this.#dom.verticalBar) return;
+      const vb = this.#dom.verticalBar;
+      const grid = this.#dom.grid;
+      const scrollBox = this.#dom.scrollBox;
+      const footer = document.getElementById("zentral-apps-vertical-bar-footer");
+      const addBtn = document.querySelector("#zentral-apps-vertical-bar .zen-app-add-btn");
+      if (!addBtn || !footer || !grid) return;
+
+      const vbHeight = vb.clientHeight;
+      if (vbHeight <= 0) return;
+
+      const activeAppsCount = scrollBox ? scrollBox.querySelectorAll(".zen-app-tile:not(.zen-app-add-btn):not(.zen-app-vb-footer-btn)").length : 0;
+      const footerBaseHeight = 82; // Eye + Gear buttons + padding
+      const itemHeight = 42; // 36px tile + 6px gap
+      const requiredHeight = (activeAppsCount + 1) * itemHeight + footerBaseHeight + 16; // 16px padding
+
+      const autohideBtn = footer.querySelector("#zentral-apps-vb-autohide-btn");
+
+      if (requiredHeight > vbHeight) {
+        // Reached limit: place addBtn inside the fixed footer right above autohideBtn
+        if (addBtn.parentElement !== footer) {
+          if (autohideBtn) {
+            footer.insertBefore(addBtn, autohideBtn);
+          } else {
+            footer.prepend(addBtn);
+          }
+        }
+      } else {
+        // Under limit: place addBtn back inside grid / scrollBox naturally below the apps
+        const targetContainer = scrollBox || grid;
+        if (addBtn.parentElement !== targetContainer) {
+          targetContainer.appendChild(addBtn);
+        }
+      }
     }
 
     /**
