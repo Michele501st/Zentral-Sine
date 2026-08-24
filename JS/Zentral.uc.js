@@ -863,9 +863,9 @@
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
           position: fixed !important;
           z-index: 2147483500 !important;
-          background: var(--zen-main-browser-background, var(--zen-theme-gradient, var(--zen-colors-tertiary, var(--zen-themed-toolbar-bg, #18181c)))) !important;
-          backdrop-filter: blur(24px) saturate(140%) !important;
-          -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+          background-color: var(--zen-themed-toolbar-bg, var(--zen-colors-tertiary, #1e1e24));
+          backdrop-filter: blur(24px) saturate(140%);
+          -webkit-backdrop-filter: blur(24px) saturate(140%);
           border-radius: var(--zen-native-inner-radius, 10px) !important;
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.25) !important;
           border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
@@ -2181,6 +2181,61 @@
       if (this.#dom.verticalBarTrigger) {
         this.#dom.verticalBarTrigger.style.top = top + "px";
         this.#dom.verticalBarTrigger.style.bottom = gap + "px";
+      }
+
+      this.syncVerticalBarTheme();
+    }
+
+    /**
+     * Synchronizes theme background gradient, color, and filters from the native sidebar
+     * to the Vertical Bar in autohide (compact) mode so it matches the Compact Sidebar.
+     */
+    syncVerticalBarTheme() {
+      const vb = this.#dom.verticalBar;
+      if (!vb) return;
+      const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
+      if (!isAutohide) {
+        vb.style.backgroundImage = "";
+        vb.style.backgroundColor = "";
+        vb.style.background = "";
+        vb.style.backdropFilter = "";
+        return;
+      }
+
+      const candidateIds = ["navigator-toolbox", "sidebar-box", "browserSidebarContainer", "TabsToolbar"];
+      let matchedBg = "";
+      let matchedBgColor = "";
+      let matchedFilter = "";
+      
+      for (const id of candidateIds) {
+        const el = document.getElementById(id) || document.querySelector("." + id);
+        if (el) {
+          const cs = window.getComputedStyle(el);
+          if (cs.backgroundImage && cs.backgroundImage !== "none" && !matchedBg) {
+            matchedBg = cs.backgroundImage;
+          }
+          if (cs.backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)" && cs.backgroundColor !== "transparent" && !matchedBgColor) {
+            matchedBgColor = cs.backgroundColor;
+          }
+          if (cs.backdropFilter && cs.backdropFilter !== "none" && !matchedFilter) {
+            matchedFilter = cs.backdropFilter;
+          }
+        }
+      }
+
+      if (matchedBg) {
+        vb.style.backgroundImage = matchedBg;
+        vb.style.backgroundSize = "cover";
+        vb.style.backgroundPosition = "center";
+        vb.style.backgroundRepeat = "no-repeat";
+      } else {
+        vb.style.backgroundImage = "";
+      }
+      if (matchedBgColor) {
+        vb.style.backgroundColor = matchedBgColor;
+      }
+      if (matchedFilter) {
+        vb.style.backdropFilter = matchedFilter;
       }
     }
 
