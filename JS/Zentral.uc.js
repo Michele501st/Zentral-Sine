@@ -874,7 +874,18 @@
           visibility: visible !important;
           box-sizing: border-box !important;
           overflow: hidden !important;
-          transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease, margin-top 0.18s cubic-bezier(0.25, 1, 0.5, 1), height 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
+          margin-top: 0 !important;
+          transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease !important;
+        }
+
+        #tabbrowser-tabbox:has(> #zentral-apps-vertical-bar) {
+          display: flex !important;
+          flex-direction: row !important;
+        }
+
+        #tabbrowser-tabbox:has(> #zentral-apps-vertical-bar) #tabbrowser-tabpanels {
+          flex: 1 1 0px !important;
+          min-width: 0 !important;
         }
 
         /* Mode B: Autohide ENABLED (Compact Floating Panel) */
@@ -2456,6 +2467,7 @@
           "navigator-toolbox",
           "nav-bar",
           "TabsToolbar",
+          "PersonalToolbar",
           "titlebar",
           "zen-window-controls",
           "titlebar-buttonbox-container"
@@ -2484,9 +2496,9 @@
       } else {
         vb.style.top = "";
         vb.style.bottom = "";
-        vb.style.marginTop = top + "px";
-        vb.style.height = "calc(100% - " + top + "px)";
-        vb.style.maxHeight = "calc(100% - " + top + "px)";
+        vb.style.marginTop = "";
+        vb.style.height = "";
+        vb.style.maxHeight = "";
       }
       if (this.#dom.verticalBarTrigger) {
         this.#dom.verticalBarTrigger.style.top = top + "px";
@@ -2907,18 +2919,18 @@
               vb.appendChild(this.#dom.vbFooter);
             }
 
-            const browserEl = document.getElementById("browser") || document.body || document.documentElement;
+            const tabbox = document.getElementById("tabbrowser-tabbox") || document.getElementById("appcontent") || document.getElementById("browser") || document.body || document.documentElement;
             const isRightSidebar = this.isSidebarRight();
 
             if (isRightSidebar) {
-              // Sidebar is on right -> Vertical Bar on LEFT (first child of #browser)
-              if (vb.parentNode !== browserEl || browserEl.firstChild !== vb) {
-                browserEl.insertBefore(vb, browserEl.firstChild);
+              // Sidebar is on right -> Vertical Bar on LEFT (first child of tabbox)
+              if (vb.parentNode !== tabbox || tabbox.firstChild !== vb) {
+                tabbox.insertBefore(vb, tabbox.firstChild);
               }
             } else {
-              // Sidebar is on left -> Vertical Bar on RIGHT (last child of #browser)
-              if (vb.parentNode !== browserEl || vb.nextSibling !== null) {
-                browserEl.appendChild(vb);
+              // Sidebar is on left -> Vertical Bar on RIGHT (last child of tabbox)
+              if (vb.parentNode !== tabbox || vb.nextSibling !== null) {
+                tabbox.appendChild(vb);
               }
             }
             vb.style.display = "flex";

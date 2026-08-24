@@ -983,7 +983,18 @@ panel[id*="tabgroup-editor"] {
   visibility: visible !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
-  transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease, margin-top 0.18s cubic-bezier(0.25, 1, 0.5, 1), height 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
+  margin-top: 0 !important;
+  transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease !important;
+}
+
+#tabbrowser-tabbox:has(> #zentral-apps-vertical-bar) {
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+#tabbrowser-tabbox:has(> #zentral-apps-vertical-bar) #tabbrowser-tabpanels {
+  flex: 1 1 0px !important;
+  min-width: 0 !important;
 }
 
 /* ==========================================================================
