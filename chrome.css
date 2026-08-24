@@ -1081,15 +1081,20 @@ panel[id*="tabgroup-editor"] {
   flex-direction: column !important;
   align-items: center !important;
   width: 100% !important;
-  height: 100% !important;
-  flex: 1 1 100% !important;
+  height: auto !important;
+  flex: 1 1 auto !important;
   padding: 0 4px !important;
   max-height: 100% !important;
-  min-height: 100% !important;
+  min-height: 0 !important;
   gap: 6px !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+  scrollbar-width: none !important;
   background: transparent !important;
+}
+
+#zentral-apps-vertical-bar #zen-apps-sidebar-grid::-webkit-scrollbar {
+  display: none !important;
 }
 
 #zentral-apps-vertical-bar #zen-apps-sidebar-grid .zen-apps-scroll-box {
@@ -1098,10 +1103,43 @@ panel[id*="tabgroup-editor"] {
   align-items: center !important;
   gap: 6px !important;
   width: 100% !important;
+  min-height: min-content !important;
   opacity: 1 !important;
   transform: none !important;
   pointer-events: auto !important;
   visibility: visible !important;
+}
+
+#zentral-apps-vertical-bar-footer {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  width: 100% !important;
+  flex-shrink: 0 !important;
+  gap: 6px !important;
+  padding: 4px 0 0 0 !important;
+  box-sizing: border-box !important;
+  margin-top: auto !important;
+  z-index: 10 !important;
+}
+
+#zentral-apps-vertical-bar .zen-app-vb-footer-btn svg {
+  width: 18px !important;
+  height: 18px !important;
+  pointer-events: none !important;
+}
+
+:root[zentral-apps-autohide="true"] #zentral-apps-vb-autohide-btn .zs-eye-open {
+  display: none !important;
+}
+:root[zentral-apps-autohide="true"] #zentral-apps-vb-autohide-btn .zs-eye-closed {
+  display: block !important;
+}
+:root:not([zentral-apps-autohide="true"]) #zentral-apps-vb-autohide-btn .zs-eye-open {
+  display: block !important;
+}
+:root:not([zentral-apps-autohide="true"]) #zentral-apps-vb-autohide-btn .zs-eye-closed {
+  display: none !important;
 }
 
 /* Autohide Mode B: Tile Button Enhancements (Scoped ONLY to autohide mode) */
@@ -1164,6 +1202,9 @@ panel[id*="tabgroup-editor"] {
   transform: none !important;
   pointer-events: auto !important;
   visibility: visible !important;
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 2 !important;
 }
 
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn:hover {
@@ -1215,6 +1256,9 @@ panel[id*="tabgroup-editor"] {
   transform: none !important;
   pointer-events: auto !important;
   visibility: visible !important;
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 2 !important;
 }
 
 :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn:hover {

@@ -327,6 +327,7 @@
           "zen-apps-autohide-trigger",
           "zen-apps-sidebar-tile-context",
           "zentral-apps-vertical-bar",
+          "zentral-apps-vertical-bar-footer",
           "zentral-apps-vertical-bar-trigger",
           "context_zenAppsSidebarAdd_sep",
           "context_zenAppsSidebarAdd"
@@ -337,7 +338,7 @@
         });
 
         // 5. Clean up floating panels and browser frames
-        document.querySelectorAll(".zs-app-panel, .zen-app-floating-panel, #zen-app-panel-root, #zentral-apps-vertical-bar, #zentral-apps-vertical-bar-trigger").forEach(p => p.remove());
+        document.querySelectorAll(".zs-app-panel, .zen-app-floating-panel, #zen-app-panel-root, #zentral-apps-vertical-bar, #zentral-apps-vertical-bar-trigger, #zentral-apps-vertical-bar-footer").forEach(p => p.remove());
         if (this.#state && this.#state.appBrowsers) {
           this.#state.appBrowsers.forEach(b => { if (b && b.remove) b.remove(); });
           this.#state.appBrowsers.clear();
@@ -348,6 +349,9 @@
           grid: null,
           verticalBar: null,
           verticalBarTrigger: null,
+          vbFooter: null,
+          vbAutohideBtn: null,
+          vbSettingsBtn: null,
           root: null,
           clip: null,
           panel: null,
@@ -960,15 +964,20 @@
           flex-direction: column !important;
           align-items: center !important;
           width: 100% !important;
-          height: 100% !important;
-          flex: 1 1 100% !important;
+          height: auto !important;
+          flex: 1 1 auto !important;
           padding: 0 4px !important;
           max-height: 100% !important;
-          min-height: 100% !important;
+          min-height: 0 !important;
           gap: 6px !important;
           overflow-y: auto !important;
           overflow-x: hidden !important;
+          scrollbar-width: none !important;
           background: transparent !important;
+        }
+
+        #zentral-apps-vertical-bar #zen-apps-sidebar-grid::-webkit-scrollbar {
+          display: none !important;
         }
 
         #zentral-apps-vertical-bar #zen-apps-sidebar-grid .zen-apps-scroll-box {
@@ -977,10 +986,43 @@
           align-items: center !important;
           gap: 6px !important;
           width: 100% !important;
+          min-height: min-content !important;
           opacity: 1 !important;
           transform: none !important;
           pointer-events: auto !important;
           visibility: visible !important;
+        }
+
+        #zentral-apps-vertical-bar-footer {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          width: 100% !important;
+          flex-shrink: 0 !important;
+          gap: 6px !important;
+          padding: 4px 0 0 0 !important;
+          box-sizing: border-box !important;
+          margin-top: auto !important;
+          z-index: 10 !important;
+        }
+
+        #zentral-apps-vertical-bar .zen-app-vb-footer-btn svg {
+          width: 18px !important;
+          height: 18px !important;
+          pointer-events: none !important;
+        }
+
+        :root[zentral-apps-autohide="true"] #zentral-apps-vb-autohide-btn .zs-eye-open {
+          display: none !important;
+        }
+        :root[zentral-apps-autohide="true"] #zentral-apps-vb-autohide-btn .zs-eye-closed {
+          display: block !important;
+        }
+        :root:not([zentral-apps-autohide="true"]) #zentral-apps-vb-autohide-btn .zs-eye-open {
+          display: block !important;
+        }
+        :root:not([zentral-apps-autohide="true"]) #zentral-apps-vb-autohide-btn .zs-eye-closed {
+          display: none !important;
         }
 
         /* Autohide Mode B: Tile Button Enhancements (Scoped ONLY to autohide mode) */
@@ -1043,6 +1085,9 @@
           transform: none !important;
           pointer-events: auto !important;
           visibility: visible !important;
+          position: sticky !important;
+          bottom: 0 !important;
+          z-index: 2 !important;
         }
 
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn:hover {
@@ -1094,6 +1139,9 @@
           transform: none !important;
           pointer-events: auto !important;
           visibility: visible !important;
+          position: sticky !important;
+          bottom: 0 !important;
+          z-index: 2 !important;
         }
 
         :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn:hover {
@@ -1282,6 +1330,59 @@
           }
         });
         this.#dom.verticalBar = vb;
+
+        let footer = document.getElementById("zentral-apps-vertical-bar-footer");
+        if (!footer) {
+          footer = document.createElement("div");
+          footer.id = "zentral-apps-vertical-bar-footer";
+        }
+
+        let autohideBtn = footer.querySelector("#zentral-apps-vb-autohide-btn");
+        if (!autohideBtn) {
+          autohideBtn = document.createElement("button");
+          autohideBtn.id = "zentral-apps-vb-autohide-btn";
+          autohideBtn.className = "zen-app-tile zen-app-vb-footer-btn";
+          autohideBtn.title = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true ? "Disable Autohide" : "Enable Autohide";
+          autohideBtn.appendChild(this.#createSVG(`<svg class="zs-eye-open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`));
+          autohideBtn.appendChild(this.#createSVG(`<svg class="zs-eye-closed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`));
+          autohideBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const cur = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
+            const next = !cur;
+            Core.setPref(Constants.Apps.PREF_AUTOHIDE, next);
+            this.updateAutohideState();
+          });
+          autohideBtn.addEventListener("mousedown", (e) => {
+            if (e.button === 0) e.stopPropagation();
+          });
+          footer.appendChild(autohideBtn);
+        }
+
+        let settingsBtn = footer.querySelector("#zentral-apps-vb-settings-btn");
+        if (!settingsBtn) {
+          settingsBtn = document.createElement("button");
+          settingsBtn.id = "zentral-apps-vb-settings-btn";
+          settingsBtn.className = "zen-app-tile zen-app-vb-footer-btn";
+          settingsBtn.title = "Zentral Settings";
+          settingsBtn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`));
+          settingsBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (window.Zentral?.Settings) window.Zentral.Settings.open();
+            else if (window.ZentralSettingsInstance) window.ZentralSettingsInstance.open();
+          });
+          settingsBtn.addEventListener("mousedown", (e) => {
+            if (e.button === 0) e.stopPropagation();
+          });
+          footer.appendChild(settingsBtn);
+        }
+
+        if (footer.parentNode !== vb) {
+          vb.appendChild(footer);
+        }
+
+        this.#dom.vbFooter = footer;
+        this.#dom.vbAutohideBtn = autohideBtn;
+        this.#dom.vbSettingsBtn = settingsBtn;
 
         let trigger = document.getElementById("zentral-apps-vertical-bar-trigger");
         if (!trigger) {
@@ -1529,6 +1630,9 @@
       if (isVerticalBar) {
         this.updateVerticalBarBounds();
       }
+      if (this.#dom.vbAutohideBtn) {
+        this.#dom.vbAutohideBtn.title = isAutohide ? "Disable Autohide" : "Enable Autohide";
+      }
     }
 
     /**
@@ -1726,7 +1830,11 @@
           if (e.button === 0) e.stopPropagation();
         });
 
-        this.#dom.grid.appendChild(addBtn);
+        if (isVerticalBar) {
+          targetContainer.appendChild(addBtn);
+        } else {
+          this.#dom.grid.appendChild(addBtn);
+        }
       }
 
       if (this.#dom.scrollBox) {
@@ -2673,7 +2781,14 @@
           const vb = this.#dom.verticalBar;
           if (vb) {
             if (grid.parentNode !== vb) {
-              vb.appendChild(grid);
+              if (this.#dom.vbFooter && this.#dom.vbFooter.parentNode === vb) {
+                vb.insertBefore(grid, this.#dom.vbFooter);
+              } else {
+                vb.appendChild(grid);
+              }
+            }
+            if (this.#dom.vbFooter && this.#dom.vbFooter.parentNode !== vb) {
+              vb.appendChild(this.#dom.vbFooter);
             }
 
             const browserEl = document.getElementById("browser") || document.body || document.documentElement;
