@@ -863,16 +863,39 @@
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
           position: fixed !important;
           z-index: 2147483500 !important;
-          background: transparent !important;
-          background-color: transparent !important;
-          background-image: none !important;
-          backdrop-filter: none !important;
-          -webkit-backdrop-filter: none !important;
+          background-color: var(--zen-colors-base, rgb(19, 19, 19)) !important;
           border-radius: var(--zen-native-inner-radius, 10px) !important;
-          box-shadow: none !important;
-          border: none !important;
+          box-shadow: var(--zen-big-shadow, rgba(0, 0, 0, 0.24) 0px 3px 8px 0px) !important;
+          border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
           transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, visibility 0.24s ease !important;
           will-change: transform, opacity;
+          overflow: hidden !important;
+        }
+
+        /* Zen Theme Wallpaper / Gradient Layer */
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar::before {
+          content: "" !important;
+          position: absolute !important;
+          inset: 0 !important;
+          z-index: -2 !important;
+          background-image: var(--zen-theme-gradient-override, var(--zen-theme-gradient, var(--zen-main-browser-background, none))) !important;
+          background-attachment: fixed !important;
+          background-size: 100vw 100vh !important;
+          background-position: 0 0 !important;
+          background-repeat: no-repeat !important;
+          pointer-events: none !important;
+        }
+
+        /* Zen Film Grain Texture Layer */
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar::after {
+          content: "" !important;
+          position: absolute !important;
+          inset: 0 !important;
+          z-index: -1 !important;
+          background-image: url("chrome://browser/content/zen-images/grain-bg.png") !important;
+          background-repeat: repeat !important;
+          opacity: 0.7 !important;
+          pointer-events: none !important;
         }
 
         /* Autohide Mode B: Position on Left (Sidebar on Right) */
@@ -2199,24 +2222,34 @@
     }
 
     /**
-     * Synchronizes theme background gradient, color, and filters from the native sidebar
+     * Synchronizes theme background gradient from the native sidebar background (#zen-toolbar-background)
      * to the Vertical Bar in autohide (compact) mode so it matches the Compact Sidebar.
-     * Zen's native Sidebar is 100% transparent and directly reveals the Windows Mica/theme frame.
      */
     syncVerticalBarTheme() {
       const vb = this.#dom.verticalBar;
       if (!vb) return;
       
-      vb.style.removeProperty("background-image");
-      vb.style.removeProperty("background-color");
-      vb.style.removeProperty("background-attachment");
-      vb.style.removeProperty("background-size");
-      vb.style.removeProperty("background-position");
-      vb.style.removeProperty("backdrop-filter");
-      vb.style.removeProperty("border");
-      vb.style.removeProperty("box-shadow");
-      vb.style.setProperty("background", "transparent", "important");
-      vb.style.setProperty("background-color", "transparent", "important");
+      const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
+      if (!isAutohide) {
+        vb.style.removeProperty("--zen-theme-gradient-override");
+        return;
+      }
+
+      // Check if Zen toolbar background exists and capture its computed gradient
+      const zenToolbarBg = document.getElementById("zen-toolbar-background") || document.querySelector(".zen-toolbar-background");
+      if (zenToolbarBg) {
+        const csBefore = window.getComputedStyle(zenToolbarBg, "::before");
+        if (csBefore && csBefore.backgroundImage && csBefore.backgroundImage !== "none") {
+          vb.style.setProperty("--zen-theme-gradient-override", csBefore.backgroundImage);
+          return;
+        }
+        const cs = window.getComputedStyle(zenToolbarBg);
+        if (cs && cs.backgroundImage && cs.backgroundImage !== "none") {
+          vb.style.setProperty("--zen-theme-gradient-override", cs.backgroundImage);
+          return;
+        }
+      }
+      vb.style.removeProperty("--zen-theme-gradient-override");
     }
 
     /**
