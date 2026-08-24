@@ -943,6 +943,8 @@ panel[id*="tabgroup-editor"] {
   width: 44px !important;
   min-width: 44px !important;
   max-width: 44px !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
@@ -965,6 +967,9 @@ panel[id*="tabgroup-editor"] {
 :root[zentral-apps-placement="vertical-bar"]:not([zentral-apps-autohide="true"]) #zentral-apps-vertical-bar {
   position: relative !important;
   height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  flex: 0 0 44px !important;
   flex-shrink: 0 !important;
   z-index: 10 !important;
   background: transparent !important;
@@ -976,6 +981,8 @@ panel[id*="tabgroup-editor"] {
   transform: none !important;
   opacity: 1 !important;
   visibility: visible !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
   transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease !important;
 }
 
@@ -1081,8 +1088,8 @@ panel[id*="tabgroup-editor"] {
   flex-direction: column !important;
   align-items: center !important;
   width: 100% !important;
-  height: auto !important;
-  flex: 1 1 auto !important;
+  height: 0 !important;
+  flex: 1 1 0px !important;
   padding: 0 4px !important;
   max-height: 100% !important;
   min-height: 0 !important;
@@ -1091,6 +1098,7 @@ panel[id*="tabgroup-editor"] {
   overflow-x: hidden !important;
   scrollbar-width: none !important;
   background: transparent !important;
+  box-sizing: border-box !important;
 }
 
 #zentral-apps-vertical-bar #zen-apps-sidebar-grid::-webkit-scrollbar {
@@ -1103,11 +1111,14 @@ panel[id*="tabgroup-editor"] {
   align-items: center !important;
   gap: 6px !important;
   width: 100% !important;
+  height: auto !important;
   min-height: min-content !important;
+  flex-shrink: 0 !important;
   opacity: 1 !important;
   transform: none !important;
   pointer-events: auto !important;
   visibility: visible !important;
+  box-sizing: border-box !important;
 }
 
 #zentral-apps-vertical-bar-footer {
@@ -1115,6 +1126,7 @@ panel[id*="tabgroup-editor"] {
   flex-direction: column !important;
   align-items: center !important;
   width: 100% !important;
+  flex: 0 0 auto !important;
   flex-shrink: 0 !important;
   gap: 6px !important;
   padding: 4px 0 0 0 !important;
@@ -1195,25 +1207,26 @@ panel[id*="tabgroup-editor"] {
 }
 
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn {
-  background-color: color-mix(in srgb, var(--zen-colors-base, #131313) 15%, transparent) !important;
-  border: 1.5px dashed color-mix(in srgb, currentColor 35%, transparent) !important;
+  background-color: var(--zen-colors-base, #1c1c1f) !important;
+  border: 1.5px dashed color-mix(in srgb, currentColor 40%, transparent) !important;
   border-radius: var(--toolbarbutton-border-radius, 8px) !important;
-  opacity: 0.8 !important;
+  opacity: 1 !important;
   transform: none !important;
   pointer-events: auto !important;
   visibility: visible !important;
   position: sticky !important;
   bottom: 0 !important;
-  z-index: 2 !important;
+  z-index: 5 !important;
+  box-shadow: 0 0 0 2px var(--zen-colors-base, #1c1c1f), 0 -2px 8px rgba(0, 0, 0, 0.3) !important;
 }
 
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn:hover {
   opacity: 1 !important;
   border-style: solid !important;
   border-color: var(--zen-primary-color, currentColor) !important;
-  background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, currentColor 15%, transparent)) !important;
+  background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, var(--zen-colors-base, #1c1c1f) 80%, currentColor 20%)) !important;
   transform: translateY(-1px) scale(1.04) !important;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 0 0 2px var(--zen-colors-base, #1c1c1f), 0 3px 8px rgba(0, 0, 0, 0.3) !important;
 }
 
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-badge {
@@ -1249,22 +1262,24 @@ panel[id*="tabgroup-editor"] {
 }
 
 :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn {
-  background-color: transparent !important;
+  background-color: var(--zen-colors-base, var(--zen-main-browser-background, rgb(24, 24, 27))) !important;
   border: 1px dashed color-mix(in srgb, currentColor 30%, transparent) !important;
   border-radius: var(--toolbarbutton-border-radius, 8px) !important;
-  opacity: 0.7 !important;
+  opacity: 1 !important;
   transform: none !important;
   pointer-events: auto !important;
   visibility: visible !important;
   position: sticky !important;
   bottom: 0 !important;
-  z-index: 2 !important;
+  z-index: 5 !important;
+  box-shadow: 0 0 0 2px var(--zen-colors-base, var(--zen-main-browser-background, rgb(24, 24, 27))), 0 -2px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
 :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn:hover {
   opacity: 1 !important;
   border-style: solid !important;
-  background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, currentColor 10%, transparent)) !important;
+  background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, var(--zen-colors-base, var(--zen-main-browser-background, rgb(24, 24, 27))) 80%, currentColor 20%)) !important;
+  box-shadow: 0 0 0 2px var(--zen-colors-base, var(--zen-main-browser-background, rgb(24, 24, 27))), 0 2px 6px rgba(0, 0, 0, 0.2) !important;
 }
 
 #zentral-apps-vertical-bar .zen-apps-autohide-dots {
