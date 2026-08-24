@@ -1004,11 +1004,21 @@ panel[id*="tabgroup-editor"] {
   inset: 0 !important;
   z-index: -2 !important;
   background-image: var(--zen-theme-gradient-override, var(--zen-theme-gradient, var(--zen-main-browser-background, none))) !important;
-  background-attachment: fixed !important;
   background-size: 100vw 100vh !important;
-  background-position: 0 0 !important;
   background-repeat: no-repeat !important;
+  background-position: var(--zen-vb-gradient-pos, left top) !important;
   pointer-events: none !important;
+}
+
+/* When Vertical Bar is on Left (Sidebar on Right): Sample top-left gradient color */
+:root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar::before,
+:root[zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar::before {
+  background-position: left top !important;
+}
+
+/* When Vertical Bar is on Right (Sidebar on Left): Sample top-right gradient color */
+:root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar::before {
+  background-position: right top !important;
 }
 
 /* Zen Film Grain Texture Layer */

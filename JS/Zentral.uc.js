@@ -879,11 +879,21 @@
           inset: 0 !important;
           z-index: -2 !important;
           background-image: var(--zen-theme-gradient-override, var(--zen-theme-gradient, var(--zen-main-browser-background, none))) !important;
-          background-attachment: fixed !important;
           background-size: 100vw 100vh !important;
-          background-position: 0 0 !important;
           background-repeat: no-repeat !important;
+          background-position: var(--zen-vb-gradient-pos, left top) !important;
           pointer-events: none !important;
+        }
+
+        /* When Vertical Bar is on Left (Sidebar on Right): Sample top-left gradient color */
+        :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar::before,
+        :root[zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar::before {
+          background-position: left top !important;
+        }
+
+        /* When Vertical Bar is on Right (Sidebar on Left): Sample top-right gradient color */
+        :root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar::before {
+          background-position: right top !important;
         }
 
         /* Zen Film Grain Texture Layer */
@@ -2232,10 +2242,15 @@
       const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
       if (!isAutohide) {
         vb.style.removeProperty("--zen-theme-gradient-override");
+        vb.style.removeProperty("--zen-vb-gradient-pos");
         return;
       }
 
-      // Check if Zen toolbar background exists and capture its computed gradient
+      // 1. Anchoring gradient position to left or right based on Vertical Bar side
+      const isVbRight = this.isVerticalBarOnRight();
+      vb.style.setProperty("--zen-vb-gradient-pos", isVbRight ? "right top" : "left top");
+
+      // 2. Check if Zen toolbar background exists and capture its computed gradient
       const zenToolbarBg = document.getElementById("zen-toolbar-background") || document.querySelector(".zen-toolbar-background");
       if (zenToolbarBg) {
         const csBefore = window.getComputedStyle(zenToolbarBg, "::before");
@@ -2698,6 +2713,18 @@
         attributes: true,
         attributeFilter: ["zen-right-side", "zen-sidebar-collapsed", "zen-compact-mode", "zen-sidebar-expanded", "zen-sidebar-hidden", "style"]
       });
+
+      // Observer 1b: Live theme changes on #navigator-toolbox
+      const toolboxEl = document.getElementById("navigator-toolbox");
+      if (toolboxEl) {
+        this.#toolboxThemeObserver = new window.MutationObserver(() => {
+          this.syncVerticalBarTheme();
+        });
+        this.#toolboxThemeObserver.observe(toolboxEl, {
+          attributes: true,
+          attributeFilter: ["style", "class"]
+        });
+      }
 
       // Observer 2: Preference changes for toolbar/sidebar mode
       this.#layoutObserver = (subject, topic, data) => {
