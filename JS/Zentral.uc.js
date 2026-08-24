@@ -877,20 +877,29 @@
         }
 
         /* Autohide Mode B: Position on Left (Sidebar on Right) */
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar,
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar {
+        :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar,
+        :root[zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar {
           left: 8px !important;
           right: auto !important;
+        }
+
+        /* Autohide Mode B: Position on Right (Sidebar on Left) */
+        :root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar {
+          right: 8px !important;
+          left: auto !important;
+        }
+
+        /* Autohide Mode B: Idle/Collapsed State on Left */
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]),
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
           transform: translateX(calc(-100% - 16px)) !important;
           opacity: 0 !important;
           pointer-events: none !important;
           visibility: hidden !important;
         }
 
-        /* Autohide Mode B: Position on Right (Sidebar on Left) */
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar {
-          right: 8px !important;
-          left: auto !important;
+        /* Autohide Mode B: Idle/Collapsed State on Right */
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
           transform: translateX(calc(100% + 16px)) !important;
           opacity: 0 !important;
           pointer-events: none !important;
@@ -998,14 +1007,15 @@
           background: transparent;
         }
 
-        :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar-trigger {
-          left: 0;
-          right: auto;
+        :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar-trigger,
+        :root[zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar-trigger {
+          left: 0 !important;
+          right: auto !important;
         }
 
-        :root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]) #zentral-apps-vertical-bar-trigger {
-          right: 0;
-          left: auto;
+        :root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar-trigger {
+          right: 0 !important;
+          left: auto !important;
         }
       `;
       try {
