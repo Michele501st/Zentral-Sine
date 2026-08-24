@@ -863,16 +863,14 @@
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
           position: fixed !important;
           z-index: 2147483500 !important;
-          background-color: var(--zen-themed-toolbar-bg, var(--zen-colors-tertiary, color-mix(in srgb, var(--zen-primary-color, #707ac2) 18%, var(--zen-colors-base, #1e1e24)))) !important;
-          background-image: var(--zen-theme-gradient, var(--zen-main-browser-background, none)) !important;
-          background-attachment: fixed !important;
-          background-size: cover !important;
-          background-repeat: no-repeat !important;
-          backdrop-filter: blur(24px) saturate(140%) !important;
-          -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+          background: transparent !important;
+          background-color: transparent !important;
+          background-image: none !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
           border-radius: var(--zen-native-inner-radius, 10px) !important;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 2px 10px rgba(0, 0, 0, 0.15) !important;
-          border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
+          box-shadow: none !important;
+          border: none !important;
           transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, visibility 0.24s ease !important;
           will-change: transform, opacity;
         }
@@ -2203,95 +2201,22 @@
     /**
      * Synchronizes theme background gradient, color, and filters from the native sidebar
      * to the Vertical Bar in autohide (compact) mode so it matches the Compact Sidebar.
+     * Zen's native Sidebar is 100% transparent and directly reveals the Windows Mica/theme frame.
      */
     syncVerticalBarTheme() {
       const vb = this.#dom.verticalBar;
       if (!vb) return;
       
-      const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
-      if (!isAutohide) {
-        vb.style.removeProperty("background-image");
-        vb.style.removeProperty("background-color");
-        vb.style.removeProperty("background-attachment");
-        vb.style.removeProperty("background-size");
-        vb.style.removeProperty("background-position");
-        vb.style.removeProperty("backdrop-filter");
-        return;
-      }
-
-      // 1. Inspect candidate native sidebar & toolbar elements
-      const candidateIds = ["navigator-toolbox", "browserSidebarContainer", "sidebar-box", "TabsToolbar"];
-      let matchedBgImage = "";
-      let matchedBgColor = "";
-      let matchedBackdrop = "";
-
-      for (const id of candidateIds) {
-        const el = document.getElementById(id) || document.querySelector("." + id);
-        if (el) {
-          const cs = window.getComputedStyle(el);
-          if (!matchedBgImage && cs.backgroundImage && cs.backgroundImage !== "none" && cs.backgroundImage !== "initial") {
-            matchedBgImage = cs.backgroundImage;
-          }
-          if (!matchedBgColor && cs.backgroundColor && cs.backgroundColor !== "transparent" && cs.backgroundColor !== "rgba(0, 0, 0, 0)") {
-            matchedBgColor = cs.backgroundColor;
-          }
-          if (!matchedBackdrop && cs.backdropFilter && cs.backdropFilter !== "none") {
-            matchedBackdrop = cs.backdropFilter;
-          }
-        }
-      }
-
-      // 2. Read root theme variables
-      const rootStyle = window.getComputedStyle(document.documentElement);
-      const themeGradient = rootStyle.getPropertyValue("--zen-theme-gradient")?.trim();
-      const mainBrowserBg = rootStyle.getPropertyValue("--zen-main-browser-background")?.trim();
-      const primary = rootStyle.getPropertyValue("--zen-primary-color")?.trim() || rootStyle.getPropertyValue("--zen-colors-primary")?.trim();
-      const secondary = rootStyle.getPropertyValue("--zen-secondary-color")?.trim() || rootStyle.getPropertyValue("--zen-colors-secondary")?.trim();
-      const tertiary = rootStyle.getPropertyValue("--zen-colors-tertiary")?.trim();
-      const toolbarBg = rootStyle.getPropertyValue("--zen-themed-toolbar-bg")?.trim();
-      const base = rootStyle.getPropertyValue("--zen-colors-base")?.trim() || "#1e1e24";
-
-      // 3. Apply Background Image / Gradient with fixed window attachment
-      if (matchedBgImage) {
-        vb.style.setProperty("background-image", matchedBgImage, "important");
-        vb.style.setProperty("background-attachment", "fixed", "important");
-        vb.style.setProperty("background-size", "cover", "important");
-      } else if (themeGradient && themeGradient !== "none" && themeGradient !== "initial") {
-        vb.style.setProperty("background-image", themeGradient, "important");
-        vb.style.setProperty("background-attachment", "fixed", "important");
-        vb.style.setProperty("background-size", "cover", "important");
-      } else if (mainBrowserBg && mainBrowserBg !== "none" && mainBrowserBg !== "initial") {
-        vb.style.setProperty("background-image", mainBrowserBg, "important");
-        vb.style.setProperty("background-attachment", "fixed", "important");
-        vb.style.setProperty("background-size", "cover", "important");
-      } else if (primary && secondary) {
-        vb.style.setProperty("background-image", `linear-gradient(to bottom, ${primary}, ${secondary})`, "important");
-        vb.style.setProperty("background-attachment", "fixed", "important");
-        vb.style.setProperty("background-size", "cover", "important");
-      } else {
-        vb.style.removeProperty("background-image");
-        vb.style.removeProperty("background-attachment");
-      }
-
-      // 4. Apply Background Color matching Sidebar
-      if (matchedBgColor) {
-        vb.style.setProperty("background-color", matchedBgColor, "important");
-      } else if (toolbarBg) {
-        vb.style.setProperty("background-color", toolbarBg, "important");
-      } else if (tertiary) {
-        vb.style.setProperty("background-color", tertiary, "important");
-      } else if (primary) {
-        vb.style.setProperty("background-color", `color-mix(in srgb, ${primary} 18%, ${base})`, "important");
-      } else {
-        vb.style.setProperty("background-color", base, "important");
-      }
-
-      // 5. Apply Backdrop Filter
-      if (matchedBackdrop) {
-        vb.style.setProperty("backdrop-filter", matchedBackdrop, "important");
-      } else {
-        vb.style.setProperty("backdrop-filter", "blur(24px) saturate(140%)", "important");
-      }
+      vb.style.removeProperty("background-image");
+      vb.style.removeProperty("background-color");
+      vb.style.removeProperty("background-attachment");
+      vb.style.removeProperty("background-size");
+      vb.style.removeProperty("background-position");
+      vb.style.removeProperty("backdrop-filter");
+      vb.style.removeProperty("border");
+      vb.style.removeProperty("box-shadow");
+      vb.style.setProperty("background", "transparent", "important");
+      vb.style.setProperty("background-color", "transparent", "important");
     }
 
     /**
