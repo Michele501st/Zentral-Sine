@@ -836,10 +836,10 @@
           align-items: center !important;
           z-index: 2147483500 !important;
           box-sizing: border-box !important;
-          background: var(--zen-colors-tertiary, var(--tabpanels-background-color, color-mix(in srgb, var(--in-content-page-background, #16161a) 88%, transparent))) !important;
+          background: var(--zen-sidebar-background, var(--zen-themed-toolbar-bg, var(--zen-colors-tertiary, var(--tabpanels-background-color, #18181c)))) !important;
           backdrop-filter: blur(20px) saturate(140%) !important;
           -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45) !important;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
           color: var(--zen-colors-text, var(--arrowpanel-color, inherit)) !important;
           padding: 8px 0 !important;
           gap: 6px !important;
@@ -929,13 +929,14 @@
         }
 
         #zentral-apps-vertical-bar .zen-app-tile {
-          width: 34px !important;
-          height: 34px !important;
-          min-width: 34px !important;
-          min-height: 34px !important;
-          max-width: 34px !important;
-          max-height: 34px !important;
+          width: 36px !important;
+          height: 36px !important;
+          min-width: 36px !important;
+          min-height: 36px !important;
+          max-width: 36px !important;
+          max-height: 36px !important;
           border-radius: var(--toolbarbutton-border-radius, 8px) !important;
+          background-color: transparent !important;
           flex-shrink: 0 !important;
           opacity: 1 !important;
           transform: none !important;
@@ -950,13 +951,13 @@
 
         #zentral-apps-vertical-bar .zen-app-tile[data-active="true"] {
           background-color: var(--toolbarbutton-active-background, color-mix(in srgb, currentColor 15%, transparent)) !important;
-          box-shadow: 0 0 0 2px var(--zen-primary-color, currentColor) !important;
         }
 
         #zentral-apps-vertical-bar .zen-app-add-btn {
-          border: 1px dashed var(--zen-colors-border, color-mix(in srgb, currentColor 30%, transparent)) !important;
+          background-color: transparent !important;
+          border: 1px dashed color-mix(in srgb, currentColor 30%, transparent) !important;
           border-radius: var(--toolbarbutton-border-radius, 8px) !important;
-          opacity: 0.75 !important;
+          opacity: 0.7 !important;
           transform: none !important;
           pointer-events: auto !important;
           visibility: visible !important;
