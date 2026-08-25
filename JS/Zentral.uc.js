@@ -3274,19 +3274,33 @@
             tab.setAttribute("data-zentral-group-id", group.id);
             tab.setAttribute("data-zentral-group-label", label);
             if (color) tab.setAttribute("data-zentral-group-color", color);
+            else tab.removeAttribute("data-zentral-group-color");
+            
             tab.setAttribute("data-zentral-group-collapsed", isCollapsed ? "true" : "false");
+            
             if (wsId) tab.setAttribute("data-zentral-group-ws", wsId);
+            else tab.removeAttribute("data-zentral-group-ws");
+            
             if (parentId) tab.setAttribute("data-zentral-parent-id", parentId);
+            else tab.removeAttribute("data-zentral-parent-id");
 
             // Persist into Firefox SessionStore so metadata survives browser restarts & cache clears
-            if (ss && typeof ss.setCustomTabValue === "function") {
+            if (ss) {
               try {
-                ss.setCustomTabValue(tab, "zentral-group-id", group.id);
-                ss.setCustomTabValue(tab, "zentral-group-label", label);
-                if (color) ss.setCustomTabValue(tab, "zentral-group-color", color);
-                if (parentId) ss.setCustomTabValue(tab, "zentral-parent-id", parentId);
-                ss.setCustomTabValue(tab, "zentral-group-collapsed", isCollapsed ? "true" : "false");
-                if (wsId) ss.setCustomTabValue(tab, "zentral-group-ws", wsId);
+                if (typeof ss.setCustomTabValue === "function") {
+                  ss.setCustomTabValue(tab, "zentral-group-id", group.id);
+                  ss.setCustomTabValue(tab, "zentral-group-label", label);
+                  ss.setCustomTabValue(tab, "zentral-group-collapsed", isCollapsed ? "true" : "false");
+                  
+                  if (color) ss.setCustomTabValue(tab, "zentral-group-color", color);
+                  else if (typeof ss.deleteCustomTabValue === "function") ss.deleteCustomTabValue(tab, "zentral-group-color");
+                  
+                  if (parentId) ss.setCustomTabValue(tab, "zentral-parent-id", parentId);
+                  else if (typeof ss.deleteCustomTabValue === "function") ss.deleteCustomTabValue(tab, "zentral-parent-id");
+                  
+                  if (wsId) ss.setCustomTabValue(tab, "zentral-group-ws", wsId);
+                  else if (typeof ss.deleteCustomTabValue === "function") ss.deleteCustomTabValue(tab, "zentral-group-ws");
+                }
               } catch (_) {}
             }
           });
@@ -3581,20 +3595,25 @@
               parentEl = rootTabContainer;
             }
 
-            let targetNode = null;
-            if (typeof info.index === "number" && info.index >= 0 && info.index < parentEl.children.length) {
-              targetNode = parentEl.children[info.index];
-            } else if (!group.isConnected && info.tabs.length > 0 && info.tabs[0].parentNode === parentEl) {
-              targetNode = info.tabs[0];
-            }
+            // Only move the group if it's completely disconnected or in the wrong parent.
+            // This preserves native session restore absolute positioning for root groups.
+            const currentParent = group.parentNode;
+            const isInCorrectParent = currentParent === parentEl || currentParent === parentEl.parentNode;
+            
+            if (!group.isConnected || !isInCorrectParent) {
+              let targetNode = null;
+              
+              if (info.tabs.length > 0 && info.tabs[0].parentNode === parentEl) {
+                targetNode = info.tabs[0];
+              } else if (typeof info.index === "number" && info.index >= 0 && info.index < parentEl.children.length) {
+                targetNode = parentEl.children[info.index];
+              }
 
-            // Enforce position to fix nesting/ordering issues after restarts
-            if (targetNode && targetNode !== group) {
-              parentEl.insertBefore(group, targetNode);
-            } else if (group.parentNode !== parentEl && group.parentNode !== parentEl.parentNode) {
-              parentEl.appendChild(group);
-            } else if (!group.isConnected) {
-              parentEl.appendChild(group);
+              if (targetNode && targetNode !== group) {
+                parentEl.insertBefore(group, targetNode);
+              } else {
+                parentEl.appendChild(group);
+              }
             }
 
             // Move member tabs into this group container
