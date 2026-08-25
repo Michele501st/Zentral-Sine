@@ -5473,6 +5473,8 @@
     /**
      * Prevents tabs from being selected and loaded while being dragged or reordered,
      * ensuring sleeping/unloaded tabs remain dormant and only activate on explicit click.
+     * When dragging an inactive tab to create a split view with another inactive tab,
+     * keeps the split view dormant without automatically switching away from the active tab.
      */
     initTabDragSelectionGuard() {
       const tabContainer = gBrowser?.tabContainer || document.getElementById("tabbrowser-tabs");
@@ -5480,11 +5482,30 @@
       this.#tabDragGuardInitialized = true;
 
       let isDraggingTab = false;
-      let prevActiveTab = null;
+      let isDropSettling = false;
+      let activeTabAtDragStart = null;
+      let wasActiveTabInvolvedInDrag = false;
       let dragCandidateTab = null;
+      let dropTargetTab = null;
       let startX = 0;
       let startY = 0;
       let pressTimer = null;
+      let dropSettleTimer = null;
+
+      const shouldBlockSelection = (val) => {
+        if (!val) return false;
+        // If not dragging and not in the brief drop settling window, allow normal selection
+        if (!isDraggingTab && !isDropSettling) return false;
+
+        // If the active tab was dragged or was the target of the split, allow selection
+        if (wasActiveTabInvolvedInDrag) return false;
+
+        // If keeping the active tab from drag start, allow it
+        if (activeTabAtDragStart && val === activeTabAtDragStart) return false;
+
+        // An inactive drag operation is attempting to select an inactive tab or new split view
+        return true;
+      };
 
       // 1. Intercept gBrowser.selectedTab setter
       let origSelectedTabDesc = null;
@@ -5504,11 +5525,8 @@
         Object.defineProperty(targetGbrowserObj, "selectedTab", {
           get: origSelectedTabDesc.get,
           set: function(val) {
-            if (isDraggingTab) {
-              const isSplitTab = val && (val.hasAttribute?.("is-zen-split") || val.hasAttribute?.("zen-split-view") || val.closest?.("tab-group[split-view-group], tab-group[zen-split-view]"));
-              if (val === dragCandidateTab && !isSplitTab) {
-                return;
-              }
+            if (shouldBlockSelection(val)) {
+              return;
             }
             origSelectedTabDesc.set.call(this, val);
           },
@@ -5535,11 +5553,8 @@
         Object.defineProperty(targetTabContainerObj, "selectedItem", {
           get: origSelectedItemDesc.get,
           set: function(val) {
-            if (isDraggingTab) {
-              const isSplitTab = val && (val.hasAttribute?.("is-zen-split") || val.hasAttribute?.("zen-split-view") || val.closest?.("tab-group[split-view-group], tab-group[zen-split-view]"));
-              if (val === dragCandidateTab && !isSplitTab) {
-                return;
-              }
+            if (shouldBlockSelection(val)) {
+              return;
             }
             origSelectedItemDesc.set.call(this, val);
           },
@@ -5558,14 +5573,18 @@
         if (!tab) return;
         if (e.target.closest(".tab-close-button, .tab-icon-sound, .tab-audio-button, .tab-pin-icon")) return;
 
-        if (tab !== gBrowser.selectedTab) {
-          prevActiveTab = gBrowser.selectedTab;
-          dragCandidateTab = tab;
-          isDraggingTab = false;
-          startX = e.clientX;
-          startY = e.clientY;
+        activeTabAtDragStart = gBrowser.selectedTab;
+        dragCandidateTab = tab;
+        dropTargetTab = null;
+        wasActiveTabInvolvedInDrag = (tab === activeTabAtDragStart);
+        isDraggingTab = false;
+        isDropSettling = false;
+        if (dropSettleTimer) { clearTimeout(dropSettleTimer); dropSettleTimer = null; }
+        startX = e.clientX;
+        startY = e.clientY;
 
-          // Block mousedown propagation so Firefox doesn't synchronously select it
+        if (tab !== activeTabAtDragStart) {
+          // Block mousedown propagation so Firefox doesn't synchronously select dormant tab on press
           e.stopImmediatePropagation();
 
           if (pressTimer) clearTimeout(pressTimer);
@@ -5578,11 +5597,26 @@
       };
 
       const onDragStart = (e) => {
-        if (pressTimer) clearTimeout(pressTimer);
+        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
         const tab = (e.target && typeof e.target.closest === "function" ? e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab") : null) || dragCandidateTab;
         if (tab) {
-          isDraggingTab = true; // Lock selection
           dragCandidateTab = tab;
+          activeTabAtDragStart = activeTabAtDragStart || gBrowser.selectedTab;
+          wasActiveTabInvolvedInDrag = (tab === activeTabAtDragStart);
+          isDraggingTab = true;
+        }
+      };
+
+      const onDragOver = (e) => {
+        if (!isDraggingTab) return;
+        if (e.target && typeof e.target.closest === "function") {
+          const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab");
+          if (tab && tab !== dragCandidateTab) {
+            dropTargetTab = tab;
+            if (tab === activeTabAtDragStart) {
+              wasActiveTabInvolvedInDrag = true;
+            }
+          }
         }
       };
 
@@ -5594,11 +5628,9 @@
         if (e.button !== 0) return;
         if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
 
-        if (dragCandidateTab) {
+        if (dragCandidateTab && !isDraggingTab && !isDropSettling) {
           const moveDist = Math.hypot(e.clientX - startX, e.clientY - startY);
           if (moveDist < 6 && dragCandidateTab.isConnected) {
-            // Un-intercept briefly to allow the intended click selection
-            isDraggingTab = false;
             try {
               if (origSelectedTabDesc) {
                 origSelectedTabDesc.set.call(gBrowser, dragCandidateTab);
@@ -5608,34 +5640,61 @@
             } catch (_) {}
           }
         }
-        if (!isDraggingTab) {
+        if (!isDraggingTab && !isDropSettling) {
           dragCandidateTab = null;
-          prevActiveTab = null;
+          dropTargetTab = null;
+          activeTabAtDragStart = null;
+          wasActiveTabInvolvedInDrag = false;
         }
       };
 
       const onDragEnd = (e) => {
         if (pressTimer) clearTimeout(pressTimer);
         isDraggingTab = false;
-        dragCandidateTab = null;
-        prevActiveTab = null;
+        if (!isDropSettling) {
+          dragCandidateTab = null;
+          dropTargetTab = null;
+          activeTabAtDragStart = null;
+          wasActiveTabInvolvedInDrag = false;
+        }
       };
 
       const onDrop = (e) => {
-        if (pressTimer) clearTimeout(pressTimer);
+        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+        if (e.target && typeof e.target.closest === "function") {
+          const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab");
+          if (tab) {
+            dropTargetTab = tab;
+            if (tab === activeTabAtDragStart) {
+              wasActiveTabInvolvedInDrag = true;
+            }
+          }
+        }
+
         isDraggingTab = false;
-        dragCandidateTab = null;
-        prevActiveTab = null;
+        isDropSettling = true;
+
+        if (dropSettleTimer) clearTimeout(dropSettleTimer);
+        dropSettleTimer = setTimeout(() => {
+          isDropSettling = false;
+          dragCandidateTab = null;
+          dropTargetTab = null;
+          activeTabAtDragStart = null;
+          wasActiveTabInvolvedInDrag = false;
+          dropSettleTimer = null;
+        }, 150);
       };
 
       tabContainer.addEventListener("mousedown", onMouseDown, { capture: true });
       window.addEventListener("mouseup", onMouseUp, { capture: true });
       tabContainer.addEventListener("dragstart", onDragStart, { capture: true });
+      tabContainer.addEventListener("dragover", onDragOver, { capture: true });
       tabContainer.addEventListener("dragend", onDragEnd, { capture: true });
       tabContainer.addEventListener("drop", onDrop, { capture: true });
 
       this.#dragGuardCleanup = () => {
         if (pressTimer) clearTimeout(pressTimer);
+        if (dropSettleTimer) clearTimeout(dropSettleTimer);
         if (origSelectedTabDesc && targetGbrowserObj) {
           Object.defineProperty(targetGbrowserObj, "selectedTab", origSelectedTabDesc);
         }
@@ -5645,6 +5704,7 @@
         tabContainer.removeEventListener("mousedown", onMouseDown, { capture: true });
         window.removeEventListener("mouseup", onMouseUp, { capture: true });
         tabContainer.removeEventListener("dragstart", onDragStart, { capture: true });
+        tabContainer.removeEventListener("dragover", onDragOver, { capture: true });
         tabContainer.removeEventListener("dragend", onDragEnd, { capture: true });
         tabContainer.removeEventListener("drop", onDrop, { capture: true });
         this.#tabDragGuardInitialized = false;
