@@ -5526,6 +5526,19 @@
           get: origSelectedTabDesc.get,
           set: function(val) {
             if (shouldBlockSelection(val)) {
+              if (activeTabAtDragStart && activeTabAtDragStart.isConnected) {
+                try {
+                  if (targetTabContainerObj && targetTabContainerObj.selectedItem !== activeTabAtDragStart) {
+                    origSelectedItemDesc?.set?.call(targetTabContainerObj, activeTabAtDragStart);
+                  }
+                  if (gBrowser.tabpanels && activeTabAtDragStart.linkedPanel && gBrowser.tabpanels.selectedPanel !== activeTabAtDragStart.linkedPanel) {
+                    gBrowser.tabpanels.selectedPanel = activeTabAtDragStart.linkedPanel;
+                  }
+                  if (typeof gBrowser.updateCurrentBrowser === "function") {
+                    gBrowser.updateCurrentBrowser(true);
+                  }
+                } catch (_) {}
+              }
               return;
             }
             origSelectedTabDesc.set.call(this, val);
@@ -5554,6 +5567,16 @@
           get: origSelectedItemDesc.get,
           set: function(val) {
             if (shouldBlockSelection(val)) {
+              if (activeTabAtDragStart && activeTabAtDragStart.isConnected) {
+                try {
+                  if (gBrowser.tabpanels && activeTabAtDragStart.linkedPanel && gBrowser.tabpanels.selectedPanel !== activeTabAtDragStart.linkedPanel) {
+                    gBrowser.tabpanels.selectedPanel = activeTabAtDragStart.linkedPanel;
+                  }
+                  if (typeof gBrowser.updateCurrentBrowser === "function") {
+                    gBrowser.updateCurrentBrowser(true);
+                  }
+                } catch (_) {}
+              }
               return;
             }
             origSelectedItemDesc.set.call(this, val);
@@ -5674,8 +5697,51 @@
         isDraggingTab = false;
         isDropSettling = true;
 
+        const tabToRestore = (!wasActiveTabInvolvedInDrag && activeTabAtDragStart && activeTabAtDragStart.isConnected) ? activeTabAtDragStart : null;
+
+        if (tabToRestore) {
+          const restoreFn = () => {
+            if (!tabToRestore.isConnected) return;
+            try {
+              if (origSelectedTabDesc) {
+                origSelectedTabDesc.set.call(gBrowser, tabToRestore);
+              } else {
+                gBrowser.selectedTab = tabToRestore;
+              }
+              if (origSelectedItemDesc && targetTabContainerObj) {
+                origSelectedItemDesc.set.call(targetTabContainerObj, tabToRestore);
+              }
+              if (gBrowser.tabpanels && tabToRestore.linkedPanel) {
+                gBrowser.tabpanels.selectedPanel = tabToRestore.linkedPanel;
+              }
+              if (typeof gBrowser.updateCurrentBrowser === "function") {
+                gBrowser.updateCurrentBrowser(true);
+              }
+            } catch (err) {
+              console.error("[ZentralTabGroups] Error restoring active tab:", err);
+            }
+          };
+
+          window.requestAnimationFrame(restoreFn);
+          setTimeout(restoreFn, 20);
+          setTimeout(restoreFn, 80);
+        }
+
         if (dropSettleTimer) clearTimeout(dropSettleTimer);
         dropSettleTimer = setTimeout(() => {
+          if (tabToRestore && tabToRestore.isConnected) {
+            try {
+              if (gBrowser.selectedTab !== tabToRestore) {
+                origSelectedTabDesc?.set?.call(gBrowser, tabToRestore);
+              }
+              if (gBrowser.tabpanels && tabToRestore.linkedPanel && gBrowser.tabpanels.selectedPanel !== tabToRestore.linkedPanel) {
+                gBrowser.tabpanels.selectedPanel = tabToRestore.linkedPanel;
+              }
+              if (typeof gBrowser.updateCurrentBrowser === "function") {
+                gBrowser.updateCurrentBrowser(true);
+              }
+            } catch (_) {}
+          }
           isDropSettling = false;
           dragCandidateTab = null;
           dropTargetTab = null;
