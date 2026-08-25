@@ -7167,16 +7167,37 @@
    * Ensures Zentral initializes safely after browser delayed startup completes.
    */
   try {
+    const dumpSplitApi = () => {
+      try {
+        if (window.ZentralLogger) {
+          const wApis = Object.keys(window).filter(k => k.toLowerCase().includes("split"));
+          window.ZentralLogger.log("ZenAPI", "Found window split properties:", wApis);
+          if (window.gBrowser) {
+            let bApis = [];
+            for (let k in window.gBrowser) {
+              if (k.toLowerCase().includes("split")) bApis.push(k);
+            }
+            window.ZentralLogger.log("ZenAPI", "Found gBrowser split properties:", bApis);
+          }
+        }
+      } catch(e) {}
+    };
+
     if (typeof gBrowserInit !== "undefined" && gBrowserInit.delayedStartupFinished) {
+      dumpSplitApi();
       window.Zentral.Init();
     } else if (document.readyState === "complete") {
+      dumpSplitApi();
       window.Zentral.Init();
     } else {
       let booted = false;
       const safeBoot = () => {
         if (booted) return;
         booted = true;
-        try { window.Zentral.Init(); } catch (err) { console.error("[Zentral] Boot error:", err); }
+        try { 
+          dumpSplitApi();
+          window.Zentral.Init(); 
+        } catch (err) { console.error("[Zentral] Boot error:", err); }
       };
 
       if (typeof Services !== "undefined" && Services.obs) {
