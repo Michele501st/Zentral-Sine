@@ -5479,10 +5479,26 @@
       if (!tabContainer || this.#tabDragGuardInitialized) return;
       this.#tabDragGuardInitialized = true;
 
+      let isGuardingTab = false;
       let isDraggingTab = false;
       let dragCandidateTab = null;
       let startX = 0;
       let startY = 0;
+
+      const shouldBlockSelection = (val) => {
+        if (!val) return false;
+        if (isGuardingTab && val === dragCandidateTab) {
+          return true;
+        }
+        if (isDraggingTab) {
+          const isSplitTab = val && (val.hasAttribute?.("is-zen-split") || val.hasAttribute?.("zen-split-view") || val.closest?.("tab-group[split-view-group], tab-group[zen-split-view]"));
+          // Allow split view creation selections through; block only plain dormant tab reorder wakeups
+          if (val === dragCandidateTab && !isSplitTab) {
+            return true;
+          }
+        }
+        return false;
+      };
 
       // 1. Intercept gBrowser.selectedTab setter
       let origSelectedTabDesc = null;
@@ -5502,12 +5518,8 @@
         Object.defineProperty(targetGbrowserObj, "selectedTab", {
           get: origSelectedTabDesc.get,
           set: function(val) {
-            if (isDraggingTab) {
-              const isSplitTab = val && (val.hasAttribute?.("is-zen-split") || val.hasAttribute?.("zen-split-view") || val.closest?.("tab-group[split-view-group], tab-group[zen-split-view]"));
-              // Allow split view creation selections through; block only plain dormant tab reorder wakeups
-              if (val === dragCandidateTab && !isSplitTab) {
-                return;
-              }
+            if (shouldBlockSelection(val)) {
+              return;
             }
             origSelectedTabDesc.set.call(this, val);
           },
@@ -5534,12 +5546,8 @@
         Object.defineProperty(targetTabContainerObj, "selectedItem", {
           get: origSelectedItemDesc.get,
           set: function(val) {
-            if (isDraggingTab) {
-              const isSplitTab = val && (val.hasAttribute?.("is-zen-split") || val.hasAttribute?.("zen-split-view") || val.closest?.("tab-group[split-view-group], tab-group[zen-split-view]"));
-              // Allow split view creation selections through; block only plain dormant tab reorder wakeups
-              if (val === dragCandidateTab && !isSplitTab) {
-                return;
-              }
+            if (shouldBlockSelection(val)) {
+              return;
             }
             origSelectedItemDesc.set.call(this, val);
           },
@@ -5557,10 +5565,13 @@
         if (!tab) return;
         if (e.target.closest(".tab-close-button, .tab-icon-sound, .tab-audio-button, .tab-pin-icon")) return;
 
-        dragCandidateTab = tab;
-        isDraggingTab = false;
-        startX = e.clientX;
-        startY = e.clientY;
+        if (tab !== gBrowser.selectedTab) {
+          dragCandidateTab = tab;
+          isGuardingTab = true;
+          isDraggingTab = false;
+          startX = e.clientX;
+          startY = e.clientY;
+        }
       };
 
       const onDragStart = (e) => {
@@ -5568,6 +5579,7 @@
         if (tab) {
           dragCandidateTab = tab;
           isDraggingTab = true;
+          isGuardingTab = false;
         }
       };
 
@@ -5578,6 +5590,7 @@
         if (dragCandidateTab && !isDraggingTab) {
           const moveDist = Math.hypot(e.clientX - startX, e.clientY - startY);
           if (moveDist < 6 && dragCandidateTab.isConnected && dragCandidateTab !== gBrowser.selectedTab) {
+            isGuardingTab = false;
             try {
               if (origSelectedTabDesc) {
                 origSelectedTabDesc.set.call(gBrowser, dragCandidateTab);
@@ -5587,16 +5600,19 @@
             } catch (_) {}
           }
         }
+        isGuardingTab = false;
         isDraggingTab = false;
         dragCandidateTab = null;
       };
 
       const onDragEnd = () => {
+        isGuardingTab = false;
         isDraggingTab = false;
         dragCandidateTab = null;
       };
 
       const onDrop = () => {
+        isGuardingTab = false;
         isDraggingTab = false;
         dragCandidateTab = null;
       };
