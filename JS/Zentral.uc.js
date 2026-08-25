@@ -5616,36 +5616,61 @@
       };
 
       const onDrop = () => {
-        if (isDraggingTab && dragCandidateTab && activeTabAtDragStart && gBrowser.selectedTab !== activeTabAtDragStart) {
-          const currentSelected = gBrowser.selectedTab;
-          const isSplitTab = currentSelected.hasAttribute("is-zen-split") || currentSelected.hasAttribute("zen-split-view");
-          
-          if (isSplitTab) {
-            // A dormant tab was dragged to create a split view, and Zen initialized/selected it.
-            // Wait briefly for layout settlement, then restore the original active tab and unload the split tabs.
-            setTimeout(() => {
-              if (activeTabAtDragStart.isConnected) {
-                if (origSelectedTabDesc) {
-                  origSelectedTabDesc.set.call(gBrowser, activeTabAtDragStart);
-                } else {
-                  gBrowser.selectedTab = activeTabAtDragStart;
-                }
-                
-                try {
-                  if (typeof gBrowser.discardBrowser === "function") {
-                    if (dragCandidateTab.isConnected) gBrowser.discardBrowser(dragCandidateTab);
-                    if (currentSelected.isConnected && currentSelected !== dragCandidateTab) gBrowser.discardBrowser(currentSelected);
-                  }
-                } catch (err) {}
-              }
-            }, 100);
-          }
-        }
+        const savedActiveTab = activeTabAtDragStart;
+        const savedDraggedTab = dragCandidateTab;
+        const wasDragging = isDraggingTab;
 
         isGuardingTab = false;
         isDraggingTab = false;
         dragCandidateTab = null;
         activeTabAtDragStart = null;
+
+        if (wasDragging && savedDraggedTab && savedActiveTab && savedActiveTab.isConnected) {
+          // Zen handles split view creation asynchronously during drop.
+          // Wait briefly for Zen to finish DOM construction, then revert to active tab and discard dormant split tabs.
+          setTimeout(() => {
+            if (!savedActiveTab.isConnected) return;
+            const splitGroup = savedDraggedTab.closest?.("tab-group[split-view-group], tab-group[zen-split-view]") || 
+                               (savedDraggedTab.hasAttribute?.("is-zen-split") || savedDraggedTab.hasAttribute?.("zen-split-view") ? savedDraggedTab.closest?.("tab-group") : null);
+            
+            const isSplit = !!splitGroup || savedDraggedTab.hasAttribute?.("is-zen-split") || savedDraggedTab.hasAttribute?.("zen-split-view") || gBrowser.selectedTab !== savedActiveTab;
+            
+            if (isSplit && gBrowser.selectedTab !== savedActiveTab) {
+              try {
+                if (origSelectedTabDesc) {
+                  origSelectedTabDesc.set.call(gBrowser, savedActiveTab);
+                } else {
+                  gBrowser.selectedTab = savedActiveTab;
+                }
+                if (origSelectedItemDesc && targetTabContainerObj) {
+                  origSelectedItemDesc.set.call(targetTabContainerObj, savedActiveTab);
+                }
+                if (gBrowser.tabpanels && savedActiveTab.linkedPanel) {
+                  gBrowser.tabpanels.selectedPanel = savedActiveTab.linkedPanel;
+                }
+                if (typeof gBrowser.updateCurrentBrowser === "function") {
+                  gBrowser.updateCurrentBrowser(true);
+                }
+              } catch (_) {}
+
+              // Once the active tab is securely restored in the viewport, unload the dormant split tabs
+              setTimeout(() => {
+                const tabsToDiscard = splitGroup ? Array.from(splitGroup.querySelectorAll("tab, .tabbrowser-tab")) : [savedDraggedTab];
+                tabsToDiscard.forEach(t => {
+                  if (t && t.isConnected && t !== savedActiveTab && !t.selected) {
+                    try {
+                      if (typeof gBrowser.discardBrowser === "function") {
+                        gBrowser.discardBrowser(t);
+                      } else if (typeof gBrowser.unloadTab === "function") {
+                        gBrowser.unloadTab(t);
+                      }
+                    } catch (_) {}
+                  }
+                });
+              }, 80);
+            }
+          }, 80);
+        }
       };
 
       tabContainer.addEventListener("mousedown", onMouseDown, { capture: true });
