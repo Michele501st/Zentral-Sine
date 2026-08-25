@@ -5471,10 +5471,8 @@
     }
 
     /**
-     * Prevents tabs from being selected and loaded while being dragged or reordered,
+     * Prevents dormant tabs from being selected and loaded while being dragged or reordered,
      * ensuring sleeping/unloaded tabs remain dormant and only activate on explicit click.
-     * When dragging an inactive tab to create a split view with another inactive tab,
-     * keeps the split view dormant without automatically switching away from the active tab.
      */
     initTabDragSelectionGuard() {
       const tabContainer = gBrowser?.tabContainer || document.getElementById("tabbrowser-tabs");
@@ -5482,30 +5480,9 @@
       this.#tabDragGuardInitialized = true;
 
       let isDraggingTab = false;
-      let isDropSettling = false;
-      let activeTabAtDragStart = null;
-      let wasActiveTabInvolvedInDrag = false;
       let dragCandidateTab = null;
-      let dropTargetTab = null;
       let startX = 0;
       let startY = 0;
-      let pressTimer = null;
-      let dropSettleTimer = null;
-
-      const shouldBlockSelection = (val) => {
-        if (!val) return false;
-        // If not dragging and not in the brief drop settling window, allow normal selection
-        if (!isDraggingTab && !isDropSettling) return false;
-
-        // If the active tab was dragged or was the target of the split, allow selection
-        if (wasActiveTabInvolvedInDrag) return false;
-
-        // If keeping the active tab from drag start, allow it
-        if (activeTabAtDragStart && val === activeTabAtDragStart) return false;
-
-        // An inactive drag operation is attempting to select an inactive tab or new split view
-        return true;
-      };
 
       // 1. Intercept gBrowser.selectedTab setter
       let origSelectedTabDesc = null;
@@ -5525,21 +5502,12 @@
         Object.defineProperty(targetGbrowserObj, "selectedTab", {
           get: origSelectedTabDesc.get,
           set: function(val) {
-            if (shouldBlockSelection(val)) {
-              if (activeTabAtDragStart && activeTabAtDragStart.isConnected) {
-                try {
-                  if (targetTabContainerObj && targetTabContainerObj.selectedItem !== activeTabAtDragStart) {
-                    origSelectedItemDesc?.set?.call(targetTabContainerObj, activeTabAtDragStart);
-                  }
-                  if (gBrowser.tabpanels && activeTabAtDragStart.linkedPanel && gBrowser.tabpanels.selectedPanel !== activeTabAtDragStart.linkedPanel) {
-                    gBrowser.tabpanels.selectedPanel = activeTabAtDragStart.linkedPanel;
-                  }
-                  if (typeof gBrowser.updateCurrentBrowser === "function") {
-                    gBrowser.updateCurrentBrowser(true);
-                  }
-                } catch (_) {}
+            if (isDraggingTab) {
+              const isSplitTab = val && (val.hasAttribute?.("is-zen-split") || val.hasAttribute?.("zen-split-view") || val.closest?.("tab-group[split-view-group], tab-group[zen-split-view]"));
+              // Allow split view creation selections through; block only plain dormant tab reorder wakeups
+              if (val === dragCandidateTab && !isSplitTab) {
+                return;
               }
-              return;
             }
             origSelectedTabDesc.set.call(this, val);
           },
@@ -5566,18 +5534,12 @@
         Object.defineProperty(targetTabContainerObj, "selectedItem", {
           get: origSelectedItemDesc.get,
           set: function(val) {
-            if (shouldBlockSelection(val)) {
-              if (activeTabAtDragStart && activeTabAtDragStart.isConnected) {
-                try {
-                  if (gBrowser.tabpanels && activeTabAtDragStart.linkedPanel && gBrowser.tabpanels.selectedPanel !== activeTabAtDragStart.linkedPanel) {
-                    gBrowser.tabpanels.selectedPanel = activeTabAtDragStart.linkedPanel;
-                  }
-                  if (typeof gBrowser.updateCurrentBrowser === "function") {
-                    gBrowser.updateCurrentBrowser(true);
-                  }
-                } catch (_) {}
+            if (isDraggingTab) {
+              const isSplitTab = val && (val.hasAttribute?.("is-zen-split") || val.hasAttribute?.("zen-split-view") || val.closest?.("tab-group[split-view-group], tab-group[zen-split-view]"));
+              // Allow split view creation selections through; block only plain dormant tab reorder wakeups
+              if (val === dragCandidateTab && !isSplitTab) {
+                return;
               }
-              return;
             }
             origSelectedItemDesc.set.call(this, val);
           },
@@ -5589,71 +5551,33 @@
       // 3. Setup drag detection logic
       const onMouseDown = (e) => {
         if (e.button !== 0) return;
-        // If Shift, Ctrl, Command, or Alt is held, allow native Firefox multi-tab selection
         if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
         if (!e.target || typeof e.target.closest !== "function") return;
         const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab");
         if (!tab) return;
         if (e.target.closest(".tab-close-button, .tab-icon-sound, .tab-audio-button, .tab-pin-icon")) return;
 
-        activeTabAtDragStart = gBrowser.selectedTab;
         dragCandidateTab = tab;
-        dropTargetTab = null;
-        wasActiveTabInvolvedInDrag = (tab === activeTabAtDragStart);
         isDraggingTab = false;
-        isDropSettling = false;
-        if (dropSettleTimer) { clearTimeout(dropSettleTimer); dropSettleTimer = null; }
         startX = e.clientX;
         startY = e.clientY;
-
-        if (tab !== activeTabAtDragStart) {
-          // Block mousedown propagation so Firefox doesn't synchronously select dormant tab on press
-          e.stopImmediatePropagation();
-
-          if (pressTimer) clearTimeout(pressTimer);
-          pressTimer = setTimeout(() => {
-            if (dragCandidateTab) {
-              isDraggingTab = true; // Lock selection before dragstart
-            }
-          }, 150);
-        }
       };
 
       const onDragStart = (e) => {
-        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
         const tab = (e.target && typeof e.target.closest === "function" ? e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab") : null) || dragCandidateTab;
         if (tab) {
           dragCandidateTab = tab;
-          activeTabAtDragStart = activeTabAtDragStart || gBrowser.selectedTab;
-          wasActiveTabInvolvedInDrag = (tab === activeTabAtDragStart);
           isDraggingTab = true;
         }
       };
 
-      const onDragOver = (e) => {
-        if (!isDraggingTab) return;
-        if (e.target && typeof e.target.closest === "function") {
-          const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab");
-          if (tab && tab !== dragCandidateTab) {
-            dropTargetTab = tab;
-            if (tab === activeTabAtDragStart) {
-              wasActiveTabInvolvedInDrag = true;
-            }
-          }
-        }
-      };
-
       const onMouseUp = (e) => {
-        if (pressTimer) {
-          clearTimeout(pressTimer);
-          pressTimer = null;
-        }
         if (e.button !== 0) return;
         if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
 
-        if (dragCandidateTab && !isDraggingTab && !isDropSettling) {
+        if (dragCandidateTab && !isDraggingTab) {
           const moveDist = Math.hypot(e.clientX - startX, e.clientY - startY);
-          if (moveDist < 6 && dragCandidateTab.isConnected) {
+          if (moveDist < 6 && dragCandidateTab.isConnected && dragCandidateTab !== gBrowser.selectedTab) {
             try {
               if (origSelectedTabDesc) {
                 origSelectedTabDesc.set.call(gBrowser, dragCandidateTab);
@@ -5663,104 +5587,27 @@
             } catch (_) {}
           }
         }
-        if (!isDraggingTab && !isDropSettling) {
-          dragCandidateTab = null;
-          dropTargetTab = null;
-          activeTabAtDragStart = null;
-          wasActiveTabInvolvedInDrag = false;
-        }
+        isDraggingTab = false;
+        dragCandidateTab = null;
       };
 
-      const onDragEnd = (e) => {
-        if (pressTimer) clearTimeout(pressTimer);
+      const onDragEnd = () => {
         isDraggingTab = false;
-        if (!isDropSettling) {
-          dragCandidateTab = null;
-          dropTargetTab = null;
-          activeTabAtDragStart = null;
-          wasActiveTabInvolvedInDrag = false;
-        }
+        dragCandidateTab = null;
       };
 
-      const onDrop = (e) => {
-        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-        if (e.target && typeof e.target.closest === "function") {
-          const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab");
-          if (tab) {
-            dropTargetTab = tab;
-            if (tab === activeTabAtDragStart) {
-              wasActiveTabInvolvedInDrag = true;
-            }
-          }
-        }
-
+      const onDrop = () => {
         isDraggingTab = false;
-        isDropSettling = true;
-
-        const tabToRestore = (!wasActiveTabInvolvedInDrag && activeTabAtDragStart && activeTabAtDragStart.isConnected) ? activeTabAtDragStart : null;
-
-        if (tabToRestore) {
-          const restoreFn = () => {
-            if (!tabToRestore.isConnected) return;
-            try {
-              if (origSelectedTabDesc) {
-                origSelectedTabDesc.set.call(gBrowser, tabToRestore);
-              } else {
-                gBrowser.selectedTab = tabToRestore;
-              }
-              if (origSelectedItemDesc && targetTabContainerObj) {
-                origSelectedItemDesc.set.call(targetTabContainerObj, tabToRestore);
-              }
-              if (gBrowser.tabpanels && tabToRestore.linkedPanel) {
-                gBrowser.tabpanels.selectedPanel = tabToRestore.linkedPanel;
-              }
-              if (typeof gBrowser.updateCurrentBrowser === "function") {
-                gBrowser.updateCurrentBrowser(true);
-              }
-            } catch (err) {
-              console.error("[ZentralTabGroups] Error restoring active tab:", err);
-            }
-          };
-
-          window.requestAnimationFrame(restoreFn);
-          setTimeout(restoreFn, 20);
-          setTimeout(restoreFn, 80);
-        }
-
-        if (dropSettleTimer) clearTimeout(dropSettleTimer);
-        dropSettleTimer = setTimeout(() => {
-          if (tabToRestore && tabToRestore.isConnected) {
-            try {
-              if (gBrowser.selectedTab !== tabToRestore) {
-                origSelectedTabDesc?.set?.call(gBrowser, tabToRestore);
-              }
-              if (gBrowser.tabpanels && tabToRestore.linkedPanel && gBrowser.tabpanels.selectedPanel !== tabToRestore.linkedPanel) {
-                gBrowser.tabpanels.selectedPanel = tabToRestore.linkedPanel;
-              }
-              if (typeof gBrowser.updateCurrentBrowser === "function") {
-                gBrowser.updateCurrentBrowser(true);
-              }
-            } catch (_) {}
-          }
-          isDropSettling = false;
-          dragCandidateTab = null;
-          dropTargetTab = null;
-          activeTabAtDragStart = null;
-          wasActiveTabInvolvedInDrag = false;
-          dropSettleTimer = null;
-        }, 150);
+        dragCandidateTab = null;
       };
 
       tabContainer.addEventListener("mousedown", onMouseDown, { capture: true });
       window.addEventListener("mouseup", onMouseUp, { capture: true });
       tabContainer.addEventListener("dragstart", onDragStart, { capture: true });
-      tabContainer.addEventListener("dragover", onDragOver, { capture: true });
       tabContainer.addEventListener("dragend", onDragEnd, { capture: true });
       tabContainer.addEventListener("drop", onDrop, { capture: true });
 
       this.#dragGuardCleanup = () => {
-        if (pressTimer) clearTimeout(pressTimer);
-        if (dropSettleTimer) clearTimeout(dropSettleTimer);
         if (origSelectedTabDesc && targetGbrowserObj) {
           Object.defineProperty(targetGbrowserObj, "selectedTab", origSelectedTabDesc);
         }
@@ -5770,7 +5617,6 @@
         tabContainer.removeEventListener("mousedown", onMouseDown, { capture: true });
         window.removeEventListener("mouseup", onMouseUp, { capture: true });
         tabContainer.removeEventListener("dragstart", onDragStart, { capture: true });
-        tabContainer.removeEventListener("dragover", onDragOver, { capture: true });
         tabContainer.removeEventListener("dragend", onDragEnd, { capture: true });
         tabContainer.removeEventListener("drop", onDrop, { capture: true });
         this.#tabDragGuardInitialized = false;
