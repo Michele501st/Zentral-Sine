@@ -3581,12 +3581,20 @@
               parentEl = rootTabContainer;
             }
 
-            if (!group.isConnected) {
-              if (info.tabs.length > 0 && info.tabs[0].parentNode === parentEl) {
-                parentEl.insertBefore(group, info.tabs[0]);
-              } else {
-                parentEl.appendChild(group);
-              }
+            let targetNode = null;
+            if (typeof info.index === "number" && info.index >= 0 && info.index < parentEl.children.length) {
+              targetNode = parentEl.children[info.index];
+            } else if (!group.isConnected && info.tabs.length > 0 && info.tabs[0].parentNode === parentEl) {
+              targetNode = info.tabs[0];
+            }
+
+            // Enforce position to fix nesting/ordering issues after restarts
+            if (targetNode && targetNode !== group) {
+              parentEl.insertBefore(group, targetNode);
+            } else if (group.parentNode !== parentEl && group.parentNode !== parentEl.parentNode) {
+              parentEl.appendChild(group);
+            } else if (!group.isConnected) {
+              parentEl.appendChild(group);
             }
 
             // Move member tabs into this group container
