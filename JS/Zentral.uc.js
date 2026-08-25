@@ -5482,6 +5482,7 @@
       let isGuardingTab = false;
       let isDraggingTab = false;
       let dragCandidateTab = null;
+      let activeTabAtDragStart = null;
       let startX = 0;
       let startY = 0;
 
@@ -5565,7 +5566,8 @@
         if (!tab) return;
         if (e.target.closest(".tab-close-button, .tab-icon-sound, .tab-audio-button, .tab-pin-icon")) return;
 
-        if (tab !== gBrowser.selectedTab) {
+        activeTabAtDragStart = gBrowser.selectedTab;
+        if (tab !== activeTabAtDragStart) {
           dragCandidateTab = tab;
           isGuardingTab = true;
           isDraggingTab = false;
@@ -5603,18 +5605,47 @@
         isGuardingTab = false;
         isDraggingTab = false;
         dragCandidateTab = null;
+        activeTabAtDragStart = null;
       };
 
       const onDragEnd = () => {
         isGuardingTab = false;
         isDraggingTab = false;
         dragCandidateTab = null;
+        activeTabAtDragStart = null;
       };
 
       const onDrop = () => {
+        if (isDraggingTab && dragCandidateTab && activeTabAtDragStart && gBrowser.selectedTab !== activeTabAtDragStart) {
+          const currentSelected = gBrowser.selectedTab;
+          const isSplitTab = currentSelected.hasAttribute("is-zen-split") || currentSelected.hasAttribute("zen-split-view");
+          
+          if (isSplitTab) {
+            // A dormant tab was dragged to create a split view, and Zen initialized/selected it.
+            // Wait briefly for layout settlement, then restore the original active tab and unload the split tabs.
+            setTimeout(() => {
+              if (activeTabAtDragStart.isConnected) {
+                if (origSelectedTabDesc) {
+                  origSelectedTabDesc.set.call(gBrowser, activeTabAtDragStart);
+                } else {
+                  gBrowser.selectedTab = activeTabAtDragStart;
+                }
+                
+                try {
+                  if (typeof gBrowser.discardBrowser === "function") {
+                    if (dragCandidateTab.isConnected) gBrowser.discardBrowser(dragCandidateTab);
+                    if (currentSelected.isConnected && currentSelected !== dragCandidateTab) gBrowser.discardBrowser(currentSelected);
+                  }
+                } catch (err) {}
+              }
+            }, 100);
+          }
+        }
+
         isGuardingTab = false;
         isDraggingTab = false;
         dragCandidateTab = null;
+        activeTabAtDragStart = null;
       };
 
       tabContainer.addEventListener("mousedown", onMouseDown, { capture: true });
