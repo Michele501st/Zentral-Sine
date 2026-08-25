@@ -3424,15 +3424,14 @@
             groupId = ss.getCustomTabValue(tab, "zentral-group-id");
           }
 
-          // Fallback: match by URL from tabMapping
+          // Fallback: match by zenTabId or URL from tabMapping
           if (!groupId && savedTabMapping) {
             const tabUrl = tab.linkedBrowser?.currentURI?.spec;
-            if (tabUrl && tabUrl !== "about:blank") {
-              for (const [gId, tabList] of Object.entries(savedTabMapping)) {
-                if (Array.isArray(tabList) && tabList.some(item => item.url === tabUrl)) {
-                  groupId = gId;
-                  break;
-                }
+            const zenTabId = tab.getAttribute("zen-tab-id") || tab.id;
+            for (const [gId, tabList] of Object.entries(savedTabMapping)) {
+              if (Array.isArray(tabList) && tabList.some(item => (zenTabId && item.zenTabId === zenTabId) || (tabUrl && tabUrl !== "about:blank" && item.url === tabUrl))) {
+                groupId = gId;
+                break;
               }
             }
           }
@@ -3476,22 +3475,29 @@
           }
         });
 
-        // Also add any saved empty groups that had child groups or metadata
+        // Also add missing parent groups needed for nested structures
         if (savedGroupsMap) {
-          Object.entries(savedGroupsMap).forEach(([gId, meta]) => {
-            if (!groupsToReconstruct.has(gId) && meta && meta.id) {
-              groupsToReconstruct.set(gId, {
-                id: meta.id,
-                label: meta.label || "Group",
-                color: meta.color || "",
-                parentId: meta.parentId || null,
-                collapsed: meta.collapsed === true,
-                workspaceId: meta.workspaceId || "",
-                index: meta.index ?? 0,
-                tabs: []
-              });
+          let addedParent = true;
+          while (addedParent) {
+            addedParent = false;
+            const currentGroups = Array.from(groupsToReconstruct.values());
+            for (const g of currentGroups) {
+              if (g.parentId && !groupsToReconstruct.has(g.parentId) && savedGroupsMap[g.parentId]) {
+                const meta = savedGroupsMap[g.parentId];
+                groupsToReconstruct.set(g.parentId, {
+                  id: meta.id,
+                  label: meta.label || "Group",
+                  color: meta.color || "",
+                  parentId: meta.parentId || null,
+                  collapsed: meta.collapsed === true,
+                  workspaceId: meta.workspaceId || "",
+                  index: meta.index ?? 0,
+                  tabs: []
+                });
+                addedParent = true;
+              }
             }
-          });
+          }
         }
 
         if (groupsToReconstruct.size === 0) return;
@@ -5638,6 +5644,7 @@
         }
       });
       Core.setPref(Constants.TabGroups.PREF_COLORS, JSON.stringify(colors));
+      this.scheduleStateSave();
     }
 
     /**
@@ -5673,6 +5680,7 @@
         if (colors[groupId]) {
           delete colors[groupId];
           Core.setPref(Constants.TabGroups.PREF_COLORS, JSON.stringify(colors));
+          this.scheduleStateSave();
         }
       } catch (e) {}
     }
@@ -5750,17 +5758,26 @@
             zenTabId: tab.getAttribute("zen-tab-id") || tab.id || ""
           }));
 
-          // Synchronize SessionStore with live state
-          if (ss && typeof ss.setCustomTabValue === "function") {
-            directTabs.forEach(tab => {
+          // Synchronize DOM attributes and SessionStore with live state
+          directTabs.forEach(tab => {
+            tab.setAttribute("data-zentral-group-id", group.id);
+            tab.setAttribute("data-zentral-group-label", label);
+            if (color) tab.setAttribute("data-zentral-group-color", color);
+            tab.setAttribute("data-zentral-group-collapsed", group.hasAttribute("collapsed") ? "true" : "false");
+            if (wsId) tab.setAttribute("data-zentral-group-ws", wsId);
+            if (parent?.id) tab.setAttribute("data-zentral-parent-id", parent.id);
+
+            if (ss && typeof ss.setCustomTabValue === "function") {
               try {
                 ss.setCustomTabValue(tab, "zentral-group-id", group.id);
                 ss.setCustomTabValue(tab, "zentral-group-label", label);
                 if (color) ss.setCustomTabValue(tab, "zentral-group-color", color);
                 if (parent?.id) ss.setCustomTabValue(tab, "zentral-parent-id", parent.id);
+                ss.setCustomTabValue(tab, "zentral-group-collapsed", group.hasAttribute("collapsed") ? "true" : "false");
+                if (wsId) ss.setCustomTabValue(tab, "zentral-group-ws", wsId);
               } catch (_) {}
-            });
-          }
+            }
+          });
         });
 
         Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify(state));
