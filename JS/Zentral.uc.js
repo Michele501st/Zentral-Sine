@@ -5485,8 +5485,17 @@
       let startX = 0;
       let startY = 0;
 
+      const isSplitViewTab = (tab) => {
+        if (!tab) return false;
+        return tab.hasAttribute?.("is-zen-split") ||
+               tab.hasAttribute?.("zen-split-view") ||
+               tab.hasAttribute?.("splitview") ||
+               !!tab.closest?.("tab-group[split-view-group], tab-group[zen-split-view]");
+      };
+
       const shouldBlockSelection = (val) => {
         if (!val) return false;
+        if (isSplitViewTab(val)) return false;
         if (isGuardingTab && val === dragCandidateTab) {
           return true;
         }
@@ -5576,7 +5585,7 @@
         if (!tab) return;
         if (e.target.closest(".tab-close-button, .tab-icon-sound, .tab-audio-button, .tab-pin-icon")) return;
 
-        if (tab !== gBrowser.selectedTab) {
+        if (tab !== gBrowser.selectedTab && !isSplitViewTab(tab)) {
           dragCandidateTab = tab;
           isGuardingTab = true;
           isDraggingTab = false;
@@ -5587,7 +5596,7 @@
 
       const onDragStart = (e) => {
         const tab = (e.target && typeof e.target.closest === "function" ? e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab") : null) || dragCandidateTab;
-        if (tab) {
+        if (tab && !isSplitViewTab(tab)) {
           dragCandidateTab = tab;
           isDraggingTab = true;
           isGuardingTab = false;
@@ -5616,16 +5625,22 @@
         dragCandidateTab = null;
       };
 
-      const onDragEnd = () => {
+      const clearZenDragState = () => {
         isGuardingTab = false;
         isDraggingTab = false;
         dragCandidateTab = null;
+        if (window.gZenCompactModeManager) {
+          delete window.gZenCompactModeManager._isTabBeingDragged;
+          try { window.gZenCompactModeManager._clearAllHoverStates(); } catch (_) {}
+        }
+      };
+
+      const onDragEnd = () => {
+        clearZenDragState();
       };
 
       const onDrop = () => {
-        isGuardingTab = false;
-        isDraggingTab = false;
-        dragCandidateTab = null;
+        clearZenDragState();
       };
 
       tabContainer.addEventListener("mousedown", onMouseDown, { capture: true });
