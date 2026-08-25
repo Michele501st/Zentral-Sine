@@ -3130,6 +3130,12 @@
     #dragGuardCleanup = null;
     /** @private Flag indicating if tab drag selection guard is active */
     #tabDragGuardInitialized = false;
+    /** @private Latch indicating session restore settlement in progress */
+    #isRestoring = false;
+    /** @private SessionStore observer callback */
+    #sessionRestoreObserver = null;
+    /** @private Settlement fallback timer */
+    #restoreSettleTimer = null;
 
     /**
      * Safely retrieves Firefox SessionStore service for persistent tab metadata across restarts.
@@ -3161,6 +3167,10 @@
         if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralTabGroups] Destroying TabGroups module...");
 
         // 1. Clear timers
+        if (this.#restoreSettleTimer) {
+          clearTimeout(this.#restoreSettleTimer);
+          this.#restoreSettleTimer = null;
+        }
         if (this.#state && this.#state.saveStateTimer) {
           clearTimeout(this.#state.saveStateTimer);
           this.#state.saveStateTimer = null;
@@ -3169,6 +3179,13 @@
           clearTimeout(window.zentralTooltipHideTimer);
           window.zentralTooltipHideTimer = null;
         }
+        if (this.#sessionRestoreObserver && typeof Services !== "undefined" && Services.obs) {
+          try {
+            Services.obs.removeObserver(this.#sessionRestoreObserver, "sessionstore-windows-restored");
+          } catch (_) {}
+          this.#sessionRestoreObserver = null;
+        }
+        this.#isRestoring = false;
 
         // 2. Disconnect observers
         if (this.#tabStripObserver) {
@@ -3274,33 +3291,19 @@
             tab.setAttribute("data-zentral-group-id", group.id);
             tab.setAttribute("data-zentral-group-label", label);
             if (color) tab.setAttribute("data-zentral-group-color", color);
-            else tab.removeAttribute("data-zentral-group-color");
-            
             tab.setAttribute("data-zentral-group-collapsed", isCollapsed ? "true" : "false");
-            
             if (wsId) tab.setAttribute("data-zentral-group-ws", wsId);
-            else tab.removeAttribute("data-zentral-group-ws");
-            
             if (parentId) tab.setAttribute("data-zentral-parent-id", parentId);
-            else tab.removeAttribute("data-zentral-parent-id");
 
             // Persist into Firefox SessionStore so metadata survives browser restarts & cache clears
-            if (ss) {
+            if (ss && typeof ss.setCustomTabValue === "function") {
               try {
-                if (typeof ss.setCustomTabValue === "function") {
-                  ss.setCustomTabValue(tab, "zentral-group-id", group.id);
-                  ss.setCustomTabValue(tab, "zentral-group-label", label);
-                  ss.setCustomTabValue(tab, "zentral-group-collapsed", isCollapsed ? "true" : "false");
-                  
-                  if (color) ss.setCustomTabValue(tab, "zentral-group-color", color);
-                  else if (typeof ss.deleteCustomTabValue === "function") ss.deleteCustomTabValue(tab, "zentral-group-color");
-                  
-                  if (parentId) ss.setCustomTabValue(tab, "zentral-parent-id", parentId);
-                  else if (typeof ss.deleteCustomTabValue === "function") ss.deleteCustomTabValue(tab, "zentral-parent-id");
-                  
-                  if (wsId) ss.setCustomTabValue(tab, "zentral-group-ws", wsId);
-                  else if (typeof ss.deleteCustomTabValue === "function") ss.deleteCustomTabValue(tab, "zentral-group-ws");
-                }
+                ss.setCustomTabValue(tab, "zentral-group-id", group.id);
+                ss.setCustomTabValue(tab, "zentral-group-label", label);
+                if (color) ss.setCustomTabValue(tab, "zentral-group-color", color);
+                if (parentId) ss.setCustomTabValue(tab, "zentral-parent-id", parentId);
+                ss.setCustomTabValue(tab, "zentral-group-collapsed", isCollapsed ? "true" : "false");
+                if (wsId) ss.setCustomTabValue(tab, "zentral-group-ws", wsId);
               } catch (_) {}
             }
           });
@@ -3769,6 +3772,7 @@
         console.log("[ZentralTabGroups] Tab Groups feature is disabled.");
         return;
       }
+      this.#isRestoring = true;
       this.clearStoredColorData();
       this.loadSavedColors();
       this.reconstructSavedGroups();
@@ -3780,11 +3784,48 @@
       this.enhanceTabContextMenu();
       this.initTabDragSelectionGuard();
       this.processExistingGroups();
-      
-      // Retry group scan after 1s to catch groups added after sessionrestore.
-      // Note: processGroup() is guarded by #processedGroups WeakSet — already-processed groups are skipped.
-      // loadTabGroupState() intentionally NOT repeated here — state is already loaded above. (C-03)
-      setTimeout(() => { document.querySelectorAll("tab-group:not([split-view-group])").forEach(g => this.processGroup(g)); }, 1000);
+
+      // SessionStore Settlement Guard:
+      // When the browser launches or caches are cleared, SessionStore injects tabs/groups asynchronously.
+      // We block saves while #isRestoring is true, and re-nest/re-construct once SessionStore is finished.
+      const settleRestore = () => {
+        if (!this.#isRestoring) return;
+        if (this.#restoreSettleTimer) {
+          clearTimeout(this.#restoreSettleTimer);
+          this.#restoreSettleTimer = null;
+        }
+        if (this.#sessionRestoreObserver && typeof Services !== "undefined" && Services.obs) {
+          try {
+            Services.obs.removeObserver(this.#sessionRestoreObserver, "sessionstore-windows-restored");
+          } catch (_) {}
+          this.#sessionRestoreObserver = null;
+        }
+
+        try {
+          this.reconstructSavedGroups();
+          this.loadTabGroupState();
+          document.querySelectorAll("tab-group:not([split-view-group])").forEach(g => this.processGroup(g));
+        } catch (err) {
+          console.error("[ZentralTabGroups] Error settling session restore state:", err);
+        } finally {
+          this.#isRestoring = false;
+          this.scheduleStateSave();
+        }
+      };
+
+      if (typeof Services !== "undefined" && Services.obs) {
+        this.#sessionRestoreObserver = (subject, topic) => {
+          if (topic === "sessionstore-windows-restored") {
+            settleRestore();
+          }
+        };
+        try {
+          Services.obs.addObserver(this.#sessionRestoreObserver, "sessionstore-windows-restored", false);
+        } catch (_) {}
+      }
+
+      // Safety fallback timer in case sessionstore-windows-restored already fired or does not fire
+      this.#restoreSettleTimer = setTimeout(settleRestore, 2500);
 
       // Collapsed Sidebar observer for Tab Groups
       const updateSidebarAttr = () => {
@@ -5716,6 +5757,7 @@
      * Schedules debounced state save for tab groups to prevent excessive disk writes.
      */
     scheduleStateSave() {
+      if (this.#isRestoring) return;
       if (this.#state.saveStateTimer) clearTimeout(this.#state.saveStateTimer);
       this.#state.saveStateTimer = setTimeout(() => this.saveTabGroupState(), 1000);
     }
@@ -5790,18 +5832,31 @@
             tab.setAttribute("data-zentral-group-id", group.id);
             tab.setAttribute("data-zentral-group-label", label);
             if (color) tab.setAttribute("data-zentral-group-color", color);
+            else tab.removeAttribute("data-zentral-group-color");
+            
             tab.setAttribute("data-zentral-group-collapsed", group.hasAttribute("collapsed") ? "true" : "false");
+            
             if (wsId) tab.setAttribute("data-zentral-group-ws", wsId);
+            else tab.removeAttribute("data-zentral-group-ws");
+            
             if (parent?.id) tab.setAttribute("data-zentral-parent-id", parent.id);
+            else tab.removeAttribute("data-zentral-parent-id");
 
             if (ss && typeof ss.setCustomTabValue === "function") {
               try {
                 ss.setCustomTabValue(tab, "zentral-group-id", group.id);
                 ss.setCustomTabValue(tab, "zentral-group-label", label);
+                
                 if (color) ss.setCustomTabValue(tab, "zentral-group-color", color);
+                else if (typeof ss.deleteCustomTabValue === "function") ss.deleteCustomTabValue(tab, "zentral-group-color");
+                
                 if (parent?.id) ss.setCustomTabValue(tab, "zentral-parent-id", parent.id);
+                else if (typeof ss.deleteCustomTabValue === "function") ss.deleteCustomTabValue(tab, "zentral-parent-id");
+                
                 ss.setCustomTabValue(tab, "zentral-group-collapsed", group.hasAttribute("collapsed") ? "true" : "false");
+                
                 if (wsId) ss.setCustomTabValue(tab, "zentral-group-ws", wsId);
+                else if (typeof ss.deleteCustomTabValue === "function") ss.deleteCustomTabValue(tab, "zentral-group-ws");
               } catch (_) {}
             }
           });
