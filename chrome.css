@@ -106,10 +106,10 @@
 }
 
 /* Nested Groups on Left Sidebar: 12px indentation towards LEFT outer edge */
-tab-group tab-group > .tab-group-label-container .zentral-tab-title-wrapper,
-tab-group .tab-group-container tab-group > .tab-group-label-container .zentral-tab-title-wrapper,
-tab-group[depth] > .tab-group-label-container .zentral-tab-title-wrapper,
-tab-group[nesting-level] > .tab-group-label-container .zentral-tab-title-wrapper {
+tab-group:not([split-view-group]):not([zen-split-view]) tab-group:not([split-view-group]):not([zen-split-view]) > .tab-group-label-container .zentral-tab-title-wrapper,
+tab-group:not([split-view-group]):not([zen-split-view]) .tab-group-container tab-group:not([split-view-group]):not([zen-split-view]) > .tab-group-label-container .zentral-tab-title-wrapper,
+tab-group:not([split-view-group]):not([zen-split-view])[depth] > .tab-group-label-container .zentral-tab-title-wrapper,
+tab-group:not([split-view-group]):not([zen-split-view])[nesting-level] > .tab-group-label-container .zentral-tab-title-wrapper {
   margin-right: 12px !important;
   margin-left: auto !important;
 }
@@ -171,14 +171,14 @@ html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-contai
   margin-right: auto !important;
 }
 
-html[zen-sidebar-right="true"] tab-group tab-group > .tab-group-label-container .zentral-tab-title-wrapper,
-html[zen-sidebar-right="true"] tab-group .tab-group-container tab-group > .tab-group-label-container .zentral-tab-title-wrapper,
-html[zen-sidebar-right="true"] tab-group[depth] > .tab-group-label-container .zentral-tab-title-wrapper,
-html[zen-sidebar-right="true"] tab-group[nesting-level] > .tab-group-label-container .zentral-tab-title-wrapper,
-html[zen-right-side="true"] tab-group tab-group > .tab-group-label-container .zentral-tab-title-wrapper,
-html[zen-right-side="true"] tab-group .tab-group-container tab-group > .tab-group-label-container .zentral-tab-title-wrapper,
-html[zen-right-side="true"] tab-group[depth] > .tab-group-label-container .zentral-tab-title-wrapper,
-html[zen-right-side="true"] tab-group[nesting-level] > .tab-group-label-container .zentral-tab-title-wrapper {
+html[zen-sidebar-right="true"] tab-group:not([split-view-group]):not([zen-split-view]) tab-group:not([split-view-group]):not([zen-split-view]) > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-sidebar-right="true"] tab-group:not([split-view-group]):not([zen-split-view]) .tab-group-container tab-group:not([split-view-group]):not([zen-split-view]) > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-sidebar-right="true"] tab-group:not([split-view-group]):not([zen-split-view])[depth] > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-sidebar-right="true"] tab-group:not([split-view-group]):not([zen-split-view])[nesting-level] > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-right-side="true"] tab-group:not([split-view-group]):not([zen-split-view]) tab-group:not([split-view-group]):not([zen-split-view]) > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-right-side="true"] tab-group:not([split-view-group]):not([zen-split-view]) .tab-group-container tab-group:not([split-view-group]):not([zen-split-view]) > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-right-side="true"] tab-group:not([split-view-group]):not([zen-split-view])[depth] > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-right-side="true"] tab-group:not([split-view-group]):not([zen-split-view])[nesting-level] > .tab-group-label-container .zentral-tab-title-wrapper {
   margin-left: 12px !important;
   margin-right: auto !important;
 }
@@ -441,14 +441,14 @@ html[zentral-show-chevron="false"] tab-group[collapsed] .tab-group-icon {
 
 /* Hierarchy & Nested Groups (Outer-edge alignment) */
 /* Hierarchy & Nested Groups Indentation (Mirrored for Left vs Right Sidebar) */
-tab-group tab-group {
+tab-group:not([split-view-group]):not([zen-split-view]) tab-group:not([split-view-group]):not([zen-split-view]) {
   margin-right: 12px !important;
   margin-left: 0 !important;
   position: relative !important;
   width: calc(100% - 12px) !important;
 }
 
-tab-group tab-group::before {
+tab-group:not([split-view-group]):not([zen-split-view]) tab-group:not([split-view-group]):not([zen-split-view])::before {
   content: "" !important;
   position: absolute !important;
   right: -6px !important;
@@ -487,14 +487,14 @@ tab-group:not([split-view-group]) .tab-group-container::after {
 }
 
 /* Right Sidebar Mode Overrides (Outer edge is on the RIGHT) */
-html[zen-sidebar-right="true"] tab-group tab-group,
-html[zen-right-side="true"] tab-group tab-group {
+html[zen-sidebar-right="true"] tab-group:not([split-view-group]):not([zen-split-view]) tab-group:not([split-view-group]):not([zen-split-view]),
+html[zen-right-side="true"] tab-group:not([split-view-group]):not([zen-split-view]) tab-group:not([split-view-group]):not([zen-split-view]) {
   margin-left: 12px !important;
   margin-right: 0 !important;
 }
 
-html[zen-sidebar-right="true"] tab-group tab-group::before,
-html[zen-right-side="true"] tab-group tab-group::before {
+html[zen-sidebar-right="true"] tab-group:not([split-view-group]):not([zen-split-view]) tab-group:not([split-view-group]):not([zen-split-view])::before,
+html[zen-right-side="true"] tab-group:not([split-view-group]):not([zen-split-view]) tab-group:not([split-view-group]):not([zen-split-view])::before {
   left: -6px !important;
   right: auto !important;
 }

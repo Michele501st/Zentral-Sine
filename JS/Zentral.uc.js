@@ -4192,21 +4192,25 @@
               if (node.nodeType !== Node.ELEMENT_NODE) continue;
               
               const tag = node.tagName?.toUpperCase();
-              if (tag === "TAB-GROUP") needsSave = true;
+              const isSplit = node.hasAttribute?.("split-view-group") || node.hasAttribute?.("zen-split-view") || node.hasAttribute?.("is-zen-split") || node.hasAttribute?.("splitview") || node.classList?.contains?.("zen-split-view");
+              if (tag === "TAB-GROUP" && !isSplit) needsSave = true;
               
               if (node.id === "tab-group-editor" || tag === "TABGROUP-MEU" || node.querySelector?.("#tab-group-editor, tabgroup-meu")) {
                 this.removeBuiltinTabGroupMenu(node);
               }
               
-              if (tag === "TAB-GROUP" && !node.hasAttribute("split-view-group")) {
+              if (tag === "TAB-GROUP" && !isSplit) {
                 this.processGroup(node);
               }
               
               const childGroups = node.querySelectorAll?.("tab-group") || [];
               if (childGroups.length > 0) {
-                needsSave = true;
                 childGroups.forEach((group) => {
-                  if (!group.hasAttribute("split-view-group")) this.processGroup(group);
+                  const gSplit = group.hasAttribute?.("split-view-group") || group.hasAttribute?.("zen-split-view") || group.hasAttribute?.("is-zen-split") || group.hasAttribute?.("splitview") || group.classList?.contains?.("zen-split-view");
+                  if (!gSplit) {
+                    needsSave = true;
+                    this.processGroup(group);
+                  }
                 });
               }
             }
@@ -4488,7 +4492,15 @@
     processGroup(group) {
       // Use a WeakSet instead of a DOM attribute to avoid persisting across restarts
       // and to prevent guard bypasses when native code resets group attributes.
-      if (this.#processedGroups.has(group) || group.classList.contains("zen-folder") || group.hasAttribute("zen-folder") || group.hasAttribute("split-view-group")) {
+      if (!group || 
+          this.#processedGroups.has(group) || 
+          group.classList?.contains("zen-folder") || 
+          group.hasAttribute?.("zen-folder") || 
+          group.hasAttribute?.("split-view-group") || 
+          group.hasAttribute?.("zen-split-view") || 
+          group.hasAttribute?.("is-zen-split") || 
+          group.hasAttribute?.("splitview") || 
+          group.classList?.contains("zen-split-view")) {
         return;
       }
       group.style.setProperty("border-radius", "6px", "important");
@@ -5462,7 +5474,10 @@
           get: origSelectedTabDesc.get,
           set: function(val) {
             if (isDraggingTab) {
-              return; // BLANKET BLOCK ALL SELECTION CHANGES WHILE DRAGGING
+              const isSplitTab = val && (val.hasAttribute?.("is-zen-split") || val.hasAttribute?.("zen-split-view") || val.closest?.("tab-group[split-view-group], tab-group[zen-split-view]"));
+              if (val === dragCandidateTab && !isSplitTab) {
+                return;
+              }
             }
             origSelectedTabDesc.set.call(this, val);
           },
@@ -5490,7 +5505,10 @@
           get: origSelectedItemDesc.get,
           set: function(val) {
             if (isDraggingTab) {
-              return; // BLANKET BLOCK ALL SELECTION CHANGES WHILE DRAGGING
+              const isSplitTab = val && (val.hasAttribute?.("is-zen-split") || val.hasAttribute?.("zen-split-view") || val.closest?.("tab-group[split-view-group], tab-group[zen-split-view]"));
+              if (val === dragCandidateTab && !isSplitTab) {
+                return;
+              }
             }
             origSelectedItemDesc.set.call(this, val);
           },
@@ -5545,7 +5563,7 @@
         if (e.button !== 0) return;
         if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
 
-        if (dragCandidateTab && !isDraggingTab) {
+        if (dragCandidateTab) {
           const moveDist = Math.hypot(e.clientX - startX, e.clientY - startY);
           if (moveDist < 6 && dragCandidateTab.isConnected) {
             // Un-intercept briefly to allow the intended click selection
@@ -5567,15 +5585,16 @@
 
       const onDragEnd = (e) => {
         if (pressTimer) clearTimeout(pressTimer);
-        setTimeout(() => {
-          isDraggingTab = false;
-          dragCandidateTab = null;
-          prevActiveTab = null;
-        }, 50);
+        isDraggingTab = false;
+        dragCandidateTab = null;
+        prevActiveTab = null;
       };
 
       const onDrop = (e) => {
-        // Just let the drop resolve natively while isDraggingTab is still true
+        if (pressTimer) clearTimeout(pressTimer);
+        isDraggingTab = false;
+        dragCandidateTab = null;
+        prevActiveTab = null;
       };
 
       tabContainer.addEventListener("mousedown", onMouseDown, { capture: true });
