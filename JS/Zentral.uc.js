@@ -5626,16 +5626,17 @@
         activeTabAtDragStart = null;
 
         if (wasDragging && savedDraggedTab && savedActiveTab && savedActiveTab.isConnected) {
-          // Zen handles split view creation asynchronously during drop.
-          // Wait briefly for Zen to finish DOM construction, then revert to active tab and discard dormant split tabs.
+          // Allow Zen's split view constructor to complete its layout and activation cycle uninterrupted.
+          // Then, after Zen finishes settling, smoothly return to the originally active tab and discard the split view tabs.
           setTimeout(() => {
             if (!savedActiveTab.isConnected) return;
             const splitGroup = savedDraggedTab.closest?.("tab-group[split-view-group], tab-group[zen-split-view]") || 
                                (savedDraggedTab.hasAttribute?.("is-zen-split") || savedDraggedTab.hasAttribute?.("zen-split-view") ? savedDraggedTab.closest?.("tab-group") : null);
             
             const isSplit = !!splitGroup || savedDraggedTab.hasAttribute?.("is-zen-split") || savedDraggedTab.hasAttribute?.("zen-split-view") || gBrowser.selectedTab !== savedActiveTab;
-            
+
             if (isSplit && gBrowser.selectedTab !== savedActiveTab) {
+              // 1. Switch back to the previously active tab
               try {
                 if (origSelectedTabDesc) {
                   origSelectedTabDesc.set.call(gBrowser, savedActiveTab);
@@ -5653,7 +5654,7 @@
                 }
               } catch (_) {}
 
-              // Once the active tab is securely restored in the viewport, unload the dormant split tabs
+              // 2. Wait for the active tab to mount in the viewport before discarding the split tabs
               setTimeout(() => {
                 const tabsToDiscard = splitGroup ? Array.from(splitGroup.querySelectorAll("tab, .tabbrowser-tab")) : [savedDraggedTab];
                 tabsToDiscard.forEach(t => {
@@ -5663,13 +5664,15 @@
                         gBrowser.discardBrowser(t);
                       } else if (typeof gBrowser.unloadTab === "function") {
                         gBrowser.unloadTab(t);
+                      } else if (typeof t.unloadTab === "function") {
+                        t.unloadTab();
                       }
                     } catch (_) {}
                   }
                 });
-              }, 80);
+              }, 120);
             }
-          }, 80);
+          }, 150);
         }
       };
 
