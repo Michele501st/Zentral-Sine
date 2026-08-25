@@ -6,15 +6,15 @@
 /* ============================================================================ */
 
 /* Remove focus frame/outline on click */
-#tabbrowser-tabs tab-group *,
-#tabbrowser-tabs tab-group *:focus,
-#tabbrowser-tabs tab-group *:focus-visible,
-#tabbrowser-tabs tab-group *:-moz-focusring {
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) *,
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) *:focus,
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) *:focus-visible,
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) *:-moz-focusring {
   outline: none !important;
   box-shadow: none !important;
 }
 
-#tabbrowser-tabs tab-group {
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) {
   display: flex !important;
   flex-direction: column !important;
   width: 100% !important;
@@ -22,21 +22,64 @@
 }
 
 /* Neutralize native pill backgrounds & aspect-ratio constraints */
-#tabbrowser-tabs tab-group > .tab-group-label-container,
-#tabbrowser-tabs tab-group > .tab-group-label-container.tab-group-label-container,
-#tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label,
-#tabbrowser-tabs tab-group:hover > .tab-group-label-container,
-#tabbrowser-tabs tab-group:hover > .tab-group-label-container .tab-group-label {
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container,
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container.tab-group-label-container,
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container .tab-group-label,
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]):hover > .tab-group-label-container,
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]):hover > .tab-group-label-container .tab-group-label {
   --tab-group-color: transparent !important;
   background: transparent !important;
+}
+
+/* Zero-gap & layout isolation for Split Views & Hidden Tabs */
+#tabbrowser-tabs tab-group[split-view-group],
+#tabbrowser-tabs tab-group[zen-split-view],
+#tabbrowser-tabs tab-group[is-zen-split],
+#tabbrowser-tabs tab-group.zen-split-view {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+#tabbrowser-tabs tab-group[split-view-group] > .tab-group-label-container,
+#tabbrowser-tabs tab-group[zen-split-view] > .tab-group-label-container,
+#tabbrowser-tabs tab-group[is-zen-split] > .tab-group-label-container,
+#tabbrowser-tabs tab-group.zen-split-view > .tab-group-label-container,
+#tabbrowser-tabs tab-group[split-view-group] > .tab-group-container::after,
+#tabbrowser-tabs tab-group[zen-split-view] > .tab-group-container::after,
+#tabbrowser-tabs tab-group[is-zen-split] > .tab-group-container::after {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+#tabbrowser-tabs tab[hidden="true"],
+#tabbrowser-tabs tab[hidden],
+#tabbrowser-tabs .tabbrowser-tab[hidden="true"],
+#tabbrowser-tabs .tabbrowser-tab[hidden] {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  visibility: hidden !important;
 }
 
 /* ===========================================================================
    Smooth Translucent Pill Tinted with Group Color (No Edge Highlights)
    =========================================================================== */
 /* Base Container (Left Sidebar default: pills align to RIGHT inner edge) */
-#tabbrowser-tabs tab-group > .tab-group-label-container,
-#tabbrowser-tabs tab-group > .tab-group-label-container.tab-group-label-container {
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container,
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container.tab-group-label-container {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
@@ -64,7 +107,7 @@
 }
 
 /* Extension Shelf (Flush-aligned to BOTTOM of pill, tucked inside title pill so it never pokes past outer corner) */
-#tabbrowser-tabs tab-group > .tab-group-label-container::before {
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container::before {
   content: "" !important;
   position: absolute !important;
   top: auto !important;
@@ -85,7 +128,7 @@
 }
 
 /* Title Pill (Left Sidebar: aligned to RIGHT inner edge) */
-#tabbrowser-tabs tab-group > .tab-group-label-container .zentral-tab-title-wrapper {
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container .zentral-tab-title-wrapper {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
@@ -158,15 +201,15 @@ panel#zentral-group-color-picker,
 }
 
 /* Right Sidebar Mode (Sidebar on Right side of screen -> Pills align to LEFT inner edge) */
-html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container,
-html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container.tab-group-label-container,
-html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-container,
-html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-container.tab-group-label-container {
+html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container,
+html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container.tab-group-label-container,
+html[zen-right-side="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container,
+html[zen-right-side="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container.tab-group-label-container {
   justify-content: flex-start !important;
 }
 
-html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container .zentral-tab-title-wrapper,
-html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-container .zentral-tab-title-wrapper {
+html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-right-side="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container .zentral-tab-title-wrapper {
   margin-left: 0 !important;
   margin-right: auto !important;
 }
@@ -183,8 +226,8 @@ html[zen-right-side="true"] tab-group:not([split-view-group]):not([zen-split-vie
   margin-right: auto !important;
 }
 
-html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container::before,
-html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-container::before {
+html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container::before,
+html[zen-right-side="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container::before {
   left: 14px !important;
   right: 0 !important;
   border-radius: 0 10px 10px 0 !important;
@@ -195,53 +238,53 @@ html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-contai
    - Below 85%: Jump to 100% full group color opacity.
    - At or above 85%: Traditional brightened highlight (15% white tint mix). */
 /* Hover State Highlights for Folder Tab Pill & Long Strip Reveal */
-#tabbrowser-tabs tab-group > .tab-group-label-container:hover::before,
-#tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container::before {
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container:hover::before,
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]):has(tab:hover) > .tab-group-label-container::before {
   opacity: 1 !important;
   transform: scaleX(1) !important;
   background-color: color-mix(in srgb, var(--zentral-custom-color, var(--tab-group-color, #777777)) 85%, #ffffff 15%) !important;
 }
 
 /* Left Sidebar Mode (default): Inner edge is on the LEFT -> top-left & bottom-left inner curve */
-#tabbrowser-tabs tab-group > .tab-group-label-container:hover .zentral-tab-title-wrapper,
-#tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper {
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container:hover .zentral-tab-title-wrapper,
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]):has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper {
   background-color: color-mix(in srgb, var(--zentral-custom-color, var(--tab-group-color, #777777)) 85%, #ffffff 15%) !important;
   border-radius: 16px 14px 14px 4px !important;
 }
 
 /* Right Sidebar Mode: Inner edge is on the RIGHT -> top-right & bottom-right inner curve */
-html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container:hover .zentral-tab-title-wrapper,
-html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper,
-html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-container:hover .zentral-tab-title-wrapper,
-html[zen-right-side="true"] #tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper {
+html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container:hover .zentral-tab-title-wrapper,
+html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]):has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-right-side="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container:hover .zentral-tab-title-wrapper,
+html[zen-right-side="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]):has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper {
   border-radius: 14px 16px 4px 14px !important;
 }
 
-html[zentral-label-opacity-below-85="true"] #tabbrowser-tabs tab-group > .tab-group-label-container:hover::before,
-html[zentral-label-opacity-below-85="true"] #tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container::before {
+html[zentral-label-opacity-below-85="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container:hover::before,
+html[zentral-label-opacity-below-85="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]):has(tab:hover) > .tab-group-label-container::before {
   opacity: 1 !important;
   transform: scaleX(1) !important;
   background-color: var(--zentral-custom-color, var(--tab-group-color, #777777)) !important;
 }
 
-html[zentral-label-opacity-below-85="true"] #tabbrowser-tabs tab-group > .tab-group-label-container:hover .zentral-tab-title-wrapper,
-html[zentral-label-opacity-below-85="true"] #tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper {
+html[zentral-label-opacity-below-85="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container:hover .zentral-tab-title-wrapper,
+html[zentral-label-opacity-below-85="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]):has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper {
   background-color: var(--zentral-custom-color, var(--tab-group-color, #777777)) !important;
   border-radius: 16px 14px 14px 4px !important;
 }
 
-html[zentral-label-opacity-below-85="true"][zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container:hover .zentral-tab-title-wrapper,
-html[zentral-label-opacity-below-85="true"][zen-sidebar-right="true"] #tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper,
-html[zentral-label-opacity-below-85="true"][zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-container:hover .zentral-tab-title-wrapper,
-html[zentral-label-opacity-below-85="true"][zen-right-side="true"] #tabbrowser-tabs tab-group:has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper {
+html[zentral-label-opacity-below-85="true"][zen-sidebar-right="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container:hover .zentral-tab-title-wrapper,
+html[zentral-label-opacity-below-85="true"][zen-sidebar-right="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]):has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zentral-label-opacity-below-85="true"][zen-right-side="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container:hover .zentral-tab-title-wrapper,
+html[zentral-label-opacity-below-85="true"][zen-right-side="true"] #tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]):has(tab:hover) > .tab-group-label-container .zentral-tab-title-wrapper {
   border-radius: 14px 16px 4px 14px !important;
 }
 
 /* Label text - Dynamically Auto-Contrast (Black or White) based on Label Color */
-#tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label,
-#tabbrowser-tabs tab-group:hover > .tab-group-label-container .tab-group-label,
-#tabbrowser-tabs tab-group[active] > .tab-group-label-container .tab-group-label,
-#tabbrowser-tabs tab-group:not([collapsed]) > .tab-group-label-container .tab-group-label {
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]) > .tab-group-label-container .tab-group-label,
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]):hover > .tab-group-label-container .tab-group-label,
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])[active] > .tab-group-label-container .tab-group-label,
+#tabbrowser-tabs tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split]):not([collapsed]) > .tab-group-label-container .tab-group-label {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;

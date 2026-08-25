@@ -4180,10 +4180,21 @@
     setupObserver() {
       const observer = new MutationObserver((mutations) => {
         let needsSave = false;
-        
         for (const mutation of mutations) {
-          if (mutation.type === "attributes" && mutation.attributeName === "collapsed") {
-            if (mutation.target.tagName?.toUpperCase() === "TAB-GROUP") needsSave = true;
+          if (mutation.type === "attributes") {
+            const attr = mutation.attributeName;
+            if (attr === "split-view-group" || attr === "zen-split-view" || attr === "is-zen-split") {
+              const g = mutation.target;
+              if (g && g.tagName?.toUpperCase() === "TAB-GROUP") {
+                const lc = g.querySelector(":scope > .tab-group-label-container");
+                if (lc) lc.remove();
+              }
+            }
+            if (attr === "collapsed") {
+              const g = mutation.target;
+              const isSplit = g.hasAttribute?.("split-view-group") || g.hasAttribute?.("zen-split-view") || g.hasAttribute?.("is-zen-split");
+              if (g.tagName?.toUpperCase() === "TAB-GROUP" && !isSplit) needsSave = true;
+            }
             continue;
           }
           
@@ -4192,25 +4203,49 @@
               if (node.nodeType !== Node.ELEMENT_NODE) continue;
               
               const tag = node.tagName?.toUpperCase();
-              const isSplit = node.hasAttribute?.("split-view-group") || node.hasAttribute?.("zen-split-view") || node.hasAttribute?.("is-zen-split") || node.hasAttribute?.("splitview") || node.classList?.contains?.("zen-split-view");
-              if (tag === "TAB-GROUP" && !isSplit) needsSave = true;
               
               if (node.id === "tab-group-editor" || tag === "TABGROUP-MEU" || node.querySelector?.("#tab-group-editor, tabgroup-meu")) {
                 this.removeBuiltinTabGroupMenu(node);
               }
               
-              if (tag === "TAB-GROUP" && !isSplit) {
-                this.processGroup(node);
+              if (tag === "TAB-GROUP") {
+                window.requestAnimationFrame(() => {
+                  if (node.isConnected) {
+                    const isSplit = node.hasAttribute?.("split-view-group") || 
+                                    node.hasAttribute?.("zen-split-view") || 
+                                    node.hasAttribute?.("is-zen-split") || 
+                                    node.hasAttribute?.("splitview") || 
+                                    node.classList?.contains?.("zen-split-view");
+                    if (!isSplit) {
+                      this.processGroup(node);
+                      this.scheduleStateSave();
+                    } else {
+                      const lc = node.querySelector(":scope > .tab-group-label-container");
+                      if (lc) lc.remove();
+                    }
+                  }
+                });
               }
               
               const childGroups = node.querySelectorAll?.("tab-group") || [];
               if (childGroups.length > 0) {
                 childGroups.forEach((group) => {
-                  const gSplit = group.hasAttribute?.("split-view-group") || group.hasAttribute?.("zen-split-view") || group.hasAttribute?.("is-zen-split") || group.hasAttribute?.("splitview") || group.classList?.contains?.("zen-split-view");
-                  if (!gSplit) {
-                    needsSave = true;
-                    this.processGroup(group);
-                  }
+                  window.requestAnimationFrame(() => {
+                    if (group.isConnected) {
+                      const gSplit = group.hasAttribute?.("split-view-group") || 
+                                     group.hasAttribute?.("zen-split-view") || 
+                                     group.hasAttribute?.("is-zen-split") || 
+                                     group.hasAttribute?.("splitview") || 
+                                     group.classList?.contains?.("zen-split-view");
+                      if (!gSplit) {
+                        this.processGroup(group);
+                        this.scheduleStateSave();
+                      } else {
+                        const lc = group.querySelector(":scope > .tab-group-label-container");
+                        if (lc) lc.remove();
+                      }
+                    }
+                  });
                 });
               }
             }
@@ -4218,10 +4253,8 @@
             for (const node of mutation.removedNodes) {
               if (node.nodeType === Node.ELEMENT_NODE && node.tagName?.toUpperCase() === "TAB-GROUP") {
                 needsSave = true;
-                // Disconnect the per-group style MutationObserver to prevent memory leak
                 const obs = this.#groupObservers.get(node);
                 if (obs) { obs.disconnect(); this.#groupObservers.delete(node); }
-                // Clear from processedGroups so it can be re-processed if re-created
                 this.#processedGroups.delete(node);
               }
             }
@@ -4231,10 +4264,9 @@
         if (needsSave) this.scheduleStateSave();
       });
       const tabContainer = document.getElementById("tabbrowser-tabs") || document.body;
-      observer.observe(tabContainer, { childList: true, subtree: true, attributes: true, attributeFilter: ["collapsed"] });
+      observer.observe(tabContainer, { childList: true, subtree: true, attributes: true, attributeFilter: ["collapsed", "split-view-group", "zen-split-view", "is-zen-split"] });
       this.#tabStripObserver = observer;
 
-      // Block native toggle on right click by capturing mousedown/mouseup/click
       if (!this.#groupRightClickBlocker) {
         this.#groupRightClickBlocker = (event) => {
           if (event.button !== 2) return;
@@ -4251,7 +4283,6 @@
           if (target.closest("tab, tabbrowser-tab, .tabbrowser-tab") && !isHeader) return;
 
           if (isHeader) {
-            // Stop propagation to prevent group toggle logic from triggering
             event.stopPropagation();
           }
         };
