@@ -5490,12 +5490,8 @@
         if (isGuardingTab && val === dragCandidateTab) {
           return true;
         }
-        if (isDraggingTab) {
-          const isSplitTab = val && (val.hasAttribute?.("is-zen-split") || val.hasAttribute?.("zen-split-view") || val.closest?.("tab-group[split-view-group], tab-group[zen-split-view]"));
-          // Allow split view creation selections through; block only plain dormant tab reorder wakeups
-          if (val === dragCandidateTab && !isSplitTab) {
-            return true;
-          }
+        if (isDraggingTab && val === dragCandidateTab) {
+          return true;
         }
         return false;
       };
@@ -5556,7 +5552,22 @@
         });
       }
 
-      // 3. Setup drag detection logic
+      // 3. Intercept gZenViewSplitter.splitTabs to maintain dormant tab state during split creation
+      let origSplitTabs = null;
+      if (window.gZenViewSplitter && typeof window.gZenViewSplitter.splitTabs === "function") {
+        origSplitTabs = window.gZenViewSplitter.splitTabs;
+        window.gZenViewSplitter.splitTabs = function(tabs, gridType, initialIndex = 0, options = {}) {
+          const currentActiveTab = window.gBrowser?.selectedTab;
+          const hasActiveTab = Array.isArray(tabs) && currentActiveTab && tabs.includes(currentActiveTab);
+          let targetIndex = initialIndex;
+          if (!hasActiveTab && targetIndex >= 0) {
+            targetIndex = -1;
+          }
+          return origSplitTabs.call(this, tabs, gridType, targetIndex, options);
+        };
+      }
+
+      // 4. Setup drag detection logic
       const onMouseDown = (e) => {
         if (e.button !== 0) return;
         if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -5629,6 +5640,9 @@
         }
         if (origSelectedItemDesc && targetTabContainerObj) {
           Object.defineProperty(targetTabContainerObj, "selectedItem", origSelectedItemDesc);
+        }
+        if (origSplitTabs && window.gZenViewSplitter) {
+          window.gZenViewSplitter.splitTabs = origSplitTabs;
         }
         tabContainer.removeEventListener("mousedown", onMouseDown, { capture: true });
         window.removeEventListener("mouseup", onMouseUp, { capture: true });
@@ -7167,27 +7181,9 @@
    * Ensures Zentral initializes safely after browser delayed startup completes.
    */
   try {
-    const dumpSplitApi = () => {
-      try {
-        if (window.ZentralLogger) {
-          const wApis = Object.keys(window).filter(k => k.toLowerCase().includes("split"));
-          window.ZentralLogger.log("ZenAPI", "Found window split properties:", wApis);
-          if (window.gBrowser) {
-            let bApis = [];
-            for (let k in window.gBrowser) {
-              if (k.toLowerCase().includes("split")) bApis.push(k);
-            }
-            window.ZentralLogger.log("ZenAPI", "Found gBrowser split properties:", bApis);
-          }
-        }
-      } catch(e) {}
-    };
-
     if (typeof gBrowserInit !== "undefined" && gBrowserInit.delayedStartupFinished) {
-      dumpSplitApi();
       window.Zentral.Init();
     } else if (document.readyState === "complete") {
-      dumpSplitApi();
       window.Zentral.Init();
     } else {
       let booted = false;
@@ -7195,7 +7191,6 @@
         if (booted) return;
         booted = true;
         try { 
-          dumpSplitApi();
           window.Zentral.Init(); 
         } catch (err) { console.error("[Zentral] Boot error:", err); }
       };
