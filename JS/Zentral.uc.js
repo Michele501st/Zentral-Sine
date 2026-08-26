@@ -3553,7 +3553,12 @@
         // Helper to instantiate a fully-structured tab-group DOM element
         const createGroupElement = (info) => {
           let group = document.getElementById(info.id);
-          if (!group) {
+          if (group) {
+            // If this group already exists in the DOM as a native Zen split view, skip it entirely.
+            if (group.hasAttribute("split-view-group") || group.hasAttribute("zen-split-view") || group.hasAttribute("is-zen-split")) {
+              return null;
+            }
+          } else {
             group = document.createXULElement ? document.createXULElement("tab-group") : document.createElement("tab-group");
             group.id = info.id;
             group.setAttribute("label", info.label);
@@ -3588,6 +3593,7 @@
           try {
             const info = groupsToReconstruct.get(gId);
             const group = createGroupElement(info);
+            if (!group) return; // Skipped — native split view group
 
             // Determine correct insertion parent: nested inside parentGroup or at rootTabContainer
             let parentEl = null;
@@ -5641,7 +5647,9 @@
       tabContainer.addEventListener("dragstart", onDragStart, { capture: true });
       window.addEventListener("dragend", onDragEnd, { capture: true });
       window.addEventListener("drop", onDrop, { capture: true });
-      tabContainer.addEventListener("mouseleave", clearZenDragState, { capture: true });
+      // NOTE: Do NOT attach mouseleave to tabContainer — it fires mid-drag when
+      // the drag ghost exits the sidebar, which would permanently break the guard
+      // for all subsequent drags in the same session.
 
       this.#dragGuardCleanup = () => {
         if (origSelectedTabDesc && targetGbrowserObj) {
@@ -5658,7 +5666,6 @@
         tabContainer.removeEventListener("dragstart", onDragStart, { capture: true });
         window.removeEventListener("dragend", onDragEnd, { capture: true });
         window.removeEventListener("drop", onDrop, { capture: true });
-        tabContainer.removeEventListener("mouseleave", clearZenDragState, { capture: true });
         this.#tabDragGuardInitialized = false;
       };
     }
