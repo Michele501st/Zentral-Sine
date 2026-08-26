@@ -60,6 +60,22 @@
   visibility: hidden !important;
 }
 
+/* Split View Resizing & Splitter Drag Isolation */
+.zen-split-view-splitter {
+  user-select: none !important;
+  -moz-user-select: none !important;
+  -moz-user-drag: none !important;
+  -webkit-user-drag: none !important;
+}
+
+#tabbrowser-tabpanels[zen-split-resizing] browser,
+#tabbrowser-tabpanels[zen-split-resizing] .browserSidebarContainer,
+#tabbrowser-tabpanels[zen-split-resizing] iframe {
+  pointer-events: none !important;
+  user-select: none !important;
+  -moz-user-select: none !important;
+}
+
 #tabbrowser-tabs tab[hidden="true"],
 #tabbrowser-tabs tab[hidden],
 #tabbrowser-tabs .tabbrowser-tab[hidden="true"],

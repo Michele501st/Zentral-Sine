@@ -5585,12 +5585,28 @@
         dragCandidateTab = null;
       };
 
+      // 3. Prevent native HTML Drag & Drop from intercepting split-view splitter resizing
+      const onSplitterDragStart = (e) => {
+        if (e.target?.closest?.(".zen-split-view-splitter, #zen-splitview-overlay, .zen-view-splitter-header-container:not(:has(toolbarbutton.zen-tab-rearrange-button))")) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      };
+
+      const onSplitterMouseDown = (e) => {
+        if (e.button === 0 && e.target?.closest?.(".zen-split-view-splitter")) {
+          e.preventDefault();
+        }
+      };
+
       tabContainer.addEventListener("mousedown", onMouseDown, { capture: true });
       window.addEventListener("mouseup", onMouseUp, { capture: true });
       window.addEventListener("dragend", clearGuard, { capture: true });
       window.addEventListener("drop", clearGuard, { capture: true });
+      window.addEventListener("dragstart", onSplitterDragStart, { capture: true });
+      window.addEventListener("mousedown", onSplitterMouseDown, { capture: true });
 
-      // 3. Hook _getDragTarget across ZenDragAndDrop and TabDragAndDrop so split views drag as native tabs
+      // 4. Hook _getDragTarget across ZenDragAndDrop and TabDragAndDrop so split views drag as native tabs
       const dndTargets = [
         window.ZenDragAndDrop?.prototype,
         tabContainer.tabDragAndDrop,
@@ -5619,7 +5635,7 @@
         }
       });
 
-      // 4. Hook startTabDrag across ZenDragAndDrop and TabDragAndDrop
+      // 5. Hook startTabDrag across ZenDragAndDrop and TabDragAndDrop
       const targets = [
         window.ZenDragAndDrop?.prototype,
         tabContainer.tabDragAndDrop,
@@ -5683,7 +5699,7 @@
         }
       });
 
-      // 5. Implement Same-Window Tab Group & Split View Reordering in gBrowser.adoptTabGroup
+      // 6. Implement Same-Window Tab Group & Split View Reordering in gBrowser.adoptTabGroup
       let origAdoptTabGroup = null;
       if (window.gBrowser && typeof window.gBrowser.adoptTabGroup === "function") {
         origAdoptTabGroup = window.gBrowser.adoptTabGroup;
@@ -5704,7 +5720,7 @@
         };
       }
 
-      // 6. Intercept gZenViewSplitter.splitTabs to maintain dormant tab state during split creation
+      // 7. Intercept gZenViewSplitter.splitTabs to maintain dormant tab state during split creation
       let origSplitTabs = null;
       if (window.gZenViewSplitter && typeof window.gZenViewSplitter.splitTabs === "function") {
         origSplitTabs = window.gZenViewSplitter.splitTabs;
@@ -5724,6 +5740,8 @@
         window.removeEventListener("mouseup", onMouseUp, { capture: true });
         window.removeEventListener("dragend", clearGuard, { capture: true });
         window.removeEventListener("drop", clearGuard, { capture: true });
+        window.removeEventListener("dragstart", onSplitterDragStart, { capture: true });
+        window.removeEventListener("mousedown", onSplitterMouseDown, { capture: true });
         clearGuard();
         origDragTargetMap.forEach((orig, target) => {
           target._getDragTarget = orig;
