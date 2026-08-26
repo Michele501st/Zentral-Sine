@@ -5735,6 +5735,16 @@
         };
       }
 
+      // 8. Filter split-view groups from gBrowser.getAllTabGroups so they never appear as "Unnamed group" in "Add Tab to Group" context menus
+      let origGetAllTabGroups = null;
+      if (window.gBrowser && typeof window.gBrowser.getAllTabGroups === "function") {
+        origGetAllTabGroups = window.gBrowser.getAllTabGroups;
+        window.gBrowser.getAllTabGroups = function(options) {
+          const groups = origGetAllTabGroups.call(this, options);
+          return groups.filter(g => g && !g.hasAttribute?.("split-view-group") && !g.hasAttribute?.("zen-split-view") && !g.hasAttribute?.("is-zen-split"));
+        };
+      }
+
       this.#dragGuardCleanup = () => {
         tabContainer.removeEventListener("mousedown", onMouseDown, { capture: true });
         window.removeEventListener("mouseup", onMouseUp, { capture: true });
@@ -5756,6 +5766,9 @@
         }
         if (origSplitTabs && window.gZenViewSplitter) {
           window.gZenViewSplitter.splitTabs = origSplitTabs;
+        }
+        if (origGetAllTabGroups && window.gBrowser) {
+          window.gBrowser.getAllTabGroups = origGetAllTabGroups;
         }
         this.#tabDragGuardInitialized = false;
       };

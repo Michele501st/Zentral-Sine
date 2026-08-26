@@ -274,7 +274,7 @@
     });
 
     // Tab Groups
-    const tabGroups = document.querySelectorAll("tab-group");
+    const tabGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])"));
     lines.push(`Tab Groups Count: ${tabGroups.length}`);
     tabGroups.forEach((g, idx) => {
       const label = g.label || g.getAttribute("label") || "(no label)";
@@ -282,6 +282,15 @@
       const rect = g.getBoundingClientRect();
       const childTabs = g.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab").length;
       lines.push(`  Group #${idx + 1} "${label}" [id="${g.id || 'none'}"]: collapsed=${collapsed} childTabs=${childTabs} rect=${Math.round(rect.width)}x${Math.round(rect.height)}`);
+    });
+
+    // Split Views
+    const splitViews = Array.from(document.querySelectorAll("tab-group[split-view-group], tab-group[zen-split-view], tab-group[is-zen-split]"));
+    lines.push(`Split Views Count: ${splitViews.length}`);
+    splitViews.forEach((s, idx) => {
+      const rect = s.getBoundingClientRect();
+      const childTabs = s.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab").length;
+      lines.push(`  Split View #${idx + 1} [id="${s.id || 'none'}"]: childTabs=${childTabs} rect=${Math.round(rect.width)}x${Math.round(rect.height)}`);
     });
 
     // Native Context Menus in DOM
