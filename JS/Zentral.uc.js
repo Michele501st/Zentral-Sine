@@ -790,9 +790,23 @@
                       background-color 0.18s ease !important;
         }
 
-        /* Scrollbox acts as display: contents in Vertical Sidebar so tiles layout directly in the grid */
+        /* Scrollbox grid layout in Vertical Sidebar */
         #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-apps-scroll-box {
-          display: contents !important;
+          display: grid !important;
+          grid-template-columns: repeat(var(--zentral-grid-cols, 7), minmax(0, 1fr)) !important;
+          justify-items: center !important;
+          align-items: center !important;
+          gap: 6px !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+          max-height: calc(var(--zentral-max-rows, 3) * 42px - 2px) !important;
+          overflow-y: auto !important;
+          scrollbar-width: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-apps-scroll-box::-webkit-scrollbar {
+          display: none !important;
         }
 
         /* Collapsed Strip State: Show 3 dots, hide all inner tiles and utility with Vertical Bar transition */
@@ -1186,9 +1200,10 @@
           display: none !important;
         }
 
-        #zen-apps-sidebar-grid { display: grid; grid-template-columns: repeat(var(--zentral-grid-cols, 7), minmax(0, 1fr)); justify-items: center; align-items: center; gap: 6px; padding: 4px 10px 0px 10px; margin: 0; width: 100%; box-sizing: border-box; position: relative; z-index: 10; max-height: calc(var(--zentral-max-rows, 3) * 42px - 2px); overflow-y: auto; scrollbar-width: none; }
+        #zen-apps-sidebar-grid { display: flex; flex-direction: column; align-items: center; padding: 4px 10px 0px 10px; margin: 0; width: 100%; box-sizing: border-box; position: relative; z-index: 10; overflow: visible; }
         #zen-apps-sidebar-grid::-webkit-scrollbar { display: none; }
-        .zen-apps-scroll-box { display: contents; }
+        .zen-apps-scroll-box { display: grid; grid-template-columns: repeat(var(--zentral-grid-cols, 7), minmax(0, 1fr)); justify-items: center; align-items: center; gap: 6px; width: 100%; box-sizing: border-box; max-height: calc(var(--zentral-max-rows, 3) * 42px - 2px); overflow-y: auto; scrollbar-width: none; margin: 0; padding: 0; }
+        .zen-apps-scroll-box::-webkit-scrollbar { display: none; }
         #zen-apps-sidebar-grid.zen-apps-horizontal { display: flex; flex-direction: row; padding: 0 2px; gap: 2px; width: auto; align-items: center; -moz-window-dragging: no; position: relative; flex-shrink: 1 !important; min-width: 0 !important; margin-left: auto !important; }
         #zen-apps-sidebar-grid.zen-apps-horizontal .zen-apps-scroll-box { display: flex; flex-direction: row; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; width: max-content; max-width: calc(10 * 38px + 9 * 4px) !important; scroll-behavior: smooth; -moz-window-dragging: no; flex-shrink: 1 !important; }
         #zen-apps-sidebar-grid.zen-apps-horizontal .zen-apps-scroll-box::-webkit-scrollbar { display: none; }
