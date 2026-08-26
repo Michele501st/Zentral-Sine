@@ -53,7 +53,7 @@
     "defaultValue": false
   },
   {
-    "property": "zen.workspace.apps.sidebar.debug_logging",
+    "property": "zen.workspace.zentral.debug",
     "label": "Enable Diagnostic Logging in Console Buffer",
     "type": "checkbox",
     "defaultValue": false

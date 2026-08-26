@@ -1,5 +1,7 @@
 # Zentral — Unified Apps Grid & Enhanced Tab Groups (Sine Mod Edition)
 
+[![Version](https://img.shields.io/badge/version-v0.1.6-blue.svg)](theme.json) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **Zentral** is a high-performance, feature-packed `userChrome.js` mod for [Zen Browser](https://zen-browser.app/) natively packaged for the **Sine Mod Engine**. It unifies your favorite web applications and tab groups into a sleek, customizable sidebar experience with floating panels, workspace isolation, custom color pickers, and native Sine Mod preference settings.
 
 ---

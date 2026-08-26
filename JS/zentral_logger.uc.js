@@ -2,7 +2,7 @@
 // @name         Zentral-Logger
 // @description  Comprehensive diagnostic logger for Zentral (Apps Grid, Tab Groups, Settings & Layout Renderings).
 // @author       Michele Pierini
-// @version      v0.1.7
+// @version      v0.1.6
 // @include      main
 // ==/UserScript==
 
