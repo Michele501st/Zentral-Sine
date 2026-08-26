@@ -5643,7 +5643,28 @@
         }
       });
 
-      // 4. Intercept gZenViewSplitter.splitTabs to maintain dormant tab state during split creation
+      // 4. Implement Same-Window Tab Group & Split View Reordering in gBrowser.adoptTabGroup
+      let origAdoptTabGroup = null;
+      if (window.gBrowser && typeof window.gBrowser.adoptTabGroup === "function") {
+        origAdoptTabGroup = window.gBrowser.adoptTabGroup;
+        window.gBrowser.adoptTabGroup = function(group, options = {}) {
+          if (group && group.ownerDocument === document) {
+            let target = options.insertBefore;
+            if (!target && options.elementIndex !== undefined && tabContainer?.ariaFocusableItems) {
+              target = tabContainer.ariaFocusableItems.at(options.elementIndex) || null;
+            }
+            if (target && target !== group && target !== group.labelContainerElement && !group.contains(target)) {
+              target.before(group);
+            } else if (!target && tabContainer?.arrowScrollbox) {
+              tabContainer.arrowScrollbox.appendChild(group);
+            }
+            return group;
+          }
+          return origAdoptTabGroup.call(this, group, options);
+        };
+      }
+
+      // 5. Intercept gZenViewSplitter.splitTabs to maintain dormant tab state during split creation
       let origSplitTabs = null;
       if (window.gZenViewSplitter && typeof window.gZenViewSplitter.splitTabs === "function") {
         origSplitTabs = window.gZenViewSplitter.splitTabs;
@@ -5668,6 +5689,9 @@
           target.startTabDrag = orig;
         });
         origStartMap.clear();
+        if (origAdoptTabGroup && window.gBrowser) {
+          window.gBrowser.adoptTabGroup = origAdoptTabGroup;
+        }
         if (origSplitTabs && window.gZenViewSplitter) {
           window.gZenViewSplitter.splitTabs = origSplitTabs;
         }
