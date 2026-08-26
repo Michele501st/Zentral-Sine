@@ -591,6 +591,169 @@
   }
 
   // -------------------------------------------------------------------------
+  // Deep Tab Drag & Split View Diagnostic Tracer
+  // -------------------------------------------------------------------------
+  function setupTabDragAndSplitViewTracer() {
+    function getElementSummary(el) {
+      if (!el) return "(null)";
+      const tag = el.tagName?.toLowerCase() || "(no-tag)";
+      const id = el.id ? `#${el.id}` : "";
+      const cls = el.className ? `.${String(el.className).trim().replace(/\s+/g, ".")}` : "";
+      const label = el.getAttribute?.("label") || el.label || el.textLabel?.textContent || "";
+      const isSplitTab = el.splitView || el.group?.hasAttribute?.("split-view-group") || false;
+      const isPending = el.hasAttribute?.("pending") || false;
+      const groupId = el.group?.id || el.getAttribute?.("zen-tab-group-id") || "";
+      return `<${tag}${id}${cls}> label="${label}" isSplitTab=${isSplitTab} isPending=${isPending} groupId="${groupId}"`;
+    }
+
+    function getCallerStack() {
+      try {
+        const stack = new Error().stack || "";
+        const lines = stack.split("\n").slice(2, 6).map(l => l.trim()).filter(Boolean);
+        return lines.join(" -> ");
+      } catch (_) {
+        return "";
+      }
+    }
+
+    const tabContainer = document.getElementById("tabbrowser-tabs") || document.body;
+
+    // 1. Trace Mouse Events on Tab Strip
+    const onTabStripMouseDown = (e) => {
+      if (!isLoggerEnabled() || e.button !== 0) return;
+      const target = e.target;
+      if (!target?.closest?.("tab, tabbrowser-tab, tab-group, .tab-group-label-container")) return;
+      const el = target.closest("tab, tabbrowser-tab, tab-group");
+      const activeTab = window.gBrowser?.selectedTab;
+      ZentralLogger.log("DragTracer:MouseDown", `MouseDown on ${getElementSummary(el)} | coords=(${e.clientX},${e.clientY}) | activeTab="${activeTab?.label || activeTab?.textLabel?.textContent || ''}"`);
+    };
+
+    const onTabStripMouseUp = (e) => {
+      if (!isLoggerEnabled() || e.button !== 0) return;
+      const target = e.target;
+      if (!target?.closest?.("tab, tabbrowser-tab, tab-group, .tab-group-label-container")) return;
+      const el = target.closest("tab, tabbrowser-tab, tab-group");
+      const activeTab = window.gBrowser?.selectedTab;
+      ZentralLogger.log("DragTracer:MouseUp", `MouseUp on ${getElementSummary(el)} | coords=(${e.clientX},${e.clientY}) | activeTab="${activeTab?.label || activeTab?.textLabel?.textContent || ''}"`);
+    };
+
+    tabContainer.addEventListener("mousedown", onTabStripMouseDown, true);
+    tabContainer.addEventListener("mouseup", onTabStripMouseUp, true);
+    cleanupObservers.push(() => {
+      tabContainer.removeEventListener("mousedown", onTabStripMouseDown, true);
+      tabContainer.removeEventListener("mouseup", onTabStripMouseUp, true);
+    });
+
+    // 2. Trace Native Drag Lifecycle
+    const onDragStart = (e) => {
+      if (!isLoggerEnabled()) return;
+      const target = e.target;
+      const activeTab = window.gBrowser?.selectedTab;
+      ZentralLogger.log("DragTracer:DragStart", `DragStart on ${getElementSummary(target)} | activeTab="${activeTab?.label || ''}" | types=[${Array.from(e.dataTransfer?.types || []).join(",")}]`);
+    };
+
+    const onDragEnd = (e) => {
+      if (!isLoggerEnabled()) return;
+      const target = e.target;
+      const activeTab = window.gBrowser?.selectedTab;
+      ZentralLogger.log("DragTracer:DragEnd", `DragEnd on ${getElementSummary(target)} | activeTab="${activeTab?.label || ''}" | dropEffect="${e.dataTransfer?.dropEffect}"`);
+    };
+
+    const onDrop = (e) => {
+      if (!isLoggerEnabled()) return;
+      const target = e.target;
+      const activeTab = window.gBrowser?.selectedTab;
+      let draggedItemSummary = "(unknown)";
+      try {
+        const dt = e.dataTransfer;
+        if (dt && dt.mozItemCount) {
+          const item = dt.mozGetDataAt("application/x-moz-tabbrowser-tab", 0);
+          if (item) draggedItemSummary = getElementSummary(item);
+        }
+      } catch (_) {}
+      ZentralLogger.log("DragTracer:Drop", `Drop on target ${getElementSummary(target)} | draggedItem=${draggedItemSummary} | activeTab="${activeTab?.label || ''}"`);
+    };
+
+    window.addEventListener("dragstart", onDragStart, true);
+    window.addEventListener("dragend", onDragEnd, true);
+    window.addEventListener("drop", onDrop, true);
+    cleanupObservers.push(() => {
+      window.removeEventListener("dragstart", onDragStart, true);
+      window.removeEventListener("dragend", onDragEnd, true);
+      window.removeEventListener("drop", onDrop, true);
+    });
+
+    // 3. Trace TabSelect Events
+    const onTabSelect = (e) => {
+      if (!isLoggerEnabled()) return;
+      const newTab = e.target;
+      const stack = getCallerStack();
+      ZentralLogger.log("DragTracer:TabSelect", `TabSelect fired -> New Active Tab: ${getElementSummary(newTab)} | Caller Stack: ${stack}`);
+    };
+    window.addEventListener("TabSelect", onTabSelect, true);
+    cleanupObservers.push(() => window.removeEventListener("TabSelect", onTabSelect, true));
+
+    // 4. Trace gZenViewSplitter Split Engine Calls
+    if (window.gZenViewSplitter) {
+      const splitter = window.gZenViewSplitter;
+      const origSplitTabs = splitter.splitTabs;
+      if (typeof origSplitTabs === "function") {
+        splitter.splitTabs = function(tabs, gridType, initialIndex, options) {
+          if (isLoggerEnabled()) {
+            const stack = getCallerStack();
+            const tabList = (tabs || []).map(t => getElementSummary(t)).join("; ");
+            ZentralLogger.log("SplitView:splitTabs", `splitTabs called | gridType="${gridType}" | initialIndex=${initialIndex} | tabs=[${tabList}] | stack: ${stack}`);
+          }
+          return origSplitTabs.apply(this, arguments);
+        };
+        cleanupObservers.push(() => { splitter.splitTabs = origSplitTabs; });
+      }
+
+      const origActivateSplitView = splitter.activateSplitView;
+      if (typeof origActivateSplitView === "function") {
+        splitter.activateSplitView = function(splitData) {
+          if (isLoggerEnabled()) {
+            const stack = getCallerStack();
+            const groupId = splitData?.groupId || "";
+            const tabList = (splitData?.tabs || []).map(t => getElementSummary(t)).join("; ");
+            ZentralLogger.log("SplitView:activateSplitView", `activateSplitView called | groupId="${groupId}" | tabs=[${tabList}] | stack: ${stack}`);
+          }
+          return origActivateSplitView.apply(this, arguments);
+        };
+        cleanupObservers.push(() => { splitter.activateSplitView = origActivateSplitView; });
+      }
+
+      const origDeactivateCurrentSplitView = splitter.deactivateCurrentSplitView;
+      if (typeof origDeactivateCurrentSplitView === "function") {
+        splitter.deactivateCurrentSplitView = function() {
+          if (isLoggerEnabled()) {
+            const stack = getCallerStack();
+            ZentralLogger.log("SplitView:deactivateCurrentSplitView", `deactivateCurrentSplitView called | stack: ${stack}`);
+          }
+          return origDeactivateCurrentSplitView.apply(this, arguments);
+        };
+        cleanupObservers.push(() => { splitter.deactivateCurrentSplitView = origDeactivateCurrentSplitView; });
+      }
+    }
+
+    // 5. Trace startTabDrag
+    const dragProto = window.ZenDragAndDrop?.prototype || tabContainer?.tabDragAndDrop;
+    if (dragProto && typeof dragProto.startTabDrag === "function") {
+      const origStartTabDrag = dragProto.startTabDrag;
+      dragProto.startTabDrag = function(event, tab, ...args) {
+        if (isLoggerEnabled()) {
+          const stack = getCallerStack();
+          const activeTab = window.gBrowser?.selectedTab;
+          const optionsStr = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(", ");
+          ZentralLogger.log("DragTracer:startTabDrag", `startTabDrag invoked for ${getElementSummary(tab)} | activeTab="${activeTab?.label || ''}" | options=(${optionsStr}) | stack: ${stack}`);
+        }
+        return origStartTabDrag.apply(this, arguments);
+      };
+      cleanupObservers.push(() => { dragProto.startTabDrag = origStartTabDrag; });
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // User Interactions & Hit-Test Logger (Clicks, Buttons, Modals)
   // -------------------------------------------------------------------------
   const onClick = (e) => {
@@ -750,13 +913,15 @@
   if (document.readyState === "complete") {
     setupLayoutObservers();
     setupTabContextMenuTracer();
+    setupTabDragAndSplitViewTracer();
   } else {
     window.addEventListener("DOMContentLoaded", () => {
       setupLayoutObservers();
       setupTabContextMenuTracer();
+      setupTabDragAndSplitViewTracer();
     }, { once: true });
   }
 
-  ZentralLogger.log("Zentral-Logger", "Overhauled Zentral-Logger v0.1.7 initialized. Tab Context Menu diagnostic tracing active. Press Alt+L to export logs.");
+  ZentralLogger.log("Zentral-Logger", "Overhauled Zentral-Logger v0.1.7 initialized. Tab Drag & Split View diagnostic tracing active. Press Alt+L to export logs.");
 
 })();
