@@ -12,7 +12,6 @@
 (function ZentralWorkspace() {
   if (typeof gBrowser === "undefined") return;
   if (window.ZentralInitialized === true) {
-    console.log("[Zentral] Already initialized, skipping boot sequence.");
     return;
   }
   window.ZentralInitialized = true;
@@ -256,7 +255,7 @@
 
   // Instantiate Core immediately
   const Core = new ZentralCore();
-  console.log("[ZentralCore] Initialized.");
+  if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralCore] Initialized.");
   /* ============================================================================
    * 3.0 APPS MODULE (ZentralApps)
    * ============================================================================
@@ -446,7 +445,7 @@
      */
     init() {
       if (!Core.getPref(Constants.Apps.PREF_ENABLED)) {
-        console.log("[ZentralApps] Apps Grid feature is disabled.");
+        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] Apps Grid feature is disabled.");
         return;
       }
       this.injectStyles();
@@ -2019,7 +2018,7 @@
      * @param {Object} app - The target app configuration object.
      */
     openPanel(app) {
-      console.log("[ZentralApps] openPanel called for app:", app.id, "URL:", app.url);
+      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] openPanel called for app:", app.id, "URL:", app.url);
       if (this.#state.closeTimerId) {
         clearTimeout(this.#state.closeTimerId);
         this.#state.closeTimerId = null;
@@ -2097,7 +2096,7 @@
      * Closes the active floating app panel and triggers closing slide-out transition.
      */
     closePanel() {
-      console.log("[ZentralApps] closePanel called");
+      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] closePanel called");
       if (!this.#state.activeAppId && !this.#dom.root?.hasAttribute("open")) return;
       
       if (this.#state.closeTimerId) {
@@ -3790,7 +3789,7 @@
      */
     init() {
       if (!Core.getPref(Constants.TabGroups.PREF_ENABLED)) {
-        console.log("[ZentralTabGroups] Tab Groups feature is disabled.");
+        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralTabGroups] Tab Groups feature is disabled.");
         return;
       }
       this.#isRestoring = true;
@@ -4807,8 +4806,8 @@
           <div class="tab-group-icon-container"><div class="tab-group-icon"><image class="group-marker" role="button" keyNav="false" tooltiptext="Toggle Group"/></div></div>
           <image class="tab-close-button close-icon" role="button" keyNav="false" tooltiptext="Close Group"/>
         `);
-        const iconContainer = frag.children[0];
-        const closeButton = frag.children[1];
+        const iconContainer = frag.querySelector(".tab-group-icon-container") || frag.children[0];
+        const closeButton = frag.querySelector(".tab-close-button") || frag.children[1];
 
         labelContainer.insertBefore(iconContainer, labelContainer.firstChild);
         labelContainer.appendChild(closeButton);
