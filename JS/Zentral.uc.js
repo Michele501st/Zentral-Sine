@@ -783,9 +783,9 @@
           overflow: hidden !important;
           border-radius: var(--toolbarbutton-border-radius, 6px);
           will-change: max-height, padding, background-color;
-          transition: max-height 0.24s cubic-bezier(0.25, 1, 0.5, 1),
-                      padding 0.24s cubic-bezier(0.25, 1, 0.5, 1),
-                      background-color 0.18s ease !important;
+          transition: max-height 0.32s cubic-bezier(0.25, 1, 0.5, 1),
+                      padding 0.32s cubic-bezier(0.25, 1, 0.5, 1),
+                      background-color 0.22s ease !important;
         }
 
         /* Scrollbox acts as display: contents in Vertical Sidebar so tiles layout directly in the grid */
@@ -815,7 +815,7 @@
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover,
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) {
           max-height: 400px !important;
-          padding: 4px 10px 8px 10px !important;
+          padding: 4px 10px 4px 10px !important;
           margin: 0 !important;
           overflow: hidden !important;
         }
