@@ -5482,15 +5482,15 @@
 
     /**
      * Prevents dormant tabs and split views from being selected and loaded while being dragged or reordered.
-     * Uses Firefox's native `fromTabList: true` drag option which instructs Gecko not to select the tab
-     * or bundle the active tab into the drag dataTransfer payload.
+     * Uses a synchronous startTabDrag hook to isolate the drag data payload and suppress tab selection
+     * while preserving native in-strip drag animations.
      */
     initTabDragSelectionGuard() {
       const tabContainer = gBrowser?.tabContainer || document.getElementById("tabbrowser-tabs");
       if (!tabContainer || this.#tabDragGuardInitialized) return;
       this.#tabDragGuardInitialized = true;
 
-      // 1. Hook ZenDragAndDrop.prototype.startTabDrag / tabContainer.tabDragAndDrop.startTabDrag
+      // 1. Hook startTabDrag across ZenDragAndDrop and TabDragAndDrop
       const targets = [
         window.ZenDragAndDrop?.prototype,
         tabContainer.tabDragAndDrop,
@@ -5505,10 +5505,44 @@
           origStartMap.set(target, orig);
           target.startTabDrag = function(event, tab, options = {}) {
             const currentActiveTab = window.gBrowser?.selectedTab;
-            // A tab is dormant if it's not the currently active tab and not multiselected with the active tab
+            // A tab or split view is dormant if it is not the currently active tab
             const isDormant = tab && tab !== currentActiveTab && !tab.multiselected;
-            const opts = isDormant ? { ...options, fromTabList: true } : options;
-            return orig.call(this, event, tab, opts);
+
+            if (isDormant && window.gBrowser) {
+              // Temporarily isolate selectedElements so Firefox only bundles the dragged tab/split view
+              Object.defineProperty(window.gBrowser, "selectedElements", {
+                get: () => [tab],
+                configurable: true
+              });
+
+              // Temporarily suppress selectedTab and selectedItem setters during startTabDrag
+              Object.defineProperty(window.gBrowser, "selectedTab", {
+                get: () => currentActiveTab,
+                set: () => {},
+                configurable: true
+              });
+
+              if (tabContainer) {
+                Object.defineProperty(tabContainer, "selectedItem", {
+                  get: () => currentActiveTab,
+                  set: () => {},
+                  configurable: true
+                });
+              }
+
+              try {
+                return orig.call(this, event, tab, options);
+              } finally {
+                // Restore native prototype getters and setters immediately
+                delete window.gBrowser.selectedElements;
+                delete window.gBrowser.selectedTab;
+                if (tabContainer) {
+                  delete tabContainer.selectedItem;
+                }
+              }
+            }
+
+            return orig.call(this, event, tab, options);
           };
         }
       });
