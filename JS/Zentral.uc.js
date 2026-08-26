@@ -395,7 +395,7 @@
      */
     #state = {
       apps: [],
-      utilityOrder: ["settings", "autohide"],
+      utilitySlots: ["settings", "autohide"],
       activeAppId: null,
       isPinned: false,
       isExpanded: false,
@@ -525,31 +525,39 @@
     }
 
     /**
-     * Loads the preferred display order for the Apps Grid Utility Section buttons.
+     * Loads the preferred display slot positions for the Apps Grid Utility Section buttons.
      */
     loadUtilityOrder() {
       try {
         const raw = Core.getPref(Constants.Apps.PREF_UTILITY_ORDER);
         const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const valid = ["settings", "autohide"];
-          const filtered = parsed.filter(k => valid.includes(k));
-          valid.forEach(k => { if (!filtered.includes(k)) filtered.push(k); });
-          this.#state.utilityOrder = filtered;
+          const cols = parseInt(Core.getPref(Constants.Apps.PREF_APPS_PER_ROW, 7), 10) || 7;
+          if (parsed.every(x => typeof x === "string")) {
+            const slots = new Array(cols).fill(null);
+            parsed.forEach((k, idx) => { if (idx < cols) slots[idx] = k; });
+            this.#state.utilitySlots = slots;
+          } else {
+            this.#state.utilitySlots = parsed;
+          }
           return;
         }
       } catch (e) {
         console.warn("[ZentralApps] Failed to load utility order pref:", e);
       }
-      this.#state.utilityOrder = ["settings", "autohide"];
+      const cols = parseInt(Core.getPref(Constants.Apps.PREF_APPS_PER_ROW, 7), 10) || 7;
+      const defaultSlots = new Array(cols).fill(null);
+      defaultSlots[0] = "settings";
+      defaultSlots[1] = "autohide";
+      this.#state.utilitySlots = defaultSlots;
     }
 
     /**
-     * Persists the preferred display order for the Apps Grid Utility Section buttons.
+     * Persists the preferred display slot positions for the Apps Grid Utility Section buttons.
      */
     saveUtilityOrder() {
       try {
-        Core.setPref(Constants.Apps.PREF_UTILITY_ORDER, JSON.stringify(this.#state.utilityOrder));
+        Core.setPref(Constants.Apps.PREF_UTILITY_ORDER, JSON.stringify(this.#state.utilitySlots));
       } catch (e) {
         console.warn("[ZentralApps] Failed to save utility order pref:", e);
       }
@@ -857,7 +865,7 @@
           width: 100% !important;
           box-sizing: border-box !important;
           position: relative !important;
-          margin: 0 !important;
+          margin: 0 0 2px 0 !important;
           padding: 0 !important;
           z-index: 12 !important;
           user-select: none !important;
@@ -871,13 +879,15 @@
           justify-content: center;
           gap: 3.5px;
           width: 100%;
-          height: 10px;
-          min-height: 10px;
+          height: 8px;
+          min-height: 8px;
           cursor: pointer;
           opacity: 0.65;
           transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.25, 1, 0.5, 1);
-          padding: 2px 0;
+          padding: 0;
+          margin: 0;
           box-sizing: border-box;
+          order: 0;
         }
 
         .zentral-apps-utility-dots:hover {
@@ -906,13 +916,14 @@
           justify-content: center;
           gap: 3.5px;
           width: 10px;
-          height: 24px;
+          height: 28px;
           cursor: pointer;
           opacity: 0.65;
           transition: opacity 0.2s ease;
           padding: 0 2px;
           box-sizing: border-box;
           flex-shrink: 0;
+          order: 0;
         }
 
         .zentral-apps-utility-dots-vertical:hover {
@@ -934,32 +945,53 @@
           opacity: 0;
           overflow: hidden;
           pointer-events: none;
-          transform: translateY(-4px);
+          transform: translateY(-2px);
+          order: 1;
           will-change: max-height, opacity, transform;
-          transition: max-height 0.24s cubic-bezier(0.25, 1, 0.5, 1),
-                      opacity 0.2s ease,
-                      transform 0.22s cubic-bezier(0.25, 1, 0.5, 1);
+          transition: max-height 0.22s cubic-bezier(0.25, 1, 0.5, 1),
+                      opacity 0.18s ease,
+                      transform 0.20s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
         .zentral-apps-utility-row {
-          display: flex;
-          flex-direction: row;
+          display: grid;
+          grid-template-columns: repeat(var(--zentral-grid-cols, 7), minmax(0, 1fr));
+          justify-items: center;
           align-items: center;
-          justify-content: center;
-          gap: 6px;
-          padding: 2px 0 3px 0;
           width: 100%;
+          padding: 0;
+          margin: 0;
           box-sizing: border-box;
         }
 
-        /* 24px Buttons (3/4 scale of 32px Apps Tiles) */
+        /* Utility Slot (Grid Column Cell) */
+        .zentral-utility-slot {
+          width: 100%;
+          height: 28px;
+          min-height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          box-sizing: border-box;
+          border-radius: var(--toolbarbutton-border-radius, 6px);
+          transition: background-color 0.15s ease;
+        }
+
+        .zentral-utility-slot.zentral-utility-slot-dragover {
+          background-color: color-mix(in srgb, var(--zen-primary-color, currentColor) 20%, transparent);
+          outline: 1px dashed var(--zen-primary-color, currentColor);
+          outline-offset: -1px;
+        }
+
+        /* 28px Buttons */
         .zentral-utility-btn {
-          width: 24px !important;
-          height: 24px !important;
-          min-width: 24px !important;
-          min-height: 24px !important;
-          max-width: 24px !important;
-          max-height: 24px !important;
+          width: 28px !important;
+          height: 28px !important;
+          min-width: 28px !important;
+          min-height: 28px !important;
+          max-width: 28px !important;
+          max-height: 28px !important;
           padding: 0 !important;
           border-radius: var(--toolbarbutton-border-radius, 6px) !important;
           background-color: transparent !important;
@@ -970,7 +1002,7 @@
           justify-content: center !important;
           cursor: pointer !important;
           color: inherit !important;
-          opacity: 0.8 !important;
+          opacity: 0.85 !important;
           flex-shrink: 0 !important;
           transition: background-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease !important;
         }
@@ -985,22 +1017,31 @@
         }
 
         .zentral-utility-btn svg {
-          width: 14px !important;
-          height: 14px !important;
+          width: 16px !important;
+          height: 16px !important;
           pointer-events: none !important;
         }
 
-        /* Morphing Divider Line */
+        /* Morphing Divider Line (Lighter color) */
         .zentral-apps-utility-divider {
           width: calc(100% - 16px);
           height: 1px;
-          background-color: var(--zen-colors-border, color-mix(in srgb, currentColor 12%, transparent));
+          background-color: color-mix(in srgb, currentColor 12%, transparent);
           opacity: 0;
           transform: scaleX(0);
           transform-origin: center;
           transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.25, 1, 0.5, 1);
-          margin: 2px auto 4px auto;
+          margin: 2px auto 3px auto;
           pointer-events: none;
+          order: 2;
+        }
+
+        /* When Hidden: Divider and content take 0 space */
+        #zentral-apps-utility-section:not([data-utility-revealed="true"]) .zentral-apps-utility-divider {
+          display: none !important;
+          height: 0 !important;
+          margin: 0 !important;
+          padding: 0 !important;
         }
 
         /* When Revealed (Autohide OFF): Dots disappear, Content slides down, Divider morphs in */
@@ -1017,10 +1058,11 @@
           opacity: 1 !important;
           pointer-events: auto !important;
           transform: translateY(0) !important;
+          margin-bottom: 2px !important;
         }
 
         #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-divider {
-          opacity: 1 !important;
+          opacity: 0.5 !important;
           transform: scaleX(1) !important;
         }
 
@@ -1038,12 +1080,13 @@
           opacity: 1 !important;
           pointer-events: auto !important;
           transform: translateY(0) !important;
+          margin-bottom: 2px !important;
         }
 
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] #zentral-apps-utility-section .zentral-apps-utility-divider,
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover #zentral-apps-utility-section .zentral-apps-utility-divider,
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) #zentral-apps-utility-section .zentral-apps-utility-divider {
-          opacity: 1 !important;
+          opacity: 0.5 !important;
           transform: scaleX(1) !important;
         }
 
@@ -1075,7 +1118,7 @@
           align-items: center !important;
           width: auto !important;
           height: 100% !important;
-          margin-left: 2px !important;
+          margin: 0 0 0 2px !important;
           grid-column: auto !important;
           flex-shrink: 0 !important;
         }
@@ -1086,9 +1129,22 @@
 
         .zen-apps-horizontal #zentral-apps-utility-section .zentral-apps-utility-dots-vertical {
           display: flex !important;
+          order: 0 !important;
+        }
+
+        .zen-apps-horizontal #zentral-apps-utility-section .zentral-apps-utility-divider {
+          width: 1px !important;
+          height: 16px !important;
+          margin: 0 4px 0 2px !important;
+          background-color: color-mix(in srgb, currentColor 12%, transparent) !important;
+          opacity: 0 !important;
+          transform: scaleY(0) !important;
+          transform-origin: center !important;
+          order: 1 !important;
         }
 
         .zen-apps-horizontal #zentral-apps-utility-section .zentral-apps-utility-content {
+          order: 2 !important;
           flex-direction: row !important;
           max-height: 100% !important;
           max-width: 0 !important;
@@ -1100,34 +1156,38 @@
         }
 
         .zen-apps-horizontal #zentral-apps-utility-section .zentral-apps-utility-row {
+          display: flex !important;
           flex-direction: row !important;
+          align-items: center !important;
           padding: 0 !important;
           width: auto !important;
           gap: 4px !important;
         }
 
-        .zen-apps-horizontal #zentral-apps-utility-section .zentral-apps-utility-divider {
-          width: 1px !important;
-          height: 16px !important;
-          margin: 0 4px !important;
-          transform: scaleY(0) !important;
-          transform-origin: center !important;
+        .zen-apps-horizontal #zentral-apps-utility-section .zentral-utility-slot {
+          width: auto !important;
+          height: auto !important;
+          min-height: 0 !important;
         }
 
         .zen-apps-horizontal #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-dots-vertical {
           display: none !important;
         }
 
+        .zen-apps-horizontal #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-divider {
+          opacity: 0.5 !important;
+          transform: scaleY(1) !important;
+        }
+
         .zen-apps-horizontal #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-content {
-          max-width: 70px !important;
+          max-width: 36px !important;
           opacity: 1 !important;
           pointer-events: auto !important;
           transform: translateX(0) !important;
         }
 
-        .zen-apps-horizontal #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-divider {
-          opacity: 1 !important;
-          transform: scaleY(1) !important;
+        .zen-apps-horizontal #zentral-utility-autohide-btn {
+          display: none !important;
         }
 
         /* Hide Utility Section in Vertical Bar placement mode (VB uses its footer) */
@@ -2178,6 +2238,7 @@
 
     /**
      * Renders the draggable buttons (Settings, Autohide) inside the Apps Grid Utility Section.
+     * Supports free slot positioning across all grid columns.
      */
     renderUtilitySection() {
       if (!this.#dom.utilitySection || !this.#dom.utilityRow) return;
@@ -2185,101 +2246,162 @@
       row.replaceChildren();
 
       const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
-      let draggedKey = null;
+      const isHorizontal = this.#dom.grid?.classList.contains("zen-apps-horizontal");
+      const cols = parseInt(Core.getPref(Constants.Apps.PREF_APPS_PER_ROW, 7), 10) || 7;
+      row.style.setProperty("--zentral-grid-cols", cols);
 
-      this.#state.utilityOrder.forEach((btnKey) => {
-        let btn = null;
-        if (btnKey === "settings") {
-          btn = document.createElement("button");
-          btn.id = "zentral-utility-settings-btn";
-          btn.className = "zen-app-tile zentral-utility-btn";
-          btn.dataset.utilityKey = "settings";
-          btn.title = "Zentral Settings";
-          btn.draggable = true;
-          btn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`));
-          btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            if (window.Zentral?.Settings) window.Zentral.Settings.open();
-            else if (window.ZentralSettingsInstance) window.ZentralSettingsInstance.open();
-          });
-          btn.addEventListener("mousedown", (e) => {
-            if (e.button === 0) e.stopPropagation();
-          });
-          this.#dom.utilitySettingsBtn = btn;
-        } else if (btnKey === "autohide") {
-          btn = document.createElement("button");
-          btn.id = "zentral-utility-autohide-btn";
-          btn.className = "zen-app-tile zentral-utility-btn";
-          btn.dataset.utilityKey = "autohide";
-          btn.title = isAutohide ? "Disable Autohide" : "Enable Autohide";
-          btn.draggable = true;
-          btn.appendChild(this.#createSVG(`<svg class="zs-eye-open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`));
-          btn.appendChild(this.#createSVG(`<svg class="zs-eye-closed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`));
-          btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            const cur = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
-            const next = !cur;
-            Core.setPref(Constants.Apps.PREF_AUTOHIDE, next);
-            this.updateAutohideState();
-          });
-          btn.addEventListener("mousedown", (e) => {
-            if (e.button === 0) e.stopPropagation();
-          });
-          this.#dom.utilityAutohideBtn = btn;
+      if (isHorizontal) {
+        // Horizontal Toolbar Mode: Single inline flex row with Settings button (autohide excluded)
+        const btn = document.createElement("button");
+        btn.id = "zentral-utility-settings-btn";
+        btn.className = "zen-app-tile zentral-utility-btn";
+        btn.dataset.utilityKey = "settings";
+        btn.title = "Zentral Settings";
+        btn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`));
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (window.Zentral?.Settings) window.Zentral.Settings.open();
+          else if (window.ZentralSettingsInstance) window.ZentralSettingsInstance.open();
+        });
+        btn.addEventListener("mousedown", (e) => {
+          if (e.button === 0) e.stopPropagation();
+        });
+        this.#dom.utilitySettingsBtn = btn;
+        row.appendChild(btn);
+        return;
+      }
+
+      // Vertical Sidebar Mode: Full multi-slot grid supporting free drag & drop
+      if (!Array.isArray(this.#state.utilitySlots)) {
+        this.#state.utilitySlots = new Array(cols).fill(null);
+        this.#state.utilitySlots[0] = "settings";
+        this.#state.utilitySlots[1] = "autohide";
+      }
+
+      while (this.#state.utilitySlots.length < cols) {
+        this.#state.utilitySlots.push(null);
+      }
+      for (let i = cols; i < this.#state.utilitySlots.length; i++) {
+        const overflowKey = this.#state.utilitySlots[i];
+        if (overflowKey) {
+          const emptyIdx = this.#state.utilitySlots.slice(0, cols).indexOf(null);
+          if (emptyIdx > -1) this.#state.utilitySlots[emptyIdx] = overflowKey;
         }
+      }
+      this.#state.utilitySlots = this.#state.utilitySlots.slice(0, cols);
 
-        if (btn) {
-          btn.addEventListener("dragstart", (e) => {
-            e.stopPropagation();
-            draggedKey = btnKey;
-            e.dataTransfer.effectAllowed = "move";
-            e.dataTransfer.setData("text/plain", "utility:" + btnKey);
-            btn.style.opacity = "0.4";
-          });
-          btn.addEventListener("dragend", (e) => {
-            e.stopPropagation();
-            draggedKey = null;
-            btn.style.opacity = "1";
-            this.renderUtilitySection();
-          });
-          btn.addEventListener("dragover", (e) => {
-            if (draggedKey && draggedKey !== btnKey) {
-              e.preventDefault();
-              e.stopPropagation();
-              e.dataTransfer.dropEffect = "move";
-              btn.style.transform = "scale(1.15)";
-              btn.style.zIndex = "5";
-            }
-          });
-          btn.addEventListener("dragleave", (e) => {
-            e.stopPropagation();
-            btn.style.transform = "";
-            btn.style.zIndex = "";
-          });
-          btn.addEventListener("drop", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            btn.style.transform = "";
-            btn.style.zIndex = "";
-            const data = e.dataTransfer.getData("text/plain");
-            if (data && data.startsWith("utility:")) {
-              const sourceKey = data.replace("utility:", "");
-              if (sourceKey && sourceKey !== btnKey) {
-                const fromIdx = this.#state.utilityOrder.indexOf(sourceKey);
-                const toIdx = this.#state.utilityOrder.indexOf(btnKey);
-                if (fromIdx > -1 && toIdx > -1) {
-                  const [moved] = this.#state.utilityOrder.splice(fromIdx, 1);
-                  this.#state.utilityOrder.splice(toIdx, 0, moved);
-                  this.saveUtilityOrder();
-                  this.renderUtilitySection();
-                }
-              }
-            }
-          });
-
-          row.appendChild(btn);
+      const required = ["settings", "autohide"];
+      required.forEach(reqKey => {
+        if (!this.#state.utilitySlots.includes(reqKey)) {
+          const emptyIdx = this.#state.utilitySlots.indexOf(null);
+          if (emptyIdx > -1) {
+            this.#state.utilitySlots[emptyIdx] = reqKey;
+          } else {
+            this.#state.utilitySlots[0] = reqKey;
+          }
         }
       });
+
+      let draggedKey = null;
+
+      for (let slotIdx = 0; slotIdx < cols; slotIdx++) {
+        const slotEl = document.createElement("div");
+        slotEl.className = "zentral-utility-slot";
+        slotEl.dataset.slotIndex = slotIdx;
+
+        const btnKey = this.#state.utilitySlots[slotIdx];
+        if (btnKey) {
+          let btn = null;
+          if (btnKey === "settings") {
+            btn = document.createElement("button");
+            btn.id = "zentral-utility-settings-btn";
+            btn.className = "zen-app-tile zentral-utility-btn";
+            btn.dataset.utilityKey = "settings";
+            btn.title = "Zentral Settings";
+            btn.draggable = true;
+            btn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`));
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              if (window.Zentral?.Settings) window.Zentral.Settings.open();
+              else if (window.ZentralSettingsInstance) window.ZentralSettingsInstance.open();
+            });
+            btn.addEventListener("mousedown", (e) => {
+              if (e.button === 0) e.stopPropagation();
+            });
+            this.#dom.utilitySettingsBtn = btn;
+          } else if (btnKey === "autohide") {
+            btn = document.createElement("button");
+            btn.id = "zentral-utility-autohide-btn";
+            btn.className = "zen-app-tile zentral-utility-btn";
+            btn.dataset.utilityKey = "autohide";
+            btn.title = isAutohide ? "Disable Autohide" : "Enable Autohide";
+            btn.draggable = true;
+            btn.appendChild(this.#createSVG(`<svg class="zs-eye-open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`));
+            btn.appendChild(this.#createSVG(`<svg class="zs-eye-closed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`));
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              const cur = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
+              const next = !cur;
+              Core.setPref(Constants.Apps.PREF_AUTOHIDE, next);
+              this.updateAutohideState();
+            });
+            btn.addEventListener("mousedown", (e) => {
+              if (e.button === 0) e.stopPropagation();
+            });
+            this.#dom.utilityAutohideBtn = btn;
+          }
+
+          if (btn) {
+            btn.addEventListener("dragstart", (e) => {
+              e.stopPropagation();
+              draggedKey = btnKey;
+              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.setData("text/plain", "utility:" + btnKey);
+              btn.style.opacity = "0.4";
+            });
+            btn.addEventListener("dragend", (e) => {
+              e.stopPropagation();
+              draggedKey = null;
+              btn.style.opacity = "1";
+              this.renderUtilitySection();
+            });
+            slotEl.appendChild(btn);
+          }
+        }
+
+        slotEl.addEventListener("dragover", (e) => {
+          if (draggedKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = "move";
+            slotEl.classList.add("zentral-utility-slot-dragover");
+          }
+        });
+        slotEl.addEventListener("dragleave", (e) => {
+          e.stopPropagation();
+          slotEl.classList.remove("zentral-utility-slot-dragover");
+        });
+        slotEl.addEventListener("drop", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          slotEl.classList.remove("zentral-utility-slot-dragover");
+          const data = e.dataTransfer.getData("text/plain");
+          if (data && data.startsWith("utility:")) {
+            const sourceKey = data.replace("utility:", "");
+            const fromIdx = this.#state.utilitySlots.indexOf(sourceKey);
+            const toIdx = slotIdx;
+            if (fromIdx > -1 && fromIdx !== toIdx) {
+              const targetKey = this.#state.utilitySlots[toIdx];
+              this.#state.utilitySlots[toIdx] = sourceKey;
+              this.#state.utilitySlots[fromIdx] = targetKey || null;
+              this.saveUtilityOrder();
+              this.renderUtilitySection();
+            }
+          }
+        });
+
+        row.appendChild(slotEl);
+      }
     }
 
     renderGrid() {

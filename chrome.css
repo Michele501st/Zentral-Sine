@@ -1328,7 +1328,7 @@ panel[id*="tabgroup-editor"] {
   width: 100% !important;
   box-sizing: border-box !important;
   position: relative !important;
-  margin: 0 !important;
+  margin: 0 0 2px 0 !important;
   padding: 0 !important;
   z-index: 12 !important;
   user-select: none !important;
@@ -1342,13 +1342,15 @@ panel[id*="tabgroup-editor"] {
   justify-content: center;
   gap: 3.5px;
   width: 100%;
-  height: 10px;
-  min-height: 10px;
+  height: 8px;
+  min-height: 8px;
   cursor: pointer;
   opacity: 0.65;
   transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.25, 1, 0.5, 1);
-  padding: 2px 0;
+  padding: 0;
+  margin: 0;
   box-sizing: border-box;
+  order: 0;
 }
 
 .zentral-apps-utility-dots:hover {
@@ -1377,13 +1379,14 @@ panel[id*="tabgroup-editor"] {
   justify-content: center;
   gap: 3.5px;
   width: 10px;
-  height: 24px;
+  height: 28px;
   cursor: pointer;
   opacity: 0.65;
   transition: opacity 0.2s ease;
   padding: 0 2px;
   box-sizing: border-box;
   flex-shrink: 0;
+  order: 0;
 }
 
 .zentral-apps-utility-dots-vertical:hover {
@@ -1405,32 +1408,53 @@ panel[id*="tabgroup-editor"] {
   opacity: 0;
   overflow: hidden;
   pointer-events: none;
-  transform: translateY(-4px);
+  transform: translateY(-2px);
+  order: 1;
   will-change: max-height, opacity, transform;
-  transition: max-height 0.24s cubic-bezier(0.25, 1, 0.5, 1),
-              opacity 0.2s ease,
-              transform 0.22s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: max-height 0.22s cubic-bezier(0.25, 1, 0.5, 1),
+              opacity 0.18s ease,
+              transform 0.20s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .zentral-apps-utility-row {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: repeat(var(--zentral-grid-cols, 7), minmax(0, 1fr));
+  justify-items: center;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 2px 0 3px 0;
   width: 100%;
+  padding: 0;
+  margin: 0;
   box-sizing: border-box;
 }
 
-/* 24px Buttons (3/4 scale of 32px Apps Tiles) */
+/* Utility Slot (Grid Column Cell) */
+.zentral-utility-slot {
+  width: 100%;
+  height: 28px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-sizing: border-box;
+  border-radius: var(--toolbarbutton-border-radius, 6px);
+  transition: background-color 0.15s ease;
+}
+
+.zentral-utility-slot.zentral-utility-slot-dragover {
+  background-color: color-mix(in srgb, var(--zen-primary-color, currentColor) 20%, transparent);
+  outline: 1px dashed var(--zen-primary-color, currentColor);
+  outline-offset: -1px;
+}
+
+/* 28px Buttons */
 .zentral-utility-btn {
-  width: 24px !important;
-  height: 24px !important;
-  min-width: 24px !important;
-  min-height: 24px !important;
-  max-width: 24px !important;
-  max-height: 24px !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
   padding: 0 !important;
   border-radius: var(--toolbarbutton-border-radius, 6px) !important;
   background-color: transparent !important;
@@ -1441,7 +1465,7 @@ panel[id*="tabgroup-editor"] {
   justify-content: center !important;
   cursor: pointer !important;
   color: inherit !important;
-  opacity: 0.8 !important;
+  opacity: 0.85 !important;
   flex-shrink: 0 !important;
   transition: background-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease !important;
 }
@@ -1456,22 +1480,31 @@ panel[id*="tabgroup-editor"] {
 }
 
 .zentral-utility-btn svg {
-  width: 14px !important;
-  height: 14px !important;
+  width: 16px !important;
+  height: 16px !important;
   pointer-events: none !important;
 }
 
-/* Morphing Divider Line */
+/* Morphing Divider Line (Lighter color) */
 .zentral-apps-utility-divider {
   width: calc(100% - 16px);
   height: 1px;
-  background-color: var(--zen-colors-border, color-mix(in srgb, currentColor 12%, transparent));
+  background-color: color-mix(in srgb, currentColor 12%, transparent);
   opacity: 0;
   transform: scaleX(0);
   transform-origin: center;
   transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.25, 1, 0.5, 1);
-  margin: 2px auto 4px auto;
+  margin: 2px auto 3px auto;
   pointer-events: none;
+  order: 2;
+}
+
+/* When Hidden: Divider and content take 0 space */
+#zentral-apps-utility-section:not([data-utility-revealed="true"]) .zentral-apps-utility-divider {
+  display: none !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* When Revealed (Autohide OFF): Dots disappear, Content slides down, Divider morphs in */
@@ -1488,10 +1521,11 @@ panel[id*="tabgroup-editor"] {
   opacity: 1 !important;
   pointer-events: auto !important;
   transform: translateY(0) !important;
+  margin-bottom: 2px !important;
 }
 
 #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-divider {
-  opacity: 1 !important;
+  opacity: 0.5 !important;
   transform: scaleX(1) !important;
 }
 
@@ -1509,12 +1543,13 @@ panel[id*="tabgroup-editor"] {
   opacity: 1 !important;
   pointer-events: auto !important;
   transform: translateY(0) !important;
+  margin-bottom: 2px !important;
 }
 
 :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] #zentral-apps-utility-section .zentral-apps-utility-divider,
 :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover #zentral-apps-utility-section .zentral-apps-utility-divider,
 :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) #zentral-apps-utility-section .zentral-apps-utility-divider {
-  opacity: 1 !important;
+  opacity: 0.5 !important;
   transform: scaleX(1) !important;
 }
 
@@ -1546,7 +1581,7 @@ panel[id*="tabgroup-editor"] {
   align-items: center !important;
   width: auto !important;
   height: 100% !important;
-  margin-left: 2px !important;
+  margin: 0 0 0 2px !important;
   grid-column: auto !important;
   flex-shrink: 0 !important;
 }
@@ -1557,9 +1592,22 @@ panel[id*="tabgroup-editor"] {
 
 .zen-apps-horizontal #zentral-apps-utility-section .zentral-apps-utility-dots-vertical {
   display: flex !important;
+  order: 0 !important;
+}
+
+.zen-apps-horizontal #zentral-apps-utility-section .zentral-apps-utility-divider {
+  width: 1px !important;
+  height: 16px !important;
+  margin: 0 4px 0 2px !important;
+  background-color: color-mix(in srgb, currentColor 12%, transparent) !important;
+  opacity: 0 !important;
+  transform: scaleY(0) !important;
+  transform-origin: center !important;
+  order: 1 !important;
 }
 
 .zen-apps-horizontal #zentral-apps-utility-section .zentral-apps-utility-content {
+  order: 2 !important;
   flex-direction: row !important;
   max-height: 100% !important;
   max-width: 0 !important;
@@ -1571,34 +1619,38 @@ panel[id*="tabgroup-editor"] {
 }
 
 .zen-apps-horizontal #zentral-apps-utility-section .zentral-apps-utility-row {
+  display: flex !important;
   flex-direction: row !important;
+  align-items: center !important;
   padding: 0 !important;
   width: auto !important;
   gap: 4px !important;
 }
 
-.zen-apps-horizontal #zentral-apps-utility-section .zentral-apps-utility-divider {
-  width: 1px !important;
-  height: 16px !important;
-  margin: 0 4px !important;
-  transform: scaleY(0) !important;
-  transform-origin: center !important;
+.zen-apps-horizontal #zentral-apps-utility-section .zentral-utility-slot {
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
 }
 
 .zen-apps-horizontal #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-dots-vertical {
   display: none !important;
 }
 
+.zen-apps-horizontal #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-divider {
+  opacity: 0.5 !important;
+  transform: scaleY(1) !important;
+}
+
 .zen-apps-horizontal #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-content {
-  max-width: 70px !important;
+  max-width: 36px !important;
   opacity: 1 !important;
   pointer-events: auto !important;
   transform: translateX(0) !important;
 }
 
-.zen-apps-horizontal #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-divider {
-  opacity: 1 !important;
-  transform: scaleY(1) !important;
+.zen-apps-horizontal #zentral-utility-autohide-btn {
+  display: none !important;
 }
 
 /* Hide Utility Section in Vertical Bar placement mode (VB uses its footer) */
