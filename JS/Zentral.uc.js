@@ -5676,6 +5676,9 @@
 
               try {
                 return orig.call(this, event, tab, options);
+              } catch (e) {
+                if (Core.getPref(Constants.DEBUG_PREF)) console.warn("[Zentral] startTabDrag snapshot notice:", e);
+                return true;
               } finally {
                 // Restore native prototype getters and setters immediately
                 delete window.gBrowser.selectedElements;
@@ -5686,7 +5689,12 @@
               }
             }
 
-            return orig.call(this, event, tab, options);
+            try {
+              return orig.call(this, event, tab, options);
+            } catch (e) {
+              if (Core.getPref(Constants.DEBUG_PREF)) console.warn("[Zentral] startTabDrag fallback:", e);
+              return true;
+            }
           };
         }
       });

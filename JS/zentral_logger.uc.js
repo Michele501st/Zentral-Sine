@@ -14,6 +14,7 @@
     try { window._zentralLoggerCleanup(); } catch (_) {}
   }
 
+  let cleanupObservers = [];
   const MAX_ENTRIES = 8000;
   const ringBuffer = window._zentralLoggerRingBuffer || [];
   window._zentralLoggerRingBuffer = ringBuffer;
@@ -64,6 +65,30 @@
     ringBuffer.push(line);
   }
 
+  function formatLogArg(a) {
+    if (a === null) return "null";
+    if (a === undefined) return "undefined";
+    if (a instanceof Error || (typeof a === "object" && ("message" in a || "stack" in a))) {
+      const name = a.name || "Error";
+      const msg = a.message || String(a);
+      const stack = a.stack ? `\nStack:\n${a.stack}` : "";
+      return `${name}: ${msg}${stack}`;
+    }
+    if (typeof a === "object") {
+      try {
+        return JSON.stringify(a, (key, value) => {
+          if (value instanceof HTMLElement || value instanceof Element) {
+            return `<${value.tagName.toLowerCase()}${value.id ? '#' + value.id : ''}${value.className ? '.' + value.className : ''}>`;
+          }
+          return value;
+        });
+      } catch (_) {
+        return String(a);
+      }
+    }
+    return String(a);
+  }
+
   const _log   = console.log.bind(console);
   const _warn  = console.warn.bind(console);
   const _error = console.error.bind(console);
@@ -76,31 +101,31 @@
   const ZentralLogger = {
     log(tag, ...args) {
       if (!isLoggerEnabled()) return;
-      const msg = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
+      const msg = args.map(formatLogArg).join(" ");
       _log(`[${tag}] ${msg}`);
       record("log", tag, msg);
     },
     warn(tag, ...args) {
       if (!isLoggerEnabled()) return;
-      const msg = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
+      const msg = args.map(formatLogArg).join(" ");
       _warn(`[${tag}] ${msg}`);
       record("warn", tag, msg);
     },
     error(tag, ...args) {
       if (!isLoggerEnabled()) return;
-      const msg = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
+      const msg = args.map(formatLogArg).join(" ");
       _error(`[${tag}] ${msg}`);
       record("error", tag, msg);
     },
     debug(tag, ...args) {
       if (!isLoggerEnabled()) return;
-      const msg = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
+      const msg = args.map(formatLogArg).join(" ");
       _debug(`[${tag}] ${msg}`);
       record("debug", tag, msg);
     },
     info(tag, ...args) {
       if (!isLoggerEnabled()) return;
-      const msg = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
+      const msg = args.map(formatLogArg).join(" ");
       _info(`[${tag}] ${msg}`);
       record("info", tag, msg);
     },
@@ -133,8 +158,8 @@
   function patchConsoleMethod(originalFn, level) {
     return function (...args) {
       originalFn(...args);
-      if (!isLoggerEnabled()) return; // Fast return: no stringifying, no regex matching, no overhead
-      const text = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
+      if (!isLoggerEnabled()) return; // Fast return: no stringifying, no overhead
+      const text = args.map(formatLogArg).join(" ");
       let tag = "Console";
       const tagMatch = text.match(/^\[(.*?)\]/);
       if (tagMatch) {
@@ -153,14 +178,67 @@
   // Capture uncaught window errors & rejections
   const onWinError = (e) => {
     if (!isLoggerEnabled()) return;
-    record("error", "WindowError", `Uncaught: ${e.message} @ ${e.filename}:${e.lineno}:${e.colno}`);
+    const msg = e.message || e.error?.message || e.error?.name || "Unknown Script Error";
+    const src = e.filename || e.error?.fileName || e.error?.filename || "unknown-source";
+    const line = e.lineno || e.error?.lineNumber || e.error?.lineno || 0;
+    const col = e.colno || e.error?.columnNumber || e.error?.colno || 0;
+    const stack = e.error?.stack ? `\nStack: ${e.error.stack}` : "";
+    record("error", "WindowError", `Uncaught ${msg} @ ${src}:${line}:${col}${stack}`);
   };
+
   const onUnhandledRej = (e) => {
     if (!isLoggerEnabled()) return;
-    record("error", "UnhandledRejection", `Reason: ${e.reason?.message || e.reason}`);
+    const reason = e.reason;
+    const text = reason instanceof Error ? `${reason.name}: ${reason.message}\nStack: ${reason.stack}` : (reason?.message || String(reason));
+    record("error", "UnhandledRejection", `Reason: ${text}`);
   };
+
   window.addEventListener("error", onWinError, true);
   window.addEventListener("unhandledrejection", onUnhandledRej, true);
+  cleanupObservers.push(() => {
+    window.removeEventListener("error", onWinError, true);
+    window.removeEventListener("unhandledrejection", onUnhandledRej, true);
+  });
+
+  // -------------------------------------------------------------------------
+  // Intercept XPCOM Gecko Console Warnings & Errors
+  // -------------------------------------------------------------------------
+  try {
+    const consoleListener = {
+      observe(msg) {
+        if (!isLoggerEnabled()) return;
+        try {
+          if (msg instanceof Ci.nsIScriptError) {
+            const sourceName = msg.sourceName || "";
+            const errorMessage = msg.errorMessage || "";
+            const isWarning = (msg.flags & Ci.nsIScriptError.warningFlag) !== 0;
+            const level = isWarning ? "warn" : "error";
+            
+            const isRelevant = /zentral|tabgroup|tab-group|splitview|workspace|sine|drag-and-drop|pagethumb/i.test(sourceName) ||
+                               /zentral|tabgroup|tab-group|splitview|zen\.workspace|draganddrop/i.test(errorMessage) ||
+                               sourceName.includes("Zentral.uc.js") ||
+                               sourceName.includes("zentral_logger.uc.js");
+
+            if (isRelevant) {
+              record(level, isWarning ? "GeckoWarning" : "GeckoScriptError", `${errorMessage} @ ${sourceName}:${msg.lineNumber}:${msg.columnNumber}`);
+            }
+          } else if (msg instanceof Ci.nsIConsoleMessage) {
+            const text = msg.message || "";
+            if (/zentral|tabgroup|tab-group|splitview|zen\.workspace|drag/i.test(text)) {
+              record("warn", "GeckoConsole", text);
+            }
+          }
+        } catch (_) {}
+      },
+      QueryInterface: ChromeUtils.generateQI(["nsIConsoleListener"])
+    };
+    Services.console.registerListener(consoleListener);
+    cleanupObservers.push(() => {
+      try {
+        Services.console.unregisterListener(consoleListener);
+      } catch (_) {}
+    });
+  } catch (_) {}
 
   // -------------------------------------------------------------------------
   // Layout & DOM Diagnostic Snapshots
@@ -399,7 +477,6 @@
   // -------------------------------------------------------------------------
   // Real-time Layout & DOM Observers
   // -------------------------------------------------------------------------
-  let cleanupObservers = [];
 
   function setupLayoutObservers() {
     // 1. Root & Sidebar Layout Attribute Observer
@@ -950,6 +1027,6 @@
     }, { once: true });
   }
 
-  ZentralLogger.log("Zentral-Logger", "Overhauled Zentral-Logger v0.1.7 initialized. Tab Drag & Split View diagnostic tracing active. Press Alt+L to export logs.");
+  ZentralLogger.log("Zentral-Logger", "Overhauled Zentral-Logger v0.1.6 initialized. Tab Drag & Split View diagnostic tracing active. Press Alt+L to export logs.");
 
 })();
