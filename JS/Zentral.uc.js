@@ -5481,88 +5481,81 @@
     }
 
     /**
-     * Prevents dormant tabs from being selected and loaded while being dragged or reordered,
-     * ensuring sleeping/unloaded tabs remain dormant and only activate on explicit click.
+     * Prevents the active tab from switching when the user drags a dormant split
+     * view group to reorder it. Uses a save/restore strategy: we record the
+     * current selectedTab before Zen's drag machinery takes over, then restore
+     * it after the drag completes (dragend or drop). Zen's own drag code runs
+     * completely unobstructed, ensuring group reordering works normally.
+     *
+     * Also intercepts gZenViewSplitter.splitTabs so that merging two dormant
+     * tabs passes initialIndex=-1, keeping both tabs unloaded after creation.
      */
     initTabDragSelectionGuard() {
       const tabContainer = gBrowser?.tabContainer || document.getElementById("tabbrowser-tabs");
       if (!tabContainer || this.#tabDragGuardInitialized) return;
       this.#tabDragGuardInitialized = true;
 
-      let isGuardingTab = false;
-      let isDraggingTab = false;
-      let dragCandidateTab = null;
-      let startX = 0;
-      let startY = 0;
+      let savedActiveTab = null;       // tab that was active before split view drag started
+      let isDraggingSplitView = false; // true while a split view group is being dragged
 
-      const shouldBlockSelection = (val) => {
-        if (!val) return false;
-        if (isGuardingTab && val === dragCandidateTab) {
-          return true;
-        }
-        if (isDraggingTab && val === dragCandidateTab) {
-          return true;
-        }
-        return false;
+      // Helper: check if a tab element belongs to a split view group
+      const isSplitViewTab = (tab) => {
+        if (!tab) return false;
+        return (
+          tab.hasAttribute?.("split-view-group") ||
+          tab.group?.hasAttribute?.("split-view-group") ||
+          tab.closest?.("tab-group[split-view-group]") !== null
+        );
       };
 
-      // 1. Intercept gBrowser.selectedTab setter
-      let origSelectedTabDesc = null;
-      let targetGbrowserObj = null;
-      let proto = gBrowser;
-      while (proto) {
-        let desc = Object.getOwnPropertyDescriptor(proto, "selectedTab");
-        if (desc && desc.set) {
-          origSelectedTabDesc = desc;
-          targetGbrowserObj = proto;
-          break;
+      // 1. On mousedown: if the user is pressing on a tab inside a split view,
+      //    capture the currently active tab so we can restore it after the drag.
+      const onMouseDown = (e) => {
+        if (e.button !== 0) return;
+        if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+        if (!e.target || typeof e.target.closest !== "function") return;
+        const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab");
+        if (!tab) return;
+        if (e.target.closest(".tab-close-button, .tab-icon-sound, .tab-audio-button, .tab-pin-icon")) return;
+
+        if (isSplitViewTab(tab)) {
+          // Capture the pre-drag active tab. We'll restore it after the drag.
+          savedActiveTab = gBrowser.selectedTab;
+          isDraggingSplitView = false; // will be confirmed in onDragStart
+        } else {
+          savedActiveTab = null;
+          isDraggingSplitView = false;
         }
-        proto = Object.getPrototypeOf(proto);
-      }
+      };
 
-      if (origSelectedTabDesc && targetGbrowserObj) {
-        Object.defineProperty(targetGbrowserObj, "selectedTab", {
-          get: origSelectedTabDesc.get,
-          set: function(val) {
-            if (shouldBlockSelection(val)) {
-              return;
-            }
-            origSelectedTabDesc.set.call(this, val);
-          },
-          configurable: true,
-          enumerable: origSelectedTabDesc.enumerable
-        });
-      }
-
-      // 2. Intercept tabContainer.selectedItem setter (Native Firefox drag uses this)
-      let origSelectedItemDesc = null;
-      let targetTabContainerObj = null;
-      let tcProto = tabContainer;
-      while (tcProto) {
-        let desc = Object.getOwnPropertyDescriptor(tcProto, "selectedItem");
-        if (desc && desc.set) {
-          origSelectedItemDesc = desc;
-          targetTabContainerObj = tcProto;
-          break;
+      // 2. On dragstart: confirm we are actually dragging (not just clicking).
+      const onDragStart = (e) => {
+        if (savedActiveTab !== null) {
+          // The drag target is a tab inside a split view (mousedown already captured savedActiveTab).
+          // If the drag target itself is the group or a tab-group-label, that's fine too.
+          isDraggingSplitView = true;
         }
-        tcProto = Object.getPrototypeOf(tcProto);
-      }
+      };
 
-      if (origSelectedItemDesc && targetTabContainerObj) {
-        Object.defineProperty(targetTabContainerObj, "selectedItem", {
-          get: origSelectedItemDesc.get,
-          set: function(val) {
-            if (shouldBlockSelection(val)) {
-              return;
-            }
-            origSelectedItemDesc.set.call(this, val);
-          },
-          configurable: true,
-          enumerable: origSelectedItemDesc.enumerable
-        });
-      }
+      // 3. After drag ends: restore the pre-drag active tab so the user's
+      //    viewport stays on what they were looking at.
+      const restoreActiveTab = () => {
+        if (isDraggingSplitView && savedActiveTab && savedActiveTab.isConnected) {
+          const tabToRestore = savedActiveTab;
+          // Defer by one frame so Zen's own dragend cleanup runs first.
+          requestAnimationFrame(() => {
+            try {
+              if (tabToRestore.isConnected && gBrowser.selectedTab !== tabToRestore) {
+                gBrowser.selectedTab = tabToRestore;
+              }
+            } catch (_) {}
+          });
+        }
+        savedActiveTab = null;
+        isDraggingSplitView = false;
+      };
 
-      // 3. Intercept gZenViewSplitter.splitTabs to maintain dormant tab state during split creation
+      // 2. Intercept gZenViewSplitter.splitTabs to maintain dormant tab state during split creation
       let origSplitTabs = null;
       if (window.gZenViewSplitter && typeof window.gZenViewSplitter.splitTabs === "function") {
         origSplitTabs = window.gZenViewSplitter.splitTabs;
@@ -5577,98 +5570,23 @@
         };
       }
 
-      // 4. Setup drag detection logic
-      const onMouseDown = (e) => {
-        if (e.button !== 0) return;
-        if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
-        if (!e.target || typeof e.target.closest !== "function") return;
-        const tab = e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab");
-        if (!tab) return;
-        if (e.target.closest(".tab-close-button, .tab-icon-sound, .tab-audio-button, .tab-pin-icon")) return;
-
-        if (tab !== gBrowser.selectedTab) {
-          dragCandidateTab = tab;
-          isGuardingTab = true;
-          isDraggingTab = false;
-          startX = e.clientX;
-          startY = e.clientY;
-        }
-      };
-
-      const onDragStart = (e) => {
-        const tab = (e.target && typeof e.target.closest === "function" ? e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab") : null) || dragCandidateTab;
-        if (tab) {
-          dragCandidateTab = tab;
-          isDraggingTab = true;
-          isGuardingTab = false;
-        }
-      };
-
-      const onMouseUp = (e) => {
-        if (e.button !== 0) return;
-        if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
-
-        if (dragCandidateTab && !isDraggingTab) {
-          const moveDist = Math.hypot(e.clientX - startX, e.clientY - startY);
-          if (moveDist < 6 && dragCandidateTab.isConnected && dragCandidateTab !== gBrowser.selectedTab) {
-            isGuardingTab = false;
-            try {
-              if (origSelectedTabDesc) {
-                origSelectedTabDesc.set.call(gBrowser, dragCandidateTab);
-              } else {
-                gBrowser.selectedTab = dragCandidateTab;
-              }
-            } catch (_) {}
-          }
-        }
-        clearZenDragState();
-      };
-
-      const clearZenDragState = () => {
-        isGuardingTab = false;
-        isDraggingTab = false;
-        dragCandidateTab = null;
-        if (window.gZenCompactModeManager) {
-          delete window.gZenCompactModeManager._isTabBeingDragged;
-          try { window.gZenCompactModeManager._clearAllHoverStates(); } catch (_) {}
-        }
-      };
-
-      const onDragEnd = () => {
-        clearZenDragState();
-      };
-
-      const onDrop = () => {
-        clearZenDragState();
-      };
-
       tabContainer.addEventListener("mousedown", onMouseDown, { capture: true });
-      window.addEventListener("mouseup", onMouseUp, { capture: true });
       tabContainer.addEventListener("dragstart", onDragStart, { capture: true });
-      window.addEventListener("dragend", onDragEnd, { capture: true });
-      window.addEventListener("drop", onDrop, { capture: true });
-      // NOTE: Do NOT attach mouseleave to tabContainer — it fires mid-drag when
-      // the drag ghost exits the sidebar, which would permanently break the guard
-      // for all subsequent drags in the same session.
+      window.addEventListener("dragend", restoreActiveTab, { capture: true });
+      window.addEventListener("drop", restoreActiveTab, { capture: true });
 
       this.#dragGuardCleanup = () => {
-        if (origSelectedTabDesc && targetGbrowserObj) {
-          Object.defineProperty(targetGbrowserObj, "selectedTab", origSelectedTabDesc);
-        }
-        if (origSelectedItemDesc && targetTabContainerObj) {
-          Object.defineProperty(targetTabContainerObj, "selectedItem", origSelectedItemDesc);
-        }
         if (origSplitTabs && window.gZenViewSplitter) {
           window.gZenViewSplitter.splitTabs = origSplitTabs;
         }
         tabContainer.removeEventListener("mousedown", onMouseDown, { capture: true });
-        window.removeEventListener("mouseup", onMouseUp, { capture: true });
         tabContainer.removeEventListener("dragstart", onDragStart, { capture: true });
-        window.removeEventListener("dragend", onDragEnd, { capture: true });
-        window.removeEventListener("drop", onDrop, { capture: true });
+        window.removeEventListener("dragend", restoreActiveTab, { capture: true });
+        window.removeEventListener("drop", restoreActiveTab, { capture: true });
         this.#tabDragGuardInitialized = false;
       };
     }
+
 
     /* --------------------------------------------------------------------------
      * 4.3 Group Hierarchy & Storage Serialization
