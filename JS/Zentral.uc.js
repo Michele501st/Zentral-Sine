@@ -3255,8 +3255,7 @@
         const ss = this.#getSessionStore();
         const allGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
         const stateToSave = {
-          groups: {},
-          tabMapping: {}
+          groups: {}
         };
 
         allGroups.forEach(group => {
@@ -3289,12 +3288,6 @@
           if (directTabs.length === 0 && group.tabs) {
             directTabs = Array.from(group.tabs);
           }
-
-          stateToSave.tabMapping[group.id] = directTabs.map(tab => ({
-            url: tab.linkedBrowser?.currentURI?.spec || "",
-            label: tab.label || "",
-            zenTabId: tab.getAttribute("zen-tab-id") || tab.id || ""
-          }));
 
           directTabs.forEach(tab => {
             if (!tab) return;
@@ -5929,8 +5922,7 @@
       try {
         const ss = this.#getSessionStore();
         const state = {
-          groups: {},
-          tabMapping: {}
+          groups: {}
         };
 
         // Clean any tabs that are no longer part of any tab group
@@ -5982,12 +5974,6 @@
           if (directTabs.length === 0 && group.tabs) {
             directTabs = Array.from(group.tabs);
           }
-
-          state.tabMapping[group.id] = directTabs.map(tab => ({
-            url: tab.linkedBrowser?.currentURI?.spec || "",
-            label: tab.label || "",
-            zenTabId: tab.getAttribute("zen-tab-id") || tab.id || ""
-          }));
 
           // Synchronize DOM attributes and SessionStore with live state
           directTabs.forEach(tab => {
