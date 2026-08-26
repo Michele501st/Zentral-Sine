@@ -5482,15 +5482,104 @@
 
     /**
      * Prevents dormant tabs and split views from being selected and loaded while being dragged or reordered.
-     * Uses a synchronous startTabDrag hook to isolate the drag data payload and suppress tab selection
-     * while preserving native in-strip drag animations.
+     * Defers mousedown tab selection until mouseup (for clicks) and isolates the drag payload during startTabDrag (for drags).
      */
     initTabDragSelectionGuard() {
       const tabContainer = gBrowser?.tabContainer || document.getElementById("tabbrowser-tabs");
       if (!tabContainer || this.#tabDragGuardInitialized) return;
       this.#tabDragGuardInitialized = true;
 
-      // 1. Hook startTabDrag across ZenDragAndDrop and TabDragAndDrop
+      let isGuardingTab = false;
+      let dragCandidateTab = null;
+      let startX = 0;
+      let startY = 0;
+
+      // Helper: resolve tab or split view primary tab
+      const resolveTab = (target) => {
+        if (!target || typeof target.closest !== "function") return null;
+        const tab = target.closest("tab, tabbrowser-tab, .tabbrowser-tab");
+        if (tab) return tab;
+        const splitGroup = target.closest("tab-group[split-view-group], tab-group[zen-split-view], tab-group[is-zen-split]");
+        if (splitGroup) {
+          return splitGroup.tabs?.[0] || splitGroup.querySelector("tab, tabbrowser-tab, .tabbrowser-tab");
+        }
+        return null;
+      };
+
+      // 1. Intercept mousedown on tabContainer to prevent Firefox tab.on_mousedown
+      //    from immediately selecting the tab before we know if it's a click or a drag.
+      const onMouseDown = (e) => {
+        if (e.button !== 0) return;
+        if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.target?.closest?.(".tab-close-button, .tab-icon-sound, .tab-audio-button, .tab-pin-icon, .tab-reset-button")) return;
+
+        const tab = resolveTab(e.target);
+        if (!tab) return;
+
+        const currentActive = window.gBrowser?.selectedTab;
+        if (tab !== currentActive && !tab.multiselected) {
+          dragCandidateTab = tab;
+          isGuardingTab = true;
+          startX = e.clientX;
+          startY = e.clientY;
+
+          // Temporarily lock gBrowser.selectedTab and tabContainer.selectedItem
+          // so tab.on_mousedown does NOT switch the active tab on mousedown.
+          if (window.gBrowser) {
+            Object.defineProperty(window.gBrowser, "selectedTab", {
+              get: () => currentActive,
+              set: () => {},
+              configurable: true
+            });
+          }
+
+          if (tabContainer) {
+            Object.defineProperty(tabContainer, "selectedItem", {
+              get: () => currentActive,
+              set: () => {},
+              configurable: true
+            });
+          }
+        }
+      };
+
+      // 2. On mouseup: if distance < 6px (click), activate the candidate tab.
+      const onMouseUp = (e) => {
+        if (isGuardingTab) {
+          // Release temporary locks immediately
+          if (window.gBrowser) delete window.gBrowser.selectedTab;
+          if (tabContainer) delete tabContainer.selectedItem;
+          isGuardingTab = false;
+
+          if (dragCandidateTab && dragCandidateTab.isConnected) {
+            const moveDist = Math.hypot(e.clientX - startX, e.clientY - startY);
+            if (moveDist < 6 && dragCandidateTab !== window.gBrowser?.selectedTab) {
+              const targetTab = dragCandidateTab;
+              dragCandidateTab = null;
+              try {
+                window.gBrowser.selectedTab = targetTab;
+              } catch (_) {}
+            }
+          }
+        }
+        dragCandidateTab = null;
+      };
+
+      const clearGuard = () => {
+        if (isGuardingTab) {
+          if (window.gBrowser) delete window.gBrowser.selectedTab;
+          if (tabContainer) delete tabContainer.selectedItem;
+          isGuardingTab = false;
+        }
+        dragCandidateTab = null;
+      };
+
+      tabContainer.addEventListener("mousedown", onMouseDown, { capture: true });
+      window.addEventListener("mouseup", onMouseUp, { capture: true });
+      window.addEventListener("dragend", clearGuard, { capture: true });
+      window.addEventListener("drop", clearGuard, { capture: true });
+
+      // 3. Hook startTabDrag across ZenDragAndDrop and TabDragAndDrop
       const targets = [
         window.ZenDragAndDrop?.prototype,
         tabContainer.tabDragAndDrop,
@@ -5504,6 +5593,13 @@
           const orig = target.startTabDrag;
           origStartMap.set(target, orig);
           target.startTabDrag = function(event, tab, options = {}) {
+            // Release mousedown lock so startTabDrag can run cleanly
+            if (isGuardingTab) {
+              if (window.gBrowser) delete window.gBrowser.selectedTab;
+              if (tabContainer) delete tabContainer.selectedItem;
+              isGuardingTab = false;
+            }
+
             const currentActiveTab = window.gBrowser?.selectedTab;
             // A tab or split view is dormant if it is not the currently active tab
             const isDormant = tab && tab !== currentActiveTab && !tab.multiselected;
@@ -5547,7 +5643,7 @@
         }
       });
 
-      // 2. Intercept gZenViewSplitter.splitTabs to maintain dormant tab state during split creation
+      // 4. Intercept gZenViewSplitter.splitTabs to maintain dormant tab state during split creation
       let origSplitTabs = null;
       if (window.gZenViewSplitter && typeof window.gZenViewSplitter.splitTabs === "function") {
         origSplitTabs = window.gZenViewSplitter.splitTabs;
@@ -5563,6 +5659,11 @@
       }
 
       this.#dragGuardCleanup = () => {
+        tabContainer.removeEventListener("mousedown", onMouseDown, { capture: true });
+        window.removeEventListener("mouseup", onMouseUp, { capture: true });
+        window.removeEventListener("dragend", clearGuard, { capture: true });
+        window.removeEventListener("drop", clearGuard, { capture: true });
+        clearGuard();
         origStartMap.forEach((orig, target) => {
           target.startTabDrag = orig;
         });
