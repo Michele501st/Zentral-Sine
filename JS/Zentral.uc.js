@@ -3436,6 +3436,10 @@
 
         // 1. Match tabs to groups using DOM attributes, SessionStore, or URL fallback
         allTabs.forEach(tab => {
+          if (tab.hasAttribute?.("is-zen-split") || tab.hasAttribute?.("zen-split-view") || tab.closest?.("tab-group[split-view-group], tab-group[zen-split-view], tab-group[is-zen-split]")) {
+            return;
+          }
+
           let groupId = tab.getAttribute("data-zentral-group-id");
           if (!groupId && ss && typeof ss.getCustomTabValue === "function") {
             groupId = ss.getCustomTabValue(tab, "zentral-group-id");
@@ -5485,17 +5489,8 @@
       let startX = 0;
       let startY = 0;
 
-      const isSplitViewTab = (tab) => {
-        if (!tab) return false;
-        return tab.hasAttribute?.("is-zen-split") ||
-               tab.hasAttribute?.("zen-split-view") ||
-               tab.hasAttribute?.("splitview") ||
-               !!tab.closest?.("tab-group[split-view-group], tab-group[zen-split-view]");
-      };
-
       const shouldBlockSelection = (val) => {
         if (!val) return false;
-        if (isSplitViewTab(val)) return false;
         if (isGuardingTab && val === dragCandidateTab) {
           return true;
         }
@@ -5585,7 +5580,7 @@
         if (!tab) return;
         if (e.target.closest(".tab-close-button, .tab-icon-sound, .tab-audio-button, .tab-pin-icon")) return;
 
-        if (tab !== gBrowser.selectedTab && !isSplitViewTab(tab)) {
+        if (tab !== gBrowser.selectedTab) {
           dragCandidateTab = tab;
           isGuardingTab = true;
           isDraggingTab = false;
@@ -5596,7 +5591,7 @@
 
       const onDragStart = (e) => {
         const tab = (e.target && typeof e.target.closest === "function" ? e.target.closest("tab, tabbrowser-tab, .tabbrowser-tab") : null) || dragCandidateTab;
-        if (tab && !isSplitViewTab(tab)) {
+        if (tab) {
           dragCandidateTab = tab;
           isDraggingTab = true;
           isGuardingTab = false;
@@ -5620,9 +5615,7 @@
             } catch (_) {}
           }
         }
-        isGuardingTab = false;
-        isDraggingTab = false;
-        dragCandidateTab = null;
+        clearZenDragState();
       };
 
       const clearZenDragState = () => {
@@ -5646,8 +5639,9 @@
       tabContainer.addEventListener("mousedown", onMouseDown, { capture: true });
       window.addEventListener("mouseup", onMouseUp, { capture: true });
       tabContainer.addEventListener("dragstart", onDragStart, { capture: true });
-      tabContainer.addEventListener("dragend", onDragEnd, { capture: true });
-      tabContainer.addEventListener("drop", onDrop, { capture: true });
+      window.addEventListener("dragend", onDragEnd, { capture: true });
+      window.addEventListener("drop", onDrop, { capture: true });
+      tabContainer.addEventListener("mouseleave", clearZenDragState, { capture: true });
 
       this.#dragGuardCleanup = () => {
         if (origSelectedTabDesc && targetGbrowserObj) {
@@ -5662,8 +5656,9 @@
         tabContainer.removeEventListener("mousedown", onMouseDown, { capture: true });
         window.removeEventListener("mouseup", onMouseUp, { capture: true });
         tabContainer.removeEventListener("dragstart", onDragStart, { capture: true });
-        tabContainer.removeEventListener("dragend", onDragEnd, { capture: true });
-        tabContainer.removeEventListener("drop", onDrop, { capture: true });
+        window.removeEventListener("dragend", onDragEnd, { capture: true });
+        window.removeEventListener("drop", onDrop, { capture: true });
+        tabContainer.removeEventListener("mouseleave", clearZenDragState, { capture: true });
         this.#tabDragGuardInitialized = false;
       };
     }
@@ -5843,7 +5838,8 @@
         // Clean any tabs that are no longer part of any tab group
         const allBrowserTabs = Array.from(gBrowser?.tabs || document.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab"));
         allBrowserTabs.forEach(tab => {
-          const tabGroup = tab.closest("tab-group:not([split-view-group])") || (tab.group && !tab.group.hasAttribute?.("split-view-group") ? tab.group : null);
+          const isSplit = tab.hasAttribute?.("is-zen-split") || tab.hasAttribute?.("zen-split-view") || tab.closest?.("tab-group[split-view-group], tab-group[zen-split-view], tab-group[is-zen-split]");
+          const tabGroup = !isSplit ? (tab.closest("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])") || (tab.group && !tab.group.hasAttribute?.("split-view-group") && !tab.group.hasAttribute?.("zen-split-view") && !tab.group.hasAttribute?.("is-zen-split") ? tab.group : null)) : null;
           if (!tabGroup) {
             ["data-zentral-group-id", "data-zentral-group-label", "data-zentral-group-color", "data-zentral-group-collapsed", "data-zentral-group-ws", "data-zentral-parent-id"].forEach(attr => tab.removeAttribute(attr));
             if (ss) {
@@ -5857,14 +5853,15 @@
           }
         });
 
-        document.querySelectorAll("tab-group:not([split-view-group])").forEach(group => {
+        document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])").forEach(group => {
           if (!group.id) return;
+          if (group.hasAttribute("split-view-group") || group.hasAttribute("zen-split-view") || group.hasAttribute("is-zen-split")) return;
 
           const parent = group.parentElement?.closest("tab-group, zen-folder") ?? null;
           const posContainer = parent || group.parentElement;
           const groupSiblings = posContainer
             ? Array.from(posContainer.children).filter(
-                el => el.tagName?.toLowerCase() === "tab-group" && !el.hasAttribute("split-view-group")
+                el => el.tagName?.toLowerCase() === "tab-group" && !el.hasAttribute("split-view-group") && !el.hasAttribute("zen-split-view") && !el.hasAttribute("is-zen-split")
               )
             : [];
           const index = groupSiblings.indexOf(group);
