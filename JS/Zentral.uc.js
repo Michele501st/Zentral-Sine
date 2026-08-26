@@ -783,7 +783,32 @@
           overflow: hidden !important;
           border-radius: var(--toolbarbutton-border-radius, 6px);
           will-change: max-height, padding, background-color;
-          transition: max-height 0.28s cubic-bezier(0.25, 1, 0.5, 1), padding 0.28s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.2s ease !important;
+          transition: max-height 0.22s cubic-bezier(0.25, 1, 0.5, 1), padding 0.22s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.18s ease !important;
+        }
+
+        /* Upward trigger extension shield over URL bar */
+        #zentral-apps-utility-section::before {
+          content: "";
+          position: absolute;
+          top: -24px;
+          left: 0;
+          right: 0;
+          height: 24px;
+          pointer-events: auto;
+          background: transparent;
+          z-index: 10;
+        }
+
+        #zen-apps-sidebar-grid:not(.zen-apps-horizontal)::before {
+          content: "";
+          position: absolute;
+          top: -20px;
+          left: 0;
+          right: 0;
+          height: 20px;
+          pointer-events: auto;
+          background: transparent;
+          z-index: 9;
         }
 
         /* Collapsed Strip State: Show 3 dots, hide app tiles */
@@ -794,7 +819,7 @@
           display: flex;
           opacity: 0.75;
           transform: translate(-50%, -50%) scale(1);
-          transition: opacity 0.22s ease 0.06s, transform 0.24s cubic-bezier(0.25, 1, 0.5, 1) 0.06s;
+          transition: opacity 0.18s ease, transform 0.20s cubic-bezier(0.25, 1, 0.5, 1);
         }
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover):hover .zen-apps-autohide-dots {
           opacity: 1;
@@ -804,8 +829,8 @@
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) .zen-app-add-btn {
           opacity: 0 !important;
           pointer-events: none !important;
-          transform: translateY(-6px) scale(0.96);
-          transition: opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          transform: translateY(-2px) !important;
+          transition: opacity 0.18s ease, transform 0.20s cubic-bezier(0.25, 1, 0.5, 1) !important;
         }
 
         /* Keep Apps Grid expanded while an App Panel is open */
@@ -825,7 +850,8 @@
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-add-btn {
           opacity: 1 !important;
           pointer-events: auto !important;
-          transform: translateY(0) scale(1) !important;
+          transform: translateY(0) !important;
+          transition: opacity 0.18s ease, transform 0.20s cubic-bezier(0.25, 1, 0.5, 1) !important;
         }
 
         /* Expanded Grid State: Hide 3 dots, reveal app tiles with smooth slide-down */
@@ -851,8 +877,8 @@
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zen-app-add-btn {
           opacity: 1 !important;
           pointer-events: auto !important;
-          transform: translateY(0) scale(1);
-          transition: opacity 0.26s cubic-bezier(0.25, 1, 0.5, 1), transform 0.28s cubic-bezier(0.25, 1, 0.5, 1) !important;
+          transform: translateY(0) !important;
+          transition: opacity 0.18s ease, transform 0.20s cubic-bezier(0.25, 1, 0.5, 1) !important;
         }
 
         /* ==========================================================================
@@ -1046,11 +1072,7 @@
 
         /* When Revealed (Autohide OFF): Dots disappear, Content slides down, Divider morphs in */
         #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-dots {
-          opacity: 0 !important;
-          max-height: 0 !important;
-          height: 0 !important;
-          padding: 0 !important;
-          pointer-events: none !important;
+          display: none !important;
         }
 
         #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-content {
@@ -1780,7 +1802,7 @@
         utilitySection.addEventListener("mouseleave", (e) => {
           if (!this.isPlacementVerticalBar()) {
             if (this.#dom.grid && !this.#dom.grid.contains(e.relatedTarget)) {
-              this.scheduleUtilityCollapse(200);
+              this.scheduleUtilityCollapse(350);
             }
           }
         });
@@ -1796,10 +1818,39 @@
         });
         this.#dom.grid.addEventListener("mouseleave", (e) => {
           if (!this.isPlacementVerticalBar()) {
-            this.scheduleAutohideCollapse();
-            this.scheduleUtilityCollapse(200);
+            this.scheduleAutohideCollapse(300);
+            this.scheduleUtilityCollapse(350);
           }
         });
+
+        window.addEventListener("mousemove", (e) => {
+          if (this.isPlacementVerticalBar()) return;
+          const grid = this.#dom.grid;
+          if (!grid) return;
+          if (grid.classList.contains("zen-apps-horizontal")) return;
+
+          const rect = grid.getBoundingClientRect();
+          if (rect.width === 0 && rect.height === 0) return;
+
+          // Upward buffer zone extending 28px over the URL bar above the grid
+          const inUpwardZone = (
+            e.clientX >= rect.left &&
+            e.clientX <= rect.right &&
+            e.clientY >= rect.top - 28 &&
+            e.clientY <= rect.bottom
+          );
+
+          if (inUpwardZone) {
+            if (this.#state.utilityCollapseTimer) {
+              clearTimeout(this.#state.utilityCollapseTimer);
+              this.#state.utilityCollapseTimer = null;
+            }
+            if (this.#state.autohideCollapseTimer) {
+              clearTimeout(this.#state.autohideCollapseTimer);
+              this.#state.autohideCollapseTimer = null;
+            }
+          }
+        }, { passive: true });
 
         scrollBox.addEventListener("wheel", (e) => {
           if (!this.#dom.grid.classList.contains("zen-apps-horizontal")) return;
@@ -2186,9 +2237,9 @@
 
     /**
      * Schedules collapse of the utility section after cursor leaves.
-     * @param {number} [delay=200] - Delay in milliseconds.
+     * @param {number} [delay=350] - Delay in milliseconds.
      */
-    scheduleUtilityCollapse(delay = 200) {
+    scheduleUtilityCollapse(delay = 350) {
       if (this.#state.utilityCollapseTimer) clearTimeout(this.#state.utilityCollapseTimer);
       this.#state.utilityCollapseTimer = setTimeout(() => {
         this.#state.utilityCollapseTimer = null;
@@ -2224,9 +2275,9 @@
 
     /**
      * Schedules delayed collapse after cursor leaves apps grid.
-     * @param {number} [delay=180] - Delay in milliseconds.
+     * @param {number} [delay=300] - Delay in milliseconds.
      */
-    scheduleAutohideCollapse(delay = 180) {
+    scheduleAutohideCollapse(delay = 300) {
       if (this.#state.autohideCollapseTimer) clearTimeout(this.#state.autohideCollapseTimer);
       this.#state.autohideCollapseTimer = setTimeout(() => {
         this.#state.autohideCollapseTimer = null;

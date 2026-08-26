@@ -1507,13 +1507,34 @@ panel[id*="tabgroup-editor"] {
   padding: 0 !important;
 }
 
+/* Upward trigger extension shield over URL bar */
+#zentral-apps-utility-section::before {
+  content: "";
+  position: absolute;
+  top: -24px;
+  left: 0;
+  right: 0;
+  height: 24px;
+  pointer-events: auto;
+  background: transparent;
+  z-index: 10;
+}
+
+#zen-apps-sidebar-grid:not(.zen-apps-horizontal)::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  left: 0;
+  right: 0;
+  height: 20px;
+  pointer-events: auto;
+  background: transparent;
+  z-index: 9;
+}
+
 /* When Revealed (Autohide OFF): Dots disappear, Content slides down, Divider morphs in */
 #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-dots {
-  opacity: 0 !important;
-  max-height: 0 !important;
-  height: 0 !important;
-  padding: 0 !important;
-  pointer-events: none !important;
+  display: none !important;
 }
 
 #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-content {
