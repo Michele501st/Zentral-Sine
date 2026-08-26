@@ -786,31 +786,6 @@
           transition: max-height 0.22s cubic-bezier(0.25, 1, 0.5, 1), padding 0.22s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.18s ease !important;
         }
 
-        /* Upward trigger extension shield over URL bar */
-        #zentral-apps-utility-section::before {
-          content: "";
-          position: absolute;
-          top: -24px;
-          left: 0;
-          right: 0;
-          height: 24px;
-          pointer-events: auto;
-          background: transparent;
-          z-index: 10;
-        }
-
-        #zen-apps-sidebar-grid:not(.zen-apps-horizontal)::before {
-          content: "";
-          position: absolute;
-          top: -20px;
-          left: 0;
-          right: 0;
-          height: 20px;
-          pointer-events: auto;
-          background: transparent;
-          z-index: 9;
-        }
-
         /* Collapsed Strip State: Show 3 dots, hide app tiles */
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover) {
           background: transparent;
@@ -835,7 +810,7 @@
 
         /* Keep Apps Grid expanded while an App Panel is open */
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) {
-          max-height: calc(var(--zentral-max-rows, 3) * 42px - 2px) !important;
+          max-height: calc(var(--zentral-max-rows, 3) * 42px + 38px) !important;
           padding: 4px 10px 0px 10px !important;
           margin: 0 !important;
           overflow-y: auto !important;
@@ -857,7 +832,7 @@
         /* Expanded Grid State: Hide 3 dots, reveal app tiles with smooth slide-down */
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"],
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover {
-          max-height: calc(var(--zentral-max-rows, 3) * 42px - 2px) !important;
+          max-height: calc(var(--zentral-max-rows, 3) * 42px + 38px) !important;
           padding: 4px 10px 0px 10px !important;
           margin: 0 !important;
           overflow-y: auto !important;
@@ -1062,8 +1037,8 @@
           order: 2;
         }
 
-        /* When Hidden: Divider and content take 0 space */
-        #zentral-apps-utility-section:not([data-utility-revealed="true"]) .zentral-apps-utility-divider {
+        /* When Hidden in Autohide OFF: Divider takes 0 space */
+        :root:not([zentral-apps-autohide="true"]) #zentral-apps-utility-section:not([data-utility-revealed="true"]) .zentral-apps-utility-divider {
           display: none !important;
           height: 0 !important;
           margin: 0 !important;
@@ -1084,6 +1059,7 @@
         }
 
         #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-divider {
+          display: block !important;
           opacity: 0.5 !important;
           transform: scaleX(1) !important;
         }
@@ -1108,6 +1084,7 @@
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] #zentral-apps-utility-section .zentral-apps-utility-divider,
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover #zentral-apps-utility-section .zentral-apps-utility-divider,
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) #zentral-apps-utility-section .zentral-apps-utility-divider {
+          display: block !important;
           opacity: 0.5 !important;
           transform: scaleX(1) !important;
         }
@@ -1802,7 +1779,7 @@
         utilitySection.addEventListener("mouseleave", (e) => {
           if (!this.isPlacementVerticalBar()) {
             if (this.#dom.grid && !this.#dom.grid.contains(e.relatedTarget)) {
-              this.scheduleUtilityCollapse(350);
+              this.scheduleUtilityCollapse(260);
             }
           }
         });
@@ -1814,12 +1791,16 @@
               clearTimeout(this.#state.utilityCollapseTimer);
               this.#state.utilityCollapseTimer = null;
             }
+            if (this.#state.autohideCollapseTimer) {
+              clearTimeout(this.#state.autohideCollapseTimer);
+              this.#state.autohideCollapseTimer = null;
+            }
           }
         });
-        this.#dom.grid.addEventListener("mouseleave", (e) => {
+        this.#dom.grid.addEventListener("mouseleave", () => {
           if (!this.isPlacementVerticalBar()) {
-            this.scheduleAutohideCollapse(300);
-            this.scheduleUtilityCollapse(350);
+            this.scheduleAutohideCollapse(260);
+            this.scheduleUtilityCollapse(260);
           }
         });
 
@@ -1828,19 +1809,27 @@
           const grid = this.#dom.grid;
           if (!grid) return;
           if (grid.classList.contains("zen-apps-horizontal")) return;
+          if (this.#state.activeAppId) return; // Keep revealed while an app panel is open
 
           const rect = grid.getBoundingClientRect();
           if (rect.width === 0 && rect.height === 0) return;
 
-          // Upward buffer zone extending 28px over the URL bar above the grid
-          const inUpwardZone = (
+          const isInsideGrid = (
             e.clientX >= rect.left &&
             e.clientX <= rect.right &&
-            e.clientY >= rect.top - 28 &&
+            e.clientY >= rect.top &&
             e.clientY <= rect.bottom
           );
 
-          if (inUpwardZone) {
+          // Forgiving 18px upward margin over URL bar bottom edge
+          const isNearTopEdge = (
+            e.clientX >= rect.left &&
+            e.clientX <= rect.right &&
+            e.clientY >= rect.top - 18 &&
+            e.clientY < rect.top
+          );
+
+          if (isInsideGrid) {
             if (this.#state.utilityCollapseTimer) {
               clearTimeout(this.#state.utilityCollapseTimer);
               this.#state.utilityCollapseTimer = null;
@@ -1849,8 +1838,25 @@
               clearTimeout(this.#state.autohideCollapseTimer);
               this.#state.autohideCollapseTimer = null;
             }
+          } else if (isNearTopEdge) {
+            // Hovering near top edge: refresh collapse timer
+            this.scheduleAutohideCollapse(260);
+            this.scheduleUtilityCollapse(260);
+          } else {
+            // Cursor is outside grid and outside top buffer (e.g. webpage, top bar, lower sidebar)
+            const isRevealed = grid.hasAttribute("data-revealed") || this.#dom.utilitySection?.hasAttribute("data-utility-revealed");
+            if (isRevealed) {
+              this.scheduleAutohideCollapse(260);
+              this.scheduleUtilityCollapse(260);
+            }
           }
         }, { passive: true });
+
+        window.addEventListener("blur", () => {
+          if (this.isPlacementVerticalBar() || this.#state.activeAppId) return;
+          this.setAutohideHovered(false);
+          this.setUtilityHovered(false);
+        });
 
         scrollBox.addEventListener("wheel", (e) => {
           if (!this.#dom.grid.classList.contains("zen-apps-horizontal")) return;

@@ -1499,37 +1499,12 @@ panel[id*="tabgroup-editor"] {
   order: 2;
 }
 
-/* When Hidden: Divider and content take 0 space */
-#zentral-apps-utility-section:not([data-utility-revealed="true"]) .zentral-apps-utility-divider {
+/* When Hidden in Autohide OFF: Divider takes 0 space */
+:root:not([zentral-apps-autohide="true"]) #zentral-apps-utility-section:not([data-utility-revealed="true"]) .zentral-apps-utility-divider {
   display: none !important;
   height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
-}
-
-/* Upward trigger extension shield over URL bar */
-#zentral-apps-utility-section::before {
-  content: "";
-  position: absolute;
-  top: -24px;
-  left: 0;
-  right: 0;
-  height: 24px;
-  pointer-events: auto;
-  background: transparent;
-  z-index: 10;
-}
-
-#zen-apps-sidebar-grid:not(.zen-apps-horizontal)::before {
-  content: "";
-  position: absolute;
-  top: -20px;
-  left: 0;
-  right: 0;
-  height: 20px;
-  pointer-events: auto;
-  background: transparent;
-  z-index: 9;
 }
 
 /* When Revealed (Autohide OFF): Dots disappear, Content slides down, Divider morphs in */
@@ -1546,6 +1521,7 @@ panel[id*="tabgroup-editor"] {
 }
 
 #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-divider {
+  display: block !important;
   opacity: 0.5 !important;
   transform: scaleX(1) !important;
 }
@@ -1570,6 +1546,7 @@ panel[id*="tabgroup-editor"] {
 :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] #zentral-apps-utility-section .zentral-apps-utility-divider,
 :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover #zentral-apps-utility-section .zentral-apps-utility-divider,
 :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) #zentral-apps-utility-section .zentral-apps-utility-divider {
+  display: block !important;
   opacity: 0.5 !important;
   transform: scaleX(1) !important;
 }
