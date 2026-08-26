@@ -106,7 +106,7 @@
      * 1.3 Diagnostics Preference Keys
      */
     Diagnostics: {
-      PREF_LOGGER_ENABLED: "zentral.logger.enabled",
+      PREF_LOGGER_ENABLED: "zen.workspace.zentral.debug",
       PREF_LOGGER_PATH: "zentral.logger.path"
     },
     /** Debug logging preference — set true in about:config to enable verbose console output */
@@ -150,7 +150,8 @@
         [Constants.TabGroups.PREF_SHOW_CHEVRON]: true,
         [Constants.TabGroups.PREF_LABEL_OPACITY]: 85,
         [Constants.Diagnostics.PREF_LOGGER_ENABLED]: false,
-        [Constants.Diagnostics.PREF_LOGGER_PATH]: ""
+        [Constants.Diagnostics.PREF_LOGGER_PATH]: "",
+        [Constants.DEBUG_PREF]: false
       };
     }
 
@@ -183,18 +184,23 @@
     /**
      * Safely retrieves a Zentral preference value, returning configured default if user pref doesn't exist.
      * @param {string} key - Preference string identifier key.
+     * @param {any} [fallback] - Optional override fallback value.
      * @returns {any} The stored or fallback preference value.
      */
-    getPref(key) {
-      const defaultVal = this.defaultPrefs[key];
-      if (!Services.prefs.prefHasUserValue(key)) return defaultVal;
-      
+    getPref(key, fallback) {
+      const defaultVal = fallback !== undefined ? fallback : this.defaultPrefs[key];
       try {
-        if (typeof defaultVal === "number") {
-          return Number.isInteger(defaultVal) ? Services.prefs.getIntPref(key) : parseFloat(Services.prefs.getStringPref(key));
+        if (!Services.prefs.prefHasUserValue(key)) {
+          // If key is zen.workspace.zentral.debug, check legacy fallback
+          if (key === Constants.DEBUG_PREF && Services.prefs.prefHasUserValue("zentral.logger.enabled")) {
+            return Services.prefs.getBoolPref("zentral.logger.enabled");
+          }
+          return defaultVal;
         }
-        if (typeof defaultVal === "string") return Services.prefs.getStringPref(key);
-        if (typeof defaultVal === "boolean") return Services.prefs.getBoolPref(key);
+        const prefType = Services.prefs.getPrefType(key);
+        if (prefType === Services.prefs.PREF_BOOL) return Services.prefs.getBoolPref(key);
+        if (prefType === Services.prefs.PREF_INT) return Services.prefs.getIntPref(key);
+        if (prefType === Services.prefs.PREF_STRING) return Services.prefs.getStringPref(key);
       } catch (e) {
         console.warn("[ZentralCore] Config failed to read pref", key, e);
       }
@@ -214,6 +220,11 @@
         }
         else if (typeof value === "string") Services.prefs.setStringPref(key, value);
         else if (typeof value === "boolean") Services.prefs.setBoolPref(key, value);
+        
+        // Keep legacy pref in sync if writing debug pref
+        if (key === Constants.DEBUG_PREF) {
+          try { Services.prefs.setBoolPref("zentral.logger.enabled", value); } catch (_) {}
+        }
         
         this.emit(`config:${key}`, value);
       } catch (e) {

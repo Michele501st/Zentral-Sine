@@ -26,9 +26,19 @@
 
   function isLoggerEnabled() {
     try {
-      return Services.prefs.getBoolPref("zentral.logger.enabled", false);
+      if (Services.prefs.prefHasUserValue("zen.workspace.zentral.debug")) {
+        return Services.prefs.getBoolPref("zen.workspace.zentral.debug");
+      }
+      if (Services.prefs.prefHasUserValue("zentral.logger.enabled")) {
+        return Services.prefs.getBoolPref("zentral.logger.enabled");
+      }
+      return Services.prefs.getBoolPref("zen.workspace.zentral.debug", false);
     } catch (_) {
-      return false;
+      try {
+        return Services.prefs.getBoolPref("zentral.logger.enabled", false);
+      } catch (_) {
+        return false;
+      }
     }
   }
 
@@ -65,43 +75,50 @@
    */
   const ZentralLogger = {
     log(tag, ...args) {
+      if (!isLoggerEnabled()) return;
       const msg = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
       _log(`[${tag}] ${msg}`);
       record("log", tag, msg);
     },
     warn(tag, ...args) {
+      if (!isLoggerEnabled()) return;
       const msg = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
       _warn(`[${tag}] ${msg}`);
       record("warn", tag, msg);
     },
     error(tag, ...args) {
+      if (!isLoggerEnabled()) return;
       const msg = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
       _error(`[${tag}] ${msg}`);
       record("error", tag, msg);
     },
     debug(tag, ...args) {
+      if (!isLoggerEnabled()) return;
       const msg = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
       _debug(`[${tag}] ${msg}`);
       record("debug", tag, msg);
     },
     info(tag, ...args) {
+      if (!isLoggerEnabled()) return;
       const msg = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
       _info(`[${tag}] ${msg}`);
       record("info", tag, msg);
     },
     layout(component, details) {
+      if (!isLoggerEnabled()) return;
       const msg = typeof details === "object" ? JSON.stringify(details) : String(details);
       _log(`[Zentral-Layout:${component}] ${msg}`);
       record("layout", `Layout:${component}`, msg);
     },
     inspectLayout() {
+      if (!isLoggerEnabled()) return "";
       const snapshot = captureLayoutDiagnosticSnapshot();
       _log(snapshot);
       record("info", "LayoutInspector", snapshot);
       return snapshot;
     },
-    get entries() { return [...ringBuffer]; },
-    dump()   { ringBuffer.forEach(l => _log(l)); },
+    get entries() { return isLoggerEnabled() ? [...ringBuffer] : []; },
+    dump()   { if (isLoggerEnabled()) ringBuffer.forEach(l => _log(l)); },
     export() { exportLog(); },
     clear()  { ringBuffer.length = 0; }
   };
@@ -387,6 +404,7 @@
   function setupLayoutObservers() {
     // 1. Root & Sidebar Layout Attribute Observer
     const rootObserver = new MutationObserver((mutations) => {
+      if (!isLoggerEnabled()) return;
       for (const m of mutations) {
         if (["zen-right-side", "zen-sidebar-collapsed", "zen-single-toolbar", "zentral-label-opacity-below-85"].includes(m.attributeName)) {
           const val = document.documentElement.getAttribute(m.attributeName);
@@ -401,6 +419,7 @@
     const grid = document.getElementById("zen-apps-sidebar-grid");
     if (grid) {
       const gridObserver = new MutationObserver((mutations) => {
+        if (!isLoggerEnabled()) return;
         for (const m of mutations) {
           if (m.type === "attributes" && m.attributeName === "class") {
             const isHoriz = grid.classList.contains("zen-apps-horizontal");
@@ -412,12 +431,15 @@
       });
       gridObserver.observe(grid, { attributes: true, childList: true, subtree: false });
       cleanupObservers.push(() => gridObserver.disconnect());
-      ZentralLogger.layout("AppsGrid", "Apps Grid observer attached.");
+      if (isLoggerEnabled()) {
+        ZentralLogger.layout("AppsGrid", "Apps Grid observer attached.");
+      }
     }
 
     // 3. Tab Groups Observer
     const tabContainer = document.getElementById("tabbrowser-tabs") || document.body;
     const tabGroupObserver = new MutationObserver((mutations) => {
+      if (!isLoggerEnabled()) return;
       for (const m of mutations) {
         if (m.target.tagName?.toUpperCase() === "TAB-GROUP") {
           const group = m.target;
@@ -480,6 +502,7 @@
 
     // 1. Capture Right-Clicks on Tabs and Tabstrip
     const onContextMenu = (e) => {
+      if (!isLoggerEnabled()) return;
       const target = e.target;
       const tab = target?.closest ? target.closest("tab, tabbrowser-tab, .tabbrowser-tab") : null;
       const group = target?.closest ? target.closest("tab-group:not([split-view-group])") : null;
@@ -521,6 +544,7 @@
       observedPopups.add(popup);
 
       const observer = new MutationObserver((mutations) => {
+        if (!isLoggerEnabled()) return;
         for (const m of mutations) {
           if (m.type === "childList") {
             const added = Array.from(m.addedNodes).filter(n => n.nodeType === 1).map(n => `<${n.tagName.toLowerCase()} id="${n.id || ''}" label="${n.getAttribute('label') || n.label || ''}">`).join(", ");
@@ -536,6 +560,7 @@
     }
 
     const onPopupShowing = (e) => {
+      if (!isLoggerEnabled()) return;
       const popup = e.target;
       if (!popup || !popup.tagName) return;
       const tag = popup.tagName.toLowerCase();
@@ -554,6 +579,7 @@
     cleanupObservers.push(() => window.removeEventListener("popupshowing", onPopupShowing, true));
 
     const onPopupShown = (e) => {
+      if (!isLoggerEnabled()) return;
       const popup = e.target;
       if (!popup || !popup.tagName) return;
       const tag = popup.tagName.toLowerCase();
@@ -566,6 +592,7 @@
     cleanupObservers.push(() => window.removeEventListener("popupshown", onPopupShown, true));
 
     const onPopupHiding = (e) => {
+      if (!isLoggerEnabled()) return;
       const popup = e.target;
       if (!popup || !popup.tagName) return;
       const tag = popup.tagName.toLowerCase();
@@ -577,6 +604,7 @@
 
     // 3. Command execution within tab context menus
     const onCommand = (e) => {
+      if (!isLoggerEnabled()) return;
       const target = e.target;
       if (target && target.closest && (target.closest("#tabContextMenu") || target.closest("#zentral-tabgroup-context-menu") || target.closest("[id*='TabToGroup']") || target.closest("menupopup"))) {
         const id = target.id || "(no-id)";
