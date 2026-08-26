@@ -4547,6 +4547,8 @@
           group.classList?.contains("zen-split-view")) {
         return;
       }
+      group.classList.add("zentral-standard");
+      group.setAttribute("zentral-group", "true");
       group.style.setProperty("border-radius", "6px", "important");
 
       // Ensure full internal structure exists
