@@ -978,7 +978,7 @@ panel[id*="tabgroup-editor"] {
   border-radius: var(--zen-native-inner-radius, 10px) !important;
   box-shadow: var(--zen-big-shadow, rgba(0, 0, 0, 0.24) 0px 3px 8px 0px) !important;
   border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-  transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, visibility 0.24s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
+  transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease, visibility 0.24s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
   will-change: transform, opacity, top;
   overflow: hidden !important;
 }
@@ -1363,7 +1363,7 @@ panel[id*="tabgroup-editor"] {
   display: flex !important;
   opacity: 0.75;
   transform: translate(-50%, -50%);
-  transition: opacity 0.20s ease, transform 0.24s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: opacity 0.18s ease, transform 0.24s cubic-bezier(0.25, 1, 0.5, 1);
 }
 :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]):hover .zen-apps-autohide-dots {
   opacity: 1;
@@ -1530,7 +1530,7 @@ panel[id*="tabgroup-editor"] {
   order: 1;
   will-change: max-height, opacity, transform;
   transition: max-height 0.24s cubic-bezier(0.25, 1, 0.5, 1),
-              opacity 0.20s ease,
+              opacity 0.18s ease,
               transform 0.24s cubic-bezier(0.25, 1, 0.5, 1),
               visibility 0.24s ease;
 }
@@ -1702,7 +1702,7 @@ panel[id*="tabgroup-editor"] {
   width: auto !important;
   transform: translateX(-4px) !important;
   transition: max-width 0.24s cubic-bezier(0.25, 1, 0.5, 1),
-              opacity 0.2s ease,
+              opacity 0.18s ease,
               transform 0.22s cubic-bezier(0.25, 1, 0.5, 1) !important;
 }
 
