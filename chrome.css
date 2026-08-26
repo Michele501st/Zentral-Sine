@@ -1342,6 +1342,8 @@ panel[id*="tabgroup-editor"] {
   align-items: center !important;
   gap: 6px !important;
   width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
   box-sizing: border-box !important;
   max-height: calc(var(--zentral-max-rows, 3) * 42px - 2px) !important;
   overflow-y: auto !important;
