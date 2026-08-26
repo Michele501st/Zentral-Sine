@@ -1269,9 +1269,6 @@
 
         /* Base style */
         :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
-          width: 38px !important;
-          min-width: 38px !important;
-          max-width: 38px !important;
           min-height: 0 !important;
           max-height: 100% !important;
           display: flex !important;
@@ -1289,6 +1286,9 @@
         /* Mode A: Autohide DISABLED (Pinned / Docked into Frame) */
         :root[zentral-apps-placement="vertical-bar"]:not([zentral-apps-autohide="true"]) #zentral-apps-vertical-bar {
           position: relative !important;
+          width: 38px !important;
+          min-width: 38px !important;
+          max-width: 38px !important;
           height: 100% !important;
           max-height: 100% !important;
           min-height: 0 !important;
@@ -1310,17 +1310,28 @@
           transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease !important;
         }
 
+        :root[zentral-apps-placement="vertical-bar"]:not([zentral-apps-autohide="true"]) #zentral-apps-vertical-bar #zen-apps-sidebar-grid {
+          padding: 0 !important;
+        }
+
         /* Mode B: Autohide ENABLED (Compact Floating Panel) */
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
           position: fixed !important;
+          width: 44px !important;
+          min-width: 44px !important;
+          max-width: 44px !important;
           z-index: 2147483500 !important;
           background-color: var(--zen-colors-base, rgb(19, 19, 19)) !important;
           border-radius: var(--zen-native-inner-radius, 10px) !important;
           box-shadow: var(--zen-big-shadow, rgba(0, 0, 0, 0.24) 0px 3px 8px 0px) !important;
           border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-          transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, visibility 0.24s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
+          transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.12s ease, visibility 0.24s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
           will-change: transform, opacity, top;
           overflow: hidden !important;
+        }
+
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar #zen-apps-sidebar-grid {
+          padding: 0 4px !important;
         }
 
         /* Zen Theme Wallpaper / Gradient Layer */
@@ -1407,7 +1418,7 @@
           width: 100% !important;
           height: 0 !important;
           flex: 1 1 0px !important;
-          padding: 0 3px !important;
+          padding: 0 4px !important;
           max-height: 100% !important;
           min-height: 0 !important;
           gap: 6px !important;
@@ -1446,15 +1457,15 @@
           flex: 0 0 auto !important;
           flex-shrink: 0 !important;
           gap: 6px !important;
-          padding: 4px 3px 0 3px !important;
+          padding: 4px 0 0 0 !important;
           box-sizing: border-box !important;
           margin-top: auto !important;
           z-index: 10 !important;
         }
 
         #zentral-apps-vertical-bar .zen-app-vb-footer-btn svg {
-          width: 16px !important;
-          height: 16px !important;
+          width: 18px !important;
+          height: 18px !important;
           pointer-events: none !important;
         }
 
@@ -1473,13 +1484,13 @@
 
         /* Autohide Mode B: Tile Button Enhancements (Scoped ONLY to autohide mode) */
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile {
-          width: 32px !important;
-          height: 32px !important;
-          min-width: 32px !important;
-          min-height: 32px !important;
-          max-width: 32px !important;
-          max-height: 32px !important;
-          border-radius: var(--toolbarbutton-border-radius, 6px) !important;
+          width: 36px !important;
+          height: 36px !important;
+          min-width: 36px !important;
+          min-height: 36px !important;
+          max-width: 36px !important;
+          max-height: 36px !important;
+          border-radius: var(--toolbarbutton-border-radius, 8px) !important;
           background-color: color-mix(in srgb, currentColor 8%, transparent) !important;
           border: none !important;
           box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
@@ -1489,14 +1500,13 @@
           pointer-events: auto !important;
           visibility: visible !important;
           color: inherit !important;
-          margin: 0 auto !important;
           transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease !important;
         }
 
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile img,
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile svg {
-          width: 16px !important;
-          height: 16px !important;
+          width: 18px !important;
+          height: 18px !important;
           object-fit: contain !important;
           filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
           transition: transform 0.15s ease, filter 0.15s ease !important;
@@ -1525,13 +1535,13 @@
         }
 
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn {
-          width: 32px !important;
-          height: 32px !important;
-          min-width: 32px !important;
-          min-height: 32px !important;
-          max-width: 32px !important;
-          max-height: 32px !important;
-          border-radius: var(--toolbarbutton-border-radius, 6px) !important;
+          width: 36px !important;
+          height: 36px !important;
+          min-width: 36px !important;
+          min-height: 36px !important;
+          max-width: 36px !important;
+          max-height: 36px !important;
+          border-radius: var(--toolbarbutton-border-radius, 8px) !important;
           background-color: color-mix(in srgb, currentColor 8%, transparent) !important;
           border: 1.5px dashed color-mix(in srgb, currentColor 25%, transparent) !important;
           opacity: 0.85 !important;
@@ -1541,7 +1551,6 @@
           box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
           flex-shrink: 0 !important;
           color: inherit !important;
-          margin: 0 auto !important;
           transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease !important;
         }
 
@@ -1564,13 +1573,13 @@
 
         /* Default / Non-autohide Vertical Bar (Clean standard tile styling) */
         :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile {
-          width: 32px !important;
-          height: 32px !important;
-          min-width: 32px !important;
-          min-height: 32px !important;
-          max-width: 32px !important;
-          max-height: 32px !important;
-          border-radius: var(--toolbarbutton-border-radius, 6px) !important;
+          width: 36px !important;
+          height: 36px !important;
+          min-width: 36px !important;
+          min-height: 36px !important;
+          max-width: 36px !important;
+          max-height: 36px !important;
+          border-radius: var(--toolbarbutton-border-radius, 8px) !important;
           background-color: transparent !important;
           border: none !important;
           box-shadow: none !important;
@@ -1583,13 +1592,6 @@
           margin: 0 auto !important;
         }
 
-        :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile img,
-        :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile svg {
-          width: 16px !important;
-          height: 16px !important;
-          object-fit: contain !important;
-        }
-
         :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:hover {
           background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, currentColor 10%, transparent)) !important;
         }
@@ -1599,13 +1601,13 @@
         }
 
         :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn {
-          width: 32px !important;
-          height: 32px !important;
-          min-width: 32px !important;
-          min-height: 32px !important;
-          max-width: 32px !important;
-          max-height: 32px !important;
-          border-radius: var(--toolbarbutton-border-radius, 6px) !important;
+          width: 36px !important;
+          height: 36px !important;
+          min-width: 36px !important;
+          min-height: 36px !important;
+          max-width: 36px !important;
+          max-height: 36px !important;
+          border-radius: var(--toolbarbutton-border-radius, 8px) !important;
           background-color: transparent !important;
           border: 1px dashed color-mix(in srgb, currentColor 30%, transparent) !important;
           opacity: 0.7 !important;
@@ -3192,7 +3194,7 @@
 
       if (this.isPlacementVerticalBar()) {
         const isVbRight = this.isVerticalBarOnRight();
-        const vbOffset = 38 + sideGap;
+        const vbOffset = 44 + sideGap;
 
         if (isVbRight) {
           targetRight = vbOffset;
@@ -3339,8 +3341,8 @@
       if (vbHeight <= 0) return;
 
       const activeAppsCount = scrollBox ? scrollBox.querySelectorAll(".zen-app-tile:not(.zen-app-add-btn):not(.zen-app-vb-footer-btn)").length : 0;
-      const footerBaseHeight = 74; // Eye + Gear buttons (32px + 6px gap + 32px + 4px padding)
-      const itemHeight = 38; // 32px tile + 6px gap
+      const footerBaseHeight = 82; // Eye + Gear buttons + padding
+      const itemHeight = 42; // 36px tile + 6px gap
       const requiredHeight = (activeAppsCount + 1) * itemHeight + footerBaseHeight + 16; // 16px padding
 
       const autohideBtn = footer.querySelector("#zentral-apps-vb-autohide-btn");
