@@ -805,7 +805,7 @@
           overflow-y: auto !important;
           scrollbar-width: none !important;
           margin: 0 !important;
-          padding: 0 !important;
+          padding: 4px 2px !important;
         }
         #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-apps-scroll-box::-webkit-scrollbar {
           display: none !important;
@@ -841,10 +841,10 @@
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"],
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover,
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) {
-          max-height: var(--zentral-apps-grid-expanded-height, 180px) !important;
-          padding: 4px 10px 4px 10px !important;
+          max-height: calc(var(--zentral-apps-grid-expanded-height, 180px) + 8px) !important;
+          padding: 6px 10px !important;
           margin: 0 !important;
-          overflow: hidden !important;
+          overflow: visible !important;
         }
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-apps-autohide-dots,
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zen-apps-autohide-dots,
@@ -859,9 +859,10 @@
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) #zentral-apps-utility-section {
           display: flex !important;
           opacity: 1 !important;
-          max-height: 34px !important;
+          max-height: 40px !important;
           pointer-events: auto !important;
           visibility: visible !important;
+          overflow: visible !important;
           transition: opacity 0.20s ease, visibility 0.24s ease !important;
         }
         :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zen-app-tile,
@@ -881,10 +882,11 @@
         :root[zentral-apps-autohide="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zentral-apps-utility-content,
         :root[zentral-apps-autohide="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zentral-apps-utility-content,
         :root[zentral-apps-autohide="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[zentral-app-panel-open="true"] .zentral-apps-utility-content {
-          max-height: 32px !important;
+          max-height: 38px !important;
           opacity: 1 !important;
           transform: none !important;
           pointer-events: auto !important;
+          overflow: visible !important;
           margin-bottom: 2px !important;
         }
         :root[zentral-apps-autohide="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zentral-apps-utility-divider,
@@ -1084,11 +1086,12 @@
         }
 
         #zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-content {
-          max-height: 32px !important;
+          max-height: 38px !important;
           opacity: 1 !important;
           transform: translateY(0) !important;
           pointer-events: auto !important;
           visibility: visible !important;
+          overflow: visible !important;
           margin-bottom: 2px !important;
         }
 
@@ -1340,7 +1343,7 @@
           border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
           transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.12s ease, visibility 0.24s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
           will-change: transform, opacity, top;
-          overflow: hidden !important;
+          overflow: visible !important;
         }
 
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar #zen-apps-sidebar-grid {
@@ -2078,9 +2081,14 @@
         });
         vb.addEventListener("mouseleave", (e) => {
           if (this.isPlacementVerticalBar()) {
-            vbHovered = false;
-            if (!vb.contains(e.relatedTarget)) {
-              this.scheduleAutohideCollapse(120);
+            if (!vb.contains(e.relatedTarget) && e.relatedTarget !== trigger) {
+              const isRight = this.isVerticalBarOnRight();
+              const barWidth = 48 + 8 + 24;
+              const isInsideBar = isRight ? (e.clientX >= window.innerWidth - barWidth) : (e.clientX <= barWidth);
+              if (!isInsideBar) {
+                vbHovered = false;
+                this.scheduleAutohideCollapse(160);
+              }
             }
           }
         });
@@ -2185,12 +2193,14 @@
           const isNearEdge = isRight ? (e.clientX >= window.innerWidth - triggerDist) : (e.clientX <= triggerDist);
           const isInsideBar = isRight ? (e.clientX >= window.innerWidth - barWidth) : (e.clientX <= barWidth);
 
-          if (isNearEdge) {
-            vbHovered = true;
-            this.setAutohideHovered(true);
+          if (isNearEdge || isInsideBar) {
+            if (!vbHovered || !this.#state.isAutohideHovered) {
+              vbHovered = true;
+              this.setAutohideHovered(true);
+            }
           } else if (!isInsideBar && vbHovered) {
             vbHovered = false;
-            this.scheduleAutohideCollapse(120);
+            this.scheduleAutohideCollapse(140);
           }
         }, { passive: true });
       }
