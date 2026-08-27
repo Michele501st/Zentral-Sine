@@ -47,12 +47,6 @@
     ]
   },
   {
-    "property": "zen.workspace.apps.sidebar.compact_drawer_enabled",
-    "label": "Enable Compact Apps Drawer Layout",
-    "type": "checkbox",
-    "defaultValue": false
-  },
-  {
     "property": "zen.workspace.zentral.debug",
     "label": "Enable Diagnostic Logging in Console Buffer",
     "type": "checkbox",
@@ -72,8 +66,18 @@
   },
   {
     "property": "zen.workspace.tabgroups.show_chevron",
-    "label": "Show Chevron Arrow Indicator on Tab Group Pills",
+    "label": "Show Open/Close Indicator on Tab Group Pills",
     "type": "checkbox",
     "defaultValue": true
+  },
+  {
+    "property": "zen.workspace.tabgroups.indicator_type",
+    "label": "Tab Group Indicator Style",
+    "type": "dropdown",
+    "defaultValue": "circle",
+    "options": [
+      { "label": "Circle Dot", "value": "circle" },
+      { "label": "Chevron Arrow", "value": "chevron" }
+    ]
   }
 ]

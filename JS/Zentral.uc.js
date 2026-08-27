@@ -77,7 +77,6 @@
       PREF_MAX_APPS: "zen.workspace.apps.sidebar.max_apps",
       PREF_APPS_PER_ROW: "zen.workspace.apps.sidebar.apps_per_row",
       PREF_MAX_ROWS: "zen.workspace.apps.sidebar.max_rows",
-      PREF_COMPACT_DRAWER_ENABLED: "zen.workspace.apps.sidebar.compact_drawer_enabled",
       PREF_AUTOHIDE: "zen.workspace.apps.sidebar.autohide",
       PREF_PLACEMENT: "zen.workspace.apps.sidebar.placement",
       PREF_UTILITY_ORDER: "zen.workspace.apps.sidebar.utility_order",
@@ -100,6 +99,7 @@
       PREF_COLLAPSE_ON_LAUNCH: "zen.workspace.tabgroups.collapse_on_launch",
       PREF_THUMBNAILS: "zen.workspace.tabgroups.thumbnails",
       PREF_SHOW_CHEVRON: "zen.workspace.tabgroups.show_chevron",
+      PREF_INDICATOR_TYPE: "zen.workspace.tabgroups.indicator_type",
       PREF_LABEL_OPACITY: "zen.workspace.tabgroups.label_opacity"
     },
     /**
@@ -139,7 +139,6 @@
         [Constants.Apps.PREF_MAX_APPS]: Constants.Apps.DEFAULT_MAX_APPS,
         [Constants.Apps.PREF_APPS_PER_ROW]: Constants.Apps.DEFAULT_APPS_PER_ROW,
         [Constants.Apps.PREF_MAX_ROWS]: Constants.Apps.DEFAULT_MAX_ROWS,
-        [Constants.Apps.PREF_COMPACT_DRAWER_ENABLED]: false,
         [Constants.Apps.PREF_AUTOHIDE]: false,
         [Constants.Apps.PREF_PLACEMENT]: "sidebar",
         [Constants.Apps.PREF_UTILITY_ORDER]: '["settings","autohide"]',
@@ -149,6 +148,7 @@
         [Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH]: false,
         [Constants.TabGroups.PREF_THUMBNAILS]: true,
         [Constants.TabGroups.PREF_SHOW_CHEVRON]: true,
+        [Constants.TabGroups.PREF_INDICATOR_TYPE]: "circle",
         [Constants.TabGroups.PREF_LABEL_OPACITY]: 85,
         [Constants.Diagnostics.PREF_LOGGER_ENABLED]: false,
         [Constants.Diagnostics.PREF_LOGGER_PATH]: "",
@@ -335,8 +335,6 @@
           "zen-apps-sidebar-styles",
           "zentral-apps-utility-section",
           "zen-app-panel-root",
-          "zen-compact-apps-drawer",
-          "zen-compact-apps-trigger",
           "zen-apps-autohide-trigger",
           "zen-apps-sidebar-tile-context",
           "zentral-apps-vertical-bar",
@@ -1706,7 +1704,6 @@
         :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile,
         :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-add-btn,
         :root[zen-compact-mode="true"] #zentral-apps-utility-section .zentral-utility-btn,
-        :root[zen-compact-mode="true"] #zen-compact-apps-drawer .zen-app-tile,
         :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile,
         :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-add-btn,
         :root[zen-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn,
@@ -1723,8 +1720,6 @@
         :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile img,
         :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile svg,
         :root[zen-compact-mode="true"] #zentral-apps-utility-section .zentral-utility-btn svg,
-        :root[zen-compact-mode="true"] #zen-compact-apps-drawer .zen-app-tile img,
-        :root[zen-compact-mode="true"] #zen-compact-apps-drawer .zen-app-tile svg,
         :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile img,
         :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile svg,
         :root[zen-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn svg,
@@ -1737,7 +1732,6 @@
 
         :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile:hover,
         :root[zen-compact-mode="true"] #zentral-apps-utility-section .zentral-utility-btn:hover,
-        :root[zen-compact-mode="true"] #zen-compact-apps-drawer .zen-app-tile:hover,
         :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:hover,
         :root[zen-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn:hover,
         :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:hover,
@@ -1750,8 +1744,6 @@
         :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile:hover img,
         :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile:hover svg,
         :root[zen-compact-mode="true"] #zentral-apps-utility-section .zentral-utility-btn:hover svg,
-        :root[zen-compact-mode="true"] #zen-compact-apps-drawer .zen-app-tile:hover img,
-        :root[zen-compact-mode="true"] #zen-compact-apps-drawer .zen-app-tile:hover svg,
         :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:hover img,
         :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:hover svg,
         :root[zen-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn:hover svg,
@@ -1764,7 +1756,6 @@
         :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile:active,
         :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-add-btn:active,
         :root[zen-compact-mode="true"] #zentral-apps-utility-section .zentral-utility-btn:active,
-        :root[zen-compact-mode="true"] #zen-compact-apps-drawer .zen-app-tile:active,
         :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:active,
         :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-add-btn:active,
         :root[zen-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn:active,
@@ -1775,7 +1766,6 @@
         }
 
         :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile[data-active="true"],
-        :root[zen-compact-mode="true"] #zen-compact-apps-drawer .zen-app-tile[data-active="true"],
         :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile[data-active="true"],
         :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile[data-active="true"] {
           background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 32%, var(--zen-colors-base, #131313)) !important;
@@ -2245,152 +2235,9 @@
         this.#dom.pinBtn = pinBtn;
         this.#dom.expandBtn = expandBtn;
       }
-
-      this.createCompactDrawerContainers();
     }
 
     /**
-     * Creates persistent DOM elements and event handlers for the Compact Sidebar Apps Drawer.
-     */
-    createCompactDrawerContainers() {
-      if (document.getElementById("zen-compact-apps-drawer")) return;
-
-      const trigger = document.createElement("div");
-      trigger.id = "zen-compact-apps-trigger";
-
-      const drawer = document.createElement("div");
-      drawer.id = "zen-compact-apps-drawer";
-
-      const header = document.createElement("div");
-      header.id = "zen-compact-apps-header";
-
-      const addBtn = document.createElement("button");
-      addBtn.className = "zen-app-tile zen-app-add-btn";
-      addBtn.title = "Add App";
-      addBtn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`));
-      addBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        this.closeCompactDrawer();
-        const tab = gBrowser.selectedTab; if (!tab) return;
-        const url = tab.linkedBrowser?.currentURI?.spec || "about:blank";
-        const title = tab.label || url;
-        const icon = (typeof gBrowser.getIcon === "function" ? gBrowser.getIcon(tab) : null) || tab.getAttribute("image") || tab.image || "";
-        if (url !== "about:blank") this.addApp(url, title, icon);
-      });
-      header.appendChild(addBtn);
-
-      const list = document.createElement("div");
-      list.id = "zen-compact-apps-list";
-
-      drawer.appendChild(header);
-      drawer.appendChild(list);
-
-      const container = document.body || document.documentElement;
-      container.appendChild(trigger);
-      container.appendChild(drawer);
-
-      this.#dom.compactTrigger = trigger;
-      this.#dom.compactDrawer = drawer;
-      this.#dom.compactList = list;
-
-      let openTimer = null;
-      let closeTimer = null;
-
-      const cancelTimers = () => {
-        if (openTimer) { clearTimeout(openTimer); openTimer = null; }
-        if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
-      };
-
-      trigger.addEventListener("mouseenter", () => {
-        if (!this.isCollapsedSidebar() || Core.getPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED) === false) return;
-        cancelTimers();
-        openTimer = setTimeout(() => {
-          openTimer = null;
-          drawer.setAttribute("open", "true");
-        }, 120);
-      });
-
-      window.addEventListener("mousemove", (e) => {
-        if (!this.isCollapsedSidebar() || Core.getPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED) === false) return;
-        if (e.clientY > window.innerHeight / 3) return;
-
-        const isRight = this.isSidebarRight();
-        const isNearEdge = isRight ? (e.clientX >= window.innerWidth - 18) : (e.clientX <= 18);
-
-        if (isNearEdge && !drawer.hasAttribute("open") && !openTimer) {
-          cancelTimers();
-          openTimer = setTimeout(() => {
-            openTimer = null;
-            drawer.setAttribute("open", "true");
-          }, 120);
-        }
-      }, { passive: true });
-
-      trigger.addEventListener("mouseleave", () => {
-        if (openTimer) { clearTimeout(openTimer); openTimer = null; }
-        closeTimer = setTimeout(() => {
-          closeTimer = null;
-          if (!drawer.matches(":hover")) drawer.removeAttribute("open");
-        }, 300);
-      });
-
-      drawer.addEventListener("mouseenter", () => {
-        cancelTimers();
-      });
-
-      drawer.addEventListener("mouseleave", () => {
-        cancelTimers();
-        closeTimer = setTimeout(() => {
-          closeTimer = null;
-          drawer.removeAttribute("open");
-        }, 300);
-      });
-
-      this.updateAutohideState();
-      this.updateCompactDrawerState();
-    }
-
-    /**
-     * Immediately closes the Compact Sidebar Apps Drawer.
-     */
-    closeCompactDrawer() {
-      if (this.#dom.compactDrawer) {
-        this.#dom.compactDrawer.removeAttribute("open");
-      }
-    }
-
-    /**
-     * Updates the enabled/disabled DOM state of the Compact Sidebar Apps Drawer trigger and container.
-     */
-    updateCompactDrawerState() {
-      const enabled = Core.getPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, false) === true;
-      if (this.#dom.compactTrigger) {
-        if (enabled) {
-          this.#dom.compactTrigger.removeAttribute("disabled");
-          this.#dom.compactTrigger.style.display = "";
-          this.#dom.compactTrigger.style.pointerEvents = "";
-        } else {
-          this.#dom.compactTrigger.setAttribute("disabled", "true");
-          this.#dom.compactTrigger.style.display = "none";
-          this.#dom.compactTrigger.style.pointerEvents = "none";
-        }
-      }
-      if (this.#dom.compactDrawer) {
-        if (enabled) {
-          this.#dom.compactDrawer.removeAttribute("disabled");
-          this.#dom.compactDrawer.style.display = "";
-        } else {
-          this.#dom.compactDrawer.setAttribute("disabled", "true");
-          this.#dom.compactDrawer.removeAttribute("open");
-          this.#dom.compactDrawer.style.display = "none";
-        }
-      }
-    }
-
-    /**
-     * Renders or updates the app tiles grid using DocumentFragment for maximum DOM performance.
-     * Filters apps based on workspace isolation rules (All Spaces vs Current Space).
-      /**
      * Updates documentElement and trigger state based on autohide preference.
      */
     updateAutohideState() {
@@ -2693,8 +2540,6 @@
       const fragment = document.createDocumentFragment();
 
       this.updateAutohideState();
-      this.updateCompactDrawerState();
-      this.renderCompactDrawer(activeApps);
       this.renderUtilitySection();
 
       activeApps.forEach((app) => {
@@ -2854,66 +2699,7 @@
       });
     }
 
-    /**
-     * Renders the apps in the compact sidebar hover drawer.
-     * @param {Array} activeApps - Array of app configuration objects to render.
-     */
-    renderCompactDrawer(activeApps) {
-      if (!this.#dom.compactList) return;
-      this.#dom.compactList.innerHTML = "";
-      
-      const fragment = document.createDocumentFragment();
-      
-      activeApps.forEach((app) => {
-        const btn = document.createElement("button");
-        btn.id = "zen-compact-app-btn-" + app.id;
-        btn.className = "zen-app-tile";
-        btn.dataset.appId = app.id;
-        btn.dataset.active = (this.#state.activeAppId === app.id) ? "true" : "false";
-        btn.title = app.title || "";
 
-        const img = document.createElement("img");
-        img.src = app.icon || `page-icon:${app.url}`;
-        btn.appendChild(img);
-        
-        if (app.hasNotification) {
-          const badge = document.createElement("div");
-          badge.className = "zen-app-badge";
-          if (app.notificationCount) {
-            badge.textContent = app.notificationCount > 99 ? "99+" : app.notificationCount;
-          } else {
-            badge.setAttribute("data-dot", "true");
-          }
-          btn.appendChild(badge);
-        }
-
-        btn.addEventListener("click", (e) => {
-          if (e.button !== 0) return;
-          e.preventDefault();
-          e.stopPropagation();
-          
-          this.closeCompactDrawer();
-          if (this.#state.activeAppId === app.id) {
-            this.closePanel();
-          } else {
-            this.openPanel(app);
-          }
-        });
-
-        btn.addEventListener("contextmenu", (e) => {
-          e.preventDefault();
-          const popup = document.getElementById("zen-apps-sidebar-tile-context");
-          if (popup) { 
-            popup.dataset.activeAppId = app.id; 
-            popup.openPopupAtScreen(e.screenX, e.screenY, true); 
-          }
-        });
-        
-        fragment.appendChild(btn);
-      });
-      
-      this.#dom.compactList.appendChild(fragment);
-    }
 
     /**
      * Adds a new app tile to the configuration and re-renders the grid.
@@ -3158,7 +2944,6 @@
             }
           };
           updateBadge(document.getElementById("zen-app-btn-" + app.id));
-          updateBadge(document.getElementById("zen-compact-app-btn-" + app.id));
         }
       };
       b.addEventListener("pagetitlechanged", titleHandler);
@@ -4863,6 +4648,7 @@
       }
       
       this.applyChevronPref();
+      this.applyIndicatorTypePref();
       this.applyLabelOpacityPref();
       Core.emit("tabGroupsInitComplete", this);
     }
@@ -4873,6 +4659,14 @@
     applyChevronPref() {
       const showChevron = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON);
       document.documentElement.setAttribute("zentral-show-chevron", showChevron !== false ? "true" : "false");
+    }
+
+    /**
+     * Reads indicator_type preference ("circle"|"chevron") and sets zentral-indicator-type attribute on root.
+     */
+    applyIndicatorTypePref() {
+      const indicatorType = Core.getPref(Constants.TabGroups.PREF_INDICATOR_TYPE, "circle");
+      document.documentElement.setAttribute("zentral-indicator-type", indicatorType === "chevron" ? "chevron" : "circle");
     }
 
     /**
@@ -7277,9 +7071,6 @@
     /**
      * Reads preferences from ZentralCore and populates modal input fields and switches.
      */
-    /**
-     * Reads preferences from ZentralCore and populates modal input fields and switches.
-     */
     populate() {
       if (!this.modal) return;
       const get = (id) => this.modal.querySelector("#" + id);
@@ -7303,19 +7094,26 @@
         btn.setAttribute("data-active", btn.dataset.placement === placement ? "true" : "false");
       });
 
+      // Show/hide Apps Box Matrix based on placement
+      const matrixWrapper = get("zs-matrix-wrapper");
+      if (matrixWrapper) {
+        matrixWrapper.style.display = (placement === "sidebar") ? "" : "none";
+      }
+
       const cols = Core.getPref(Constants.Apps.PREF_APPS_PER_ROW, 7) || 7;
       const rows = Core.getPref(Constants.Apps.PREF_MAX_ROWS, 3) || 3;
       this.updateMatrixUI(cols, rows);
 
-      if (get("zs-ag-compact-drawer")) {
-        get("zs-ag-compact-drawer").checked = Core.getPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, false) === true;
-      }
-      if (get("zs-ag-autohide")) {
-        get("zs-ag-autohide").checked = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
-      }
-      get("zs-anim-type").value = Core.getPref(Constants.Apps.PREF_ANIMATION_TYPE, "slide") || "slide";
-      get("zs-anim-speed").value = Core.getPref(Constants.Apps.PREF_ANIMATION_SPEED, 450) || 450;
-      get("zs-max-apps").value = Core.getPref(Constants.Apps.PREF_MAX_APPS, 21) || 21;
+      const animType = Core.getPref(Constants.Apps.PREF_ANIMATION_TYPE, "slide") || "slide";
+      const animSpeed = Core.getPref(Constants.Apps.PREF_ANIMATION_SPEED, 450) || 450;
+      const maxApps = Core.getPref(Constants.Apps.PREF_MAX_APPS, 21) || 21;
+
+      get("zs-anim-type").value = animType;
+      get("zs-anim-speed").value = animSpeed;
+      if (get("zs-anim-speed-slider")) get("zs-anim-speed-slider").value = animSpeed;
+      get("zs-max-apps").value = maxApps;
+
+      this.updatePreviewDemo(animType, animSpeed);
 
       const tgEnabled = Core.getPref(Constants.TabGroups.PREF_ENABLED, true) !== false;
       if (get("zs-tg-enabled")) {
@@ -7331,7 +7129,16 @@
 
       get("zs-tg-collapse").checked = Core.getPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH, false) === true;
       get("zs-tg-thumbnails").checked = Core.getPref(Constants.TabGroups.PREF_THUMBNAILS, true) !== false;
-      get("zs-tg-chevron").checked = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON, true) !== false;
+      
+      const showIndicator = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON, true) !== false;
+      get("zs-tg-chevron").checked = showIndicator;
+      const indicatorTypeRow = get("zs-tg-indicator-type-row");
+      if (indicatorTypeRow) {
+        indicatorTypeRow.style.display = showIndicator ? "" : "none";
+      }
+      if (get("zs-tg-indicator-type")) {
+        get("zs-tg-indicator-type").value = Core.getPref(Constants.TabGroups.PREF_INDICATOR_TYPE, "circle") || "circle";
+      }
       
       const opacity = Core.getPref(Constants.TabGroups.PREF_LABEL_OPACITY, 85) || 85;
       if (get("zs-tg-opacity")) {
@@ -7347,6 +7154,28 @@
         get("zs-pref-logger-path").value = savedPath;
         this.updatePathUI(savedPath);
       }
+    }
+
+    /**
+     * Updates the animation preview demo element with live easing curve and duration.
+     * @param {string} type - Animation easing type
+     * @param {number} speedMs - Animation duration in milliseconds
+     */
+    updatePreviewDemo(type, speedMs) {
+      if (!this.modal) return;
+      const previewBox = this.modal.querySelector("#zs-anim-preview-box");
+      if (!previewBox) return;
+
+      let curve = "cubic-bezier(0.25, 1, 0.5, 1)";
+      if (type === "spring-snappy") curve = "cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+      else if (type === "spring-gentle") curve = "cubic-bezier(0.34, 1.3, 0.64, 1)";
+      else if (type === "spring-bouncy") curve = "cubic-bezier(0.68, -0.55, 0.265, 1.55)";
+      else if (type === "elastic") curve = "cubic-bezier(0.68, -0.6, 0.32, 1.6)";
+      else if (type === "none") curve = "step-end";
+
+      const duration = (type === "none" || speedMs <= 0) ? "0.01s" : `${(speedMs / 1000).toFixed(2)}s`;
+      previewBox.style.setProperty("--zs-preview-anim-curve", curve);
+      previewBox.style.setProperty("--zs-preview-anim-duration", duration);
     }
 
     /**
@@ -7383,14 +7212,8 @@
       if (get("zs-ag-placement")) {
         Core.setPref(Constants.Apps.PREF_PLACEMENT, get("zs-ag-placement").value);
       }
-      if (get("zs-ag-compact-drawer")) {
-        Core.setPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, get("zs-ag-compact-drawer").checked);
-      }
-      if (get("zs-ag-autohide")) {
-        Core.setPref(Constants.Apps.PREF_AUTOHIDE, get("zs-ag-autohide").checked);
-      }
       Core.setPref(Constants.Apps.PREF_ANIMATION_TYPE, get("zs-anim-type").value);
-      Core.setPref(Constants.Apps.PREF_ANIMATION_SPEED, parseInt(get("zs-anim-speed").value) || 450);
+      Core.setPref(Constants.Apps.PREF_ANIMATION_SPEED, parseInt(get("zs-anim-speed").value) || 0);
       Core.setPref(Constants.Apps.PREF_MAX_APPS, parseInt(get("zs-max-apps").value) || 21);
       Core.setPref(Constants.Apps.PREF_APPS_PER_ROW, parseInt(get("zs-apps-row").value) || 7);
       Core.setPref(Constants.Apps.PREF_MAX_ROWS, parseInt(get("zs-max-rows").value) || 3);
@@ -7399,6 +7222,9 @@
       Core.setPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH, get("zs-tg-collapse").checked);
       Core.setPref(Constants.TabGroups.PREF_THUMBNAILS, get("zs-tg-thumbnails").checked);
       Core.setPref(Constants.TabGroups.PREF_SHOW_CHEVRON, get("zs-tg-chevron").checked);
+      if (get("zs-tg-indicator-type")) {
+        Core.setPref(Constants.TabGroups.PREF_INDICATOR_TYPE, get("zs-tg-indicator-type").value);
+      }
       if (get("zs-tg-opacity")) {
         Core.setPref(Constants.TabGroups.PREF_LABEL_OPACITY, parseInt(get("zs-tg-opacity").value) || 85);
       }
@@ -7418,6 +7244,7 @@
       }
       if (window.Zentral?.TabGroups) {
         window.Zentral.TabGroups.applyChevronPref();
+        window.Zentral.TabGroups.applyIndicatorTypePref();
         window.Zentral.TabGroups.applyLabelOpacityPref();
       }
     }
@@ -7434,7 +7261,7 @@
           left: 0;
           right: 0;
           height: 100vh;
-          background: rgba(0, 0, 0, 0.62);
+          background: rgba(0, 0, 0, 0.65);
           backdrop-filter: blur(16px) saturate(140%);
           -webkit-backdrop-filter: blur(16px) saturate(140%);
           z-index: 2147483647;
@@ -7471,11 +7298,11 @@
         .zs-dialog {
           background: #18181c !important;
           color: #f2f2f7 !important;
-          width: 1140px;
+          width: 1120px;
           max-width: 95vw;
-          height: 740px;
-          min-height: 640px;
-          max-height: 90vh;
+          height: 720px;
+          min-height: 600px;
+          max-height: 94vh;
           border-radius: 14px;
           box-shadow: 0 28px 70px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -7486,7 +7313,7 @@
         }
 
         .zs-header {
-          padding: 16px 28px 14px 28px;
+          padding: 14px 24px 12px 24px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           display: flex;
           justify-content: space-between;
@@ -7504,20 +7331,20 @@
 
         .zs-title {
           margin: 0;
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 600;
           letter-spacing: -0.2px;
           color: #ffffff !important;
         }
 
         .zs-version-badge {
-          font-size: 11px;
-          padding: 2px 7px;
-          border-radius: 10px;
+          font-size: 10.5px;
+          padding: 2px 6px;
+          border-radius: 8px;
           background: color-mix(in srgb, currentColor 10%, transparent);
           opacity: 0.75;
           font-weight: 600;
-          margin-left: 8px;
+          margin-left: 6px;
         }
 
         .zs-close-btn {
@@ -7525,9 +7352,9 @@
           border: none;
           color: #f2f2f7 !important;
           cursor: pointer;
-          width: 28px;
-          height: 28px;
-          border-radius: 8px;
+          width: 26px;
+          height: 26px;
+          border-radius: 6px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -7545,18 +7372,18 @@
         .zs-tab-bar {
           display: flex;
           position: relative;
-          padding: 0 28px;
+          padding: 0 24px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           background: rgba(255, 255, 255, 0.02);
-          gap: 24px;
+          gap: 20px;
           flex-shrink: 0;
         }
 
         .zs-tab-btn {
           background: transparent;
           border: none;
-          padding: 12px 4px;
-          font-size: 13.5px;
+          padding: 10px 2px;
+          font-size: 13px;
           font-weight: 600;
           color: rgba(255, 255, 255, 0.55);
           cursor: pointer;
@@ -7586,22 +7413,25 @@
 
         /* Modal Body & Tab Panels */
         .zs-body {
-          padding: 20px 28px 24px 28px;
+          padding: 14px 24px 16px 24px;
           display: flex;
           flex-direction: column;
           flex: 1 1 auto;
-          gap: 16px;
+          gap: 12px;
           overflow-y: auto;
-          scrollbar-width: thin;
-          scrollbar-gutter: stable;
+          scrollbar-width: none;
           background: #18181c !important;
           color: #f2f2f7 !important;
+        }
+
+        .zs-body::-webkit-scrollbar {
+          display: none;
         }
 
         .zs-tab-panel {
           display: none;
           flex-direction: column;
-          gap: 16px;
+          gap: 12px;
           width: 100%;
           flex: 1 1 auto;
         }
@@ -7614,8 +7444,8 @@
         /* 2-Column Side-by-Side Grid for Settings Tab */
         .zs-columns {
           display: grid;
-          grid-template-columns: 1.05fr 0.95fr;
-          gap: 24px;
+          grid-template-columns: 1.04fr 0.96fr;
+          gap: 20px;
           align-items: stretch;
           width: 100%;
           flex: 1 1 auto;
@@ -7624,7 +7454,7 @@
         .zs-col {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 6px;
           height: 100%;
         }
 
@@ -7634,11 +7464,11 @@
           justify-content: space-between;
           align-items: center;
           padding: 2px 4px;
-          min-height: 26px;
+          min-height: 24px;
         }
 
         .zs-section-title {
-          font-size: 11.5px;
+          font-size: 11px;
           text-transform: uppercase;
           font-weight: 700;
           letter-spacing: 0.08em;
@@ -7650,11 +7480,11 @@
         .zs-header-toggle {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
         }
 
         .zs-toggle-status {
-          font-size: 11.5px;
+          font-size: 11px;
           font-weight: 600;
           color: var(--zen-primary-color, #707ac2);
           transition: color 0.18s ease;
@@ -7669,10 +7499,10 @@
           background: rgba(255, 255, 255, 0.04) !important;
           border: 1px solid rgba(255, 255, 255, 0.07) !important;
           border-radius: 12px;
-          padding: 16px 18px;
+          padding: 12px 14px;
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 10px;
           flex: 1 1 auto;
           transition: opacity 0.2s ease, filter 0.2s ease;
         }
@@ -7687,8 +7517,8 @@
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 16px;
-          min-height: 28px;
+          gap: 14px;
+          min-height: 26px;
         }
 
         .zs-label-container {
@@ -7699,87 +7529,154 @@
         }
 
         .zs-label {
-          font-size: 13.5px;
+          font-size: 13px;
           font-weight: 500;
           color: #f2f2f7 !important;
         }
 
         .zs-sublabel {
-          font-size: 11.5px;
-          color: rgba(255, 255, 255, 0.58) !important;
-          margin-top: 2px;
-          line-height: 1.35;
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.55) !important;
+          margin-top: 1px;
+          line-height: 1.3;
         }
 
-        /* Visual Placement Cards */
+        /* Visual Placement Cards (Highlight only - no pop up) */
         .zs-placement-group {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 6px;
         }
 
         .zs-placement-cards {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 12px;
+          gap: 10px;
         }
 
         .zs-placement-btn {
           background: rgba(255, 255, 255, 0.03);
           border: 1.5px solid rgba(255, 255, 255, 0.1);
           border-radius: 10px;
-          padding: 10px 10px 8px 10px;
+          padding: 8px 8px 6px 8px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 6px;
+          gap: 4px;
           cursor: pointer;
-          transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+          transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
           color: #ffffff;
           outline: none;
+          transform: none;
         }
 
         .zs-placement-btn:hover {
           background: rgba(255, 255, 255, 0.07);
-          border-color: rgba(255, 255, 255, 0.25);
-          transform: translateY(-1px);
+          border-color: rgba(255, 255, 255, 0.28);
+          transform: none;
         }
 
         .zs-placement-btn[data-active="true"] {
           background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 14%, rgba(255,255,255,0.03));
           border-color: var(--zen-primary-color, #707ac2);
-          box-shadow: 0 0 16px color-mix(in srgb, var(--zen-primary-color, #707ac2) 22%, transparent);
+          box-shadow: 0 0 14px color-mix(in srgb, var(--zen-primary-color, #707ac2) 20%, transparent);
+          transform: none;
         }
 
         .zs-placement-svg-box {
           width: 100%;
-          height: 52px;
+          height: 48px;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
         .zs-placement-label {
-          font-size: 12.5px;
+          font-size: 12px;
           font-weight: 600;
           letter-spacing: -0.1px;
         }
 
         .zs-placement-sublabel {
-          font-size: 10.5px;
-          color: rgba(255, 255, 255, 0.55);
+          font-size: 10px;
+          color: rgba(255, 255, 255, 0.5);
           margin-top: -3px;
         }
 
-        /* 10x6 Matrix Selection Grid */
+        /* Horizontal Stepper (- [value] +) */
+        .zs-h-stepper {
+          display: inline-flex;
+          align-items: center;
+          background: rgba(255, 255, 255, 0.07);
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          border-radius: 8px;
+          overflow: hidden;
+          height: 28px;
+          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+          flex-shrink: 0;
+        }
+
+        .zs-h-stepper:focus-within {
+          border-color: var(--zen-primary-color, #707ac2) !important;
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--zen-primary-color, #707ac2) 30%, transparent) !important;
+        }
+
+        .zs-h-btn {
+          width: 28px;
+          height: 100%;
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.12s ease;
+          user-select: none;
+          padding: 0;
+        }
+
+        .zs-h-btn:hover {
+          background: rgba(255, 255, 255, 0.14);
+          color: #ffffff;
+        }
+
+        .zs-h-btn:active {
+          background: var(--zen-primary-color, #707ac2);
+          color: #ffffff;
+        }
+
+        .zs-h-val {
+          width: 44px;
+          background: transparent;
+          border: none;
+          color: #ffffff;
+          text-align: center;
+          font-size: 13px;
+          font-weight: 600;
+          outline: none;
+          -moz-appearance: textfield;
+          appearance: textfield;
+          padding: 0;
+        }
+
+        .zs-h-val::-webkit-outer-spin-button,
+        .zs-h-val::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+
+        /* 10x6 Selection Matrix */
         .zs-matrix-wrapper {
           display: flex;
           flex-direction: column;
-          gap: 8px;
-          background: rgba(0, 0, 0, 0.2);
+          gap: 6px;
+          background: rgba(0, 0, 0, 0.22);
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 10px;
-          padding: 10px 12px;
+          padding: 8px 10px;
         }
 
         .zs-matrix-header {
@@ -7789,13 +7686,13 @@
         }
 
         .zs-matrix-title {
-          font-size: 12px;
+          font-size: 11.5px;
           font-weight: 600;
           color: #f2f2f7;
         }
 
         .zs-matrix-readout {
-          font-size: 11.5px;
+          font-size: 11px;
           font-weight: 600;
           color: var(--zen-primary-color, #707ac2);
           display: flex;
@@ -7806,9 +7703,9 @@
         .zs-matrix-badge {
           background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 20%, transparent);
           border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent);
-          padding: 1px 6px;
+          padding: 1px 5px;
           border-radius: 4px;
-          font-size: 10.5px;
+          font-size: 10px;
           font-weight: 700;
         }
 
@@ -7816,122 +7713,197 @@
           display: grid;
           grid-template-columns: repeat(10, 1fr);
           grid-template-rows: repeat(6, 1fr);
-          gap: 4px;
+          gap: 3px;
           user-select: none;
           touch-action: none;
-          padding: 2px 0;
+          padding: 1px 0;
         }
 
         .zs-matrix-cell {
           aspect-ratio: 1 / 1;
-          min-height: 18px;
+          min-height: 14px;
           background: rgba(255, 255, 255, 0.08);
           border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 4px;
+          border-radius: 3px;
           cursor: pointer;
-          transition: background-color 0.1s ease, border-color 0.1s ease, transform 0.1s ease;
+          transition: background-color 0.1s ease, border-color 0.1s ease;
+          transform: none;
         }
 
         .zs-matrix-cell:hover,
         .zs-matrix-cell[data-hover="true"] {
           background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 50%, rgba(255,255,255,0.2));
           border-color: var(--zen-primary-color, #707ac2);
-          transform: scale(1.08);
+          transform: none;
         }
 
         .zs-matrix-cell[data-selected="true"] {
           background: var(--zen-primary-color, #707ac2);
           border-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 80%, #ffffff);
-          box-shadow: 0 0 6px color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent);
+          box-shadow: 0 0 5px color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent);
         }
 
-        /* Stepper Controls */
-        .zs-stepper {
+        /* Animation Speed Input & Slider Composite */
+        .zs-speed-container {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 170px;
+          flex-shrink: 0;
+        }
+
+        .zs-speed-input-box {
           display: inline-flex;
           align-items: center;
           background: rgba(255, 255, 255, 0.08);
           border: 1px solid rgba(255, 255, 255, 0.16);
-          border-radius: 8px;
-          overflow: hidden;
-          transition: border-color 0.15s ease, box-shadow 0.15s ease;
-          width: 90px;
-          height: 32px;
-          flex-shrink: 0;
+          border-radius: 6px;
+          padding: 2px 6px;
+          width: 58px;
+          box-sizing: border-box;
         }
 
-        .zs-stepper:focus-within {
-          border-color: var(--zen-primary-color, #707ac2) !important;
-          box-shadow: 0 0 0 2px color-mix(in srgb, var(--zen-primary-color, #707ac2) 30%, transparent) !important;
-        }
-
-        .zs-stepper .zs-input-number {
-          flex: 1;
-          width: 58px !important;
+        .zs-speed-input {
+          width: 34px;
           background: transparent !important;
           border: none !important;
           color: #ffffff !important;
-          padding: 4px 6px 4px 10px !important;
-          font-size: 13px !important;
-          text-align: left !important;
+          font-size: 12px !important;
           font-weight: 600 !important;
+          text-align: right !important;
           outline: none !important;
           -moz-appearance: textfield !important;
           appearance: textfield !important;
+          padding: 0 !important;
         }
 
-        .zs-stepper .zs-input-number::-webkit-outer-spin-button,
-        .zs-stepper .zs-input-number::-webkit-inner-spin-button {
+        .zs-speed-input::-webkit-outer-spin-button,
+        .zs-speed-input::-webkit-inner-spin-button {
           -webkit-appearance: none !important;
           margin: 0 !important;
         }
 
-        .zs-stepper-btns {
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          border-left: 1px solid rgba(255, 255, 255, 0.1);
-          width: 22px;
-        }
-
-        .zs-stepper-btn {
-          flex: 1;
-          background: transparent;
-          border: none;
-          color: rgba(255, 255, 255, 0.7);
-          cursor: pointer;
-          padding: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.12s ease;
+        .zs-speed-unit {
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.6);
+          margin-left: 2px;
           user-select: none;
         }
 
-        .zs-stepper-btn:hover {
+        /* Animation Preview Demo Box */
+        .zs-anim-preview-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          background: rgba(0, 0, 0, 0.22);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 10px;
+          padding: 8px 12px;
+        }
+
+        .zs-anim-preview-box {
+          position: relative;
+          height: 64px;
+          background: #121215;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 8px;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+          user-select: none;
+        }
+
+        .zs-anim-preview-sidebar {
+          width: 32px;
+          height: 100%;
+          background: rgba(255, 255, 255, 0.04);
+          border-right: 1px solid rgba(255, 255, 255, 0.08);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          flex-shrink: 0;
+          z-index: 2;
+        }
+
+        .zs-anim-preview-dot {
+          width: 14px;
+          height: 14px;
+          border-radius: 4px;
           background: rgba(255, 255, 255, 0.15);
-          color: #ffffff;
         }
 
-        .zs-stepper-btn:active {
+        .zs-anim-preview-panel {
+          position: absolute;
+          left: 33px;
+          top: 6px;
+          bottom: 6px;
+          width: 0;
+          max-width: 140px;
+          opacity: 0;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, rgba(255,255,255,0.1));
+          border-radius: 6px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          padding: 6px 8px;
+          gap: 4px;
+          box-sizing: border-box;
+          pointer-events: none;
+          transform: translateX(-10px) scale(0.95);
+          transition: width var(--zs-preview-anim-duration, 0.45s) var(--zs-preview-anim-curve, cubic-bezier(0.25, 1, 0.5, 1)),
+                      opacity var(--zs-preview-anim-duration, 0.45s) var(--zs-preview-anim-curve, cubic-bezier(0.25, 1, 0.5, 1)),
+                      transform var(--zs-preview-anim-duration, 0.45s) var(--zs-preview-anim-curve, cubic-bezier(0.25, 1, 0.5, 1));
+        }
+
+        .zs-anim-preview-box:hover .zs-anim-preview-panel {
+          width: 130px;
+          opacity: 1;
+          transform: translateX(0) scale(1);
+        }
+
+        .zs-anim-preview-pill {
+          height: 6px;
+          width: 50px;
+          border-radius: 3px;
           background: var(--zen-primary-color, #707ac2);
-          color: #ffffff;
         }
 
-        .zs-stepper-up {
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        .zs-anim-preview-line {
+          height: 4px;
+          border-radius: 2px;
+          background: rgba(255, 255, 255, 0.2);
+          margin-top: 2px;
+        }
+
+        .zs-anim-preview-hint {
+          position: absolute;
+          right: 12px;
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.4);
+          pointer-events: none;
+          transition: opacity 0.15s ease;
+        }
+
+        .zs-anim-preview-box:hover .zs-anim-preview-hint {
+          opacity: 0;
         }
 
         /* Dropdown Select */
         .zs-select {
-          min-width: 160px;
+          min-width: 150px;
           background: #242429 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>') no-repeat right 10px center !important;
           -moz-appearance: none !important;
           appearance: none !important;
           border: 1px solid rgba(255, 255, 255, 0.16) !important;
           border-radius: 8px;
           color: #ffffff !important;
-          padding: 6px 28px 6px 12px;
-          font-size: 13px;
+          padding: 5px 26px 5px 10px;
+          font-size: 12.5px;
           font-weight: 500;
           outline: none;
           cursor: pointer;
@@ -7955,8 +7927,8 @@
         .zs-switch {
           position: relative;
           display: inline-block;
-          width: 38px;
-          height: 22px;
+          width: 36px;
+          height: 20px;
           flex-shrink: 0;
         }
 
@@ -7972,21 +7944,21 @@
           inset: 0;
           background-color: rgba(255, 255, 255, 0.16) !important;
           transition: background-color 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
-          border-radius: 22px;
+          border-radius: 20px;
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
         }
 
         .zs-slider:before {
           position: absolute;
           content: "";
-          height: 16px;
-          width: 16px;
+          height: 14px;
+          width: 14px;
           left: 2px;
           bottom: 2px;
           background-color: #ffffff;
           transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
           border-radius: 50%;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
 
         .zs-switch input:checked + .zs-slider {
@@ -8001,8 +7973,8 @@
         .zs-range-container {
           display: flex;
           align-items: center;
-          gap: 12px;
-          min-width: 160px;
+          gap: 10px;
+          min-width: 150px;
           flex-shrink: 0;
         }
 
@@ -8020,13 +7992,13 @@
         .zs-range-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 16px;
-          height: 16px;
+          width: 15px;
+          height: 15px;
           border-radius: 50%;
           background: #ffffff !important;
           box-shadow: 0 1px 4px rgba(0,0,0,0.4);
           cursor: pointer;
-          transition: transform 0.15s ease;
+          transition: transform 0.1s ease;
         }
 
         .zs-range-slider::-webkit-slider-thumb:hover {
@@ -8034,9 +8006,9 @@
         }
 
         .zs-range-value {
-          font-size: 12.5px;
+          font-size: 12px;
           font-weight: 600;
-          min-width: 36px;
+          min-width: 34px;
           text-align: right;
           color: #f2f2f7 !important;
         }
@@ -8046,13 +8018,13 @@
           background: transparent !important;
           border: 1px solid rgba(255, 255, 255, 0.12) !important;
           color: rgba(255, 255, 255, 0.7) !important;
-          padding: 6px 12px;
+          padding: 5px 10px;
           border-radius: 6px;
-          font-size: 11.5px;
+          font-size: 11px;
           font-weight: 500;
           cursor: pointer;
           transition: all 0.15s ease;
-          margin-top: 4px;
+          margin-top: 2px;
         }
 
         .zs-reset-btn:hover {
@@ -8062,22 +8034,22 @@
         }
 
         .zs-footer {
-          padding: 14px 28px;
+          padding: 12px 24px;
           background: rgba(255, 255, 255, 0.02) !important;
           border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
           display: flex;
           justify-content: flex-end;
-          gap: 12px;
+          gap: 10px;
           flex-shrink: 0;
         }
 
         .zs-btn-cancel {
-          padding: 8px 16px;
-          border-radius: 8px;
+          padding: 7px 14px;
+          border-radius: 7px;
           background: transparent !important;
           border: 1px solid rgba(255, 255, 255, 0.14) !important;
           color: #f2f2f7 !important;
-          font-size: 13px;
+          font-size: 12.5px;
           font-weight: 500;
           cursor: pointer;
           transition: all 0.15s ease;
@@ -8089,12 +8061,12 @@
         }
 
         .zs-btn-save {
-          padding: 8px 20px;
-          border-radius: 8px;
+          padding: 7px 18px;
+          border-radius: 7px;
           background: var(--zen-primary-color, #707ac2) !important;
           border: none;
           color: #ffffff !important;
-          font-size: 13px;
+          font-size: 12.5px;
           font-weight: 600;
           cursor: pointer;
           box-shadow: 0 2px 8px color-mix(in srgb, var(--zen-primary-color, #707ac2) 30%, transparent);
@@ -8108,21 +8080,6 @@
 
         .zs-btn-save:active {
           transform: scale(0.98);
-        }
-
-        .zs-badge {
-          display: inline-flex;
-          align-items: center;
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-size: 9px;
-          font-weight: 700;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          background: rgba(255, 85, 85, 0.15);
-          color: #ff6b6b;
-          border: 1px solid rgba(255, 85, 85, 0.25);
-          margin-left: 6px;
         }
       `;
       try {
@@ -8189,13 +8146,13 @@
                   <div class="zs-placement-group">
                     <div class="zs-label-container">
                       <span class="zs-label">Apps Placement</span>
-                      <span class="zs-sublabel">Choose between Sidebar dock or Side Strip on opposite edge</span>
+                      <span class="zs-sublabel">Choose where Apps will be located</span>
                     </div>
                     <input type="hidden" id="zs-ag-placement" value="sidebar" />
                     <div class="zs-placement-cards">
                       <button type="button" class="zs-placement-btn" id="zs-placement-sidebar" data-placement="sidebar" data-active="true" title="Dock Apps Box inside Zen Sidebar">
                         <div class="zs-placement-svg-box">
-                          <svg width="108" height="48" viewBox="0 0 120 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <svg width="116" height="48" viewBox="0 0 120 54" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <rect x="1" y="1" width="118" height="52" rx="5" fill="#141416" stroke="rgba(255,255,255,0.15)" stroke-width="1.2"/>
                             <line x1="1" y1="12" x2="119" y2="12" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
                             <circle cx="7" cy="6.5" r="2" fill="rgba(255,255,255,0.25)"/>
@@ -8214,7 +8171,7 @@
 
                       <button type="button" class="zs-placement-btn" id="zs-placement-strip" data-placement="vertical-bar" data-active="false" title="Dock Apps Bar as dedicated strip on opposite edge">
                         <div class="zs-placement-svg-box">
-                          <svg width="108" height="48" viewBox="0 0 120 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <svg width="116" height="48" viewBox="0 0 120 54" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <rect x="1" y="1" width="118" height="52" rx="5" fill="#141416" stroke="rgba(255,255,255,0.15)" stroke-width="1.2"/>
                             <line x1="1" y1="12" x2="119" y2="12" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
                             <circle cx="7" cy="6.5" r="2" fill="rgba(255,255,255,0.25)"/>
@@ -8228,16 +8185,31 @@
                             <rect x="110" y="14" width="6" height="36" rx="2" fill="var(--zen-primary-color, #707ac2)" fill-opacity="0.85" stroke="var(--zen-primary-color, #707ac2)" stroke-width="1"/>
                           </svg>
                         </div>
-                        <span class="zs-placement-label">Side Strip</span>
-                        <span class="zs-placement-sublabel">Apps Bar</span>
+                        <span class="zs-placement-label">Apps Bar</span>
                       </button>
                     </div>
                   </div>
 
-                  <!-- 10x6 Selection Matrix -->
-                  <div class="zs-matrix-wrapper">
+                  <!-- Apps Number Cap -->
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Apps Number Cap</span>
+                      <span class="zs-sublabel">Choose the maximum number of Apps you can add</span>
+                    </div>
+                    <div class="zs-h-stepper">
+                      <button type="button" class="zs-h-btn zs-h-dec" data-target="zs-max-apps" data-step="-1">−</button>
+                      <input type="number" id="zs-max-apps" class="zs-h-val" min="1" max="100" step="1" />
+                      <button type="button" class="zs-h-btn zs-h-inc" data-target="zs-max-apps" data-step="1">+</button>
+                    </div>
+                  </div>
+
+                  <!-- 10x6 Selection Matrix (Apps Box) -->
+                  <div class="zs-matrix-wrapper" id="zs-matrix-wrapper">
                     <div class="zs-matrix-header">
-                      <span class="zs-matrix-title">Grid Dimensions</span>
+                      <div class="zs-label-container">
+                        <span class="zs-matrix-title">Apps Box</span>
+                        <span class="zs-sublabel">Choose how many Apps are allowed in each row and how many rows are allowed to be shown in the Apps Box before you have to scroll down to reach other Apps</span>
+                      </div>
                       <div class="zs-matrix-readout">
                         <span id="zs-matrix-dims">7 Columns × 3 Rows</span>
                         <span id="zs-matrix-total-badge" class="zs-matrix-badge">21 Visible Apps</span>
@@ -8250,62 +8222,56 @@
                     </div>
                   </div>
 
+                  <!-- Panel Animation -->
                   <div class="zs-row">
                     <div class="zs-label-container">
-                      <span class="zs-label">Compact Apps Drawer <span class="zs-badge">Experimental</span></span>
-                      <span class="zs-sublabel">Hover top 1/3 screen edge in compact mode</span>
-                    </div>
-                    <label class="zs-switch">
-                      <input type="checkbox" id="zs-ag-compact-drawer" />
-                      <span class="zs-slider"></span>
-                    </label>
-                  </div>
-
-                  <div class="zs-row">
-                    <div class="zs-label-container">
-                      <span class="zs-label">Animation type</span>
+                      <span class="zs-label">Panel Animation</span>
+                      <span class="zs-sublabel">Choose how the opening/closing Apps panels should be animated</span>
                     </div>
                     <select id="zs-anim-type" class="zs-select">
                       <option value="slide">Smooth Slide</option>
-                      <option value="spring-gentle">Spring (Gentle)</option>
-                      <option value="spring-bouncy">Spring (Bouncy)</option>
-                      <option value="spring-snappy">Spring (Snappy)</option>
-                      <option value="elastic">Elastic Bounce</option>
-                      <option value="none">None (Instant)</option>
+                      <option value="spring-snappy">Snappy Spring</option>
+                      <option value="spring-gentle">Gentle Spring</option>
+                      <option value="spring-bouncy">Bouncy Spring</option>
+                      <option value="elastic">Elastic</option>
+                      <option value="none">Instant</option>
                     </select>
                   </div>
 
+                  <!-- Animation Speed -->
                   <div class="zs-row">
                     <div class="zs-label-container">
-                      <span class="zs-label">Animation speed (ms)</span>
+                      <span class="zs-label">Animation Speed</span>
+                      <span class="zs-sublabel">Adjust panel animation duration</span>
                     </div>
-                    <div class="zs-stepper">
-                      <input type="number" id="zs-anim-speed" class="zs-input-number" min="50" max="2000" step="50" />
-                      <div class="zs-stepper-btns">
-                        <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-anim-speed" data-step="50" title="Increase">
-                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                        </button>
-                        <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-anim-speed" data-step="-50" title="Decrease">
-                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                        </button>
+                    <div class="zs-speed-container">
+                      <input type="range" id="zs-anim-speed-slider" class="zs-range-slider" min="0" max="2000" step="50" />
+                      <div class="zs-speed-input-box">
+                        <input type="number" id="zs-anim-speed" class="zs-speed-input" min="0" max="2000" step="50" />
+                        <span class="zs-speed-unit">ms</span>
                       </div>
                     </div>
                   </div>
 
-                  <div class="zs-row">
+                  <!-- Animation Preview Demo -->
+                  <div class="zs-anim-preview-group">
                     <div class="zs-label-container">
-                      <span class="zs-label">Max total apps</span>
+                      <span class="zs-label">Animation Preview</span>
+                      <span class="zs-sublabel">Hover below to test opening/closing speed and easing curve</span>
                     </div>
-                    <div class="zs-stepper">
-                      <input type="number" id="zs-max-apps" class="zs-input-number" min="1" max="100" step="1" />
-                      <div class="zs-stepper-btns">
-                        <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-max-apps" data-step="1" title="Increase">
-                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                        </button>
-                        <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-max-apps" data-step="-1" title="Decrease">
-                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                        </button>
+                    <div class="zs-anim-preview-box" id="zs-anim-preview-box">
+                      <div class="zs-anim-preview-sidebar">
+                        <div class="zs-anim-preview-dot"></div>
+                        <div class="zs-anim-preview-dot"></div>
+                        <div class="zs-anim-preview-dot"></div>
                       </div>
+                      <div class="zs-anim-preview-panel" id="zs-anim-preview-panel">
+                        <div class="zs-anim-preview-pill"></div>
+                        <div class="zs-anim-preview-line" style="width: 85%;"></div>
+                        <div class="zs-anim-preview-line" style="width: 65%;"></div>
+                        <div class="zs-anim-preview-line" style="width: 75%;"></div>
+                      </div>
+                      <span class="zs-anim-preview-hint">Hover to preview</span>
                     </div>
                   </div>
 
@@ -8329,8 +8295,7 @@
                 <div class="zs-card" id="zs-tg-card">
                   <div class="zs-row">
                     <div class="zs-label-container">
-                      <span class="zs-label">Collapse groups at Startup</span>
-                      <span class="zs-sublabel">Disable to remember group states</span>
+                      <span class="zs-label">Close Groups at Startup</span>
                     </div>
                     <label class="zs-switch">
                       <input type="checkbox" id="zs-tg-collapse" />
@@ -8341,7 +8306,7 @@
                   <div class="zs-row">
                     <div class="zs-label-container">
                       <span class="zs-label">Groups Thumbnails</span>
-                      <span class="zs-sublabel">Show thumbnails for tab groups</span>
+                      <span class="zs-sublabel">Shows interactive thumbnails when hovering a group label</span>
                     </div>
                     <label class="zs-switch">
                       <input type="checkbox" id="zs-tg-thumbnails" />
@@ -8351,13 +8316,24 @@
 
                   <div class="zs-row">
                     <div class="zs-label-container">
-                      <span class="zs-label">Show Group Chevron</span>
-                      <span class="zs-sublabel">Display expansion chevron icon</span>
+                      <span class="zs-label">Group Indicator</span>
+                      <span class="zs-sublabel">Shows open/close indicator next the group's name</span>
                     </div>
                     <label class="zs-switch">
                       <input type="checkbox" id="zs-tg-chevron" />
                       <span class="zs-slider"></span>
                     </label>
+                  </div>
+
+                  <div class="zs-row" id="zs-tg-indicator-type-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Indicator Type</span>
+                      <span class="zs-sublabel">Choose style of the group indicator</span>
+                    </div>
+                    <select id="zs-tg-indicator-type" class="zs-select">
+                      <option value="circle">Circle</option>
+                      <option value="chevron">Chevron</option>
+                    </select>
                   </div>
 
                   <div class="zs-row">
@@ -8478,14 +8454,41 @@
         });
       }
 
-      // Placement Visual Cards selection
+      // Placement Visual Cards selection + Conditional matrix visibility
       const placementBtns = this.modal.querySelectorAll(".zs-placement-btn");
       const placementInput = this.modal.querySelector("#zs-ag-placement");
+      const matrixWrapper = this.modal.querySelector("#zs-matrix-wrapper");
+
       placementBtns.forEach(btn => {
         btn.addEventListener("click", () => {
           const placement = btn.dataset.placement;
           if (placementInput) placementInput.value = placement;
           placementBtns.forEach(b => b.setAttribute("data-active", b === btn ? "true" : "false"));
+          if (matrixWrapper) {
+            matrixWrapper.style.display = (placement === "sidebar") ? "" : "none";
+          }
+        });
+      });
+
+      // Horizontal Stepper (+ / -)
+      this.modal.querySelectorAll(".zs-h-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          const targetId = btn.dataset.target;
+          const step = parseInt(btn.dataset.step, 10) || 1;
+          const input = this.modal.querySelector("#" + targetId);
+          if (input) {
+            const min = input.min !== "" ? parseInt(input.min, 10) : 1;
+            const max = input.max !== "" ? parseInt(input.max, 10) : 100;
+            let current = parseInt(input.value, 10);
+            if (isNaN(current)) current = 21;
+            let nextVal = current + step;
+            if (nextVal < min) nextVal = min;
+            if (nextVal > max) nextVal = max;
+            input.value = nextVal;
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+          }
         });
       });
 
@@ -8527,6 +8530,71 @@
       window.addEventListener("mouseup", () => {
         if (isDraggingMatrix) isDraggingMatrix = false;
       });
+
+      // Animation Type and Speed Sync + Preview Demo
+      const animTypeSelect = this.modal.querySelector("#zs-anim-type");
+      const animSpeedSlider = this.modal.querySelector("#zs-anim-speed-slider");
+      const animSpeedInput = this.modal.querySelector("#zs-anim-speed");
+
+      const onAnimChange = () => {
+        const type = animTypeSelect ? animTypeSelect.value : "slide";
+        let speed = parseInt(animSpeedInput ? animSpeedInput.value : "450", 10);
+        if (isNaN(speed)) speed = 0;
+
+        if (speed <= 0 && type !== "none") {
+          if (animTypeSelect) animTypeSelect.value = "none";
+        }
+        this.updatePreviewDemo(animTypeSelect ? animTypeSelect.value : type, speed);
+      };
+
+      if (animTypeSelect) {
+        animTypeSelect.addEventListener("change", () => {
+          const type = animTypeSelect.value;
+          if (type === "none") {
+            if (animSpeedInput) animSpeedInput.value = 0;
+            if (animSpeedSlider) animSpeedSlider.value = 0;
+          } else {
+            const currentSpeed = parseInt(animSpeedInput ? animSpeedInput.value : "0", 10);
+            if (currentSpeed === 0) {
+              if (animSpeedInput) animSpeedInput.value = 450;
+              if (animSpeedSlider) animSpeedSlider.value = 450;
+            }
+          }
+          onAnimChange();
+        });
+      }
+
+      if (animSpeedSlider) {
+        animSpeedSlider.addEventListener("input", (e) => {
+          const val = parseInt(e.target.value, 10) || 0;
+          if (animSpeedInput) animSpeedInput.value = val;
+          if (val === 0 && animTypeSelect) animTypeSelect.value = "none";
+          else if (val > 0 && animTypeSelect && animTypeSelect.value === "none") animTypeSelect.value = "slide";
+          onAnimChange();
+        });
+      }
+
+      if (animSpeedInput) {
+        animSpeedInput.addEventListener("input", (e) => {
+          let val = parseInt(e.target.value, 10);
+          if (isNaN(val)) val = 0;
+          if (val < 0) val = 0;
+          if (val > 2000) val = 2000;
+          if (animSpeedSlider) animSpeedSlider.value = val;
+          if (val === 0 && animTypeSelect) animTypeSelect.value = "none";
+          else if (val > 0 && animTypeSelect && animTypeSelect.value === "none") animTypeSelect.value = "slide";
+          onAnimChange();
+        });
+      }
+
+      // Group Indicator toggle -> shows/hides Indicator Type row
+      const chevronToggle = this.modal.querySelector("#zs-tg-chevron");
+      const indicatorTypeRow = this.modal.querySelector("#zs-tg-indicator-type-row");
+      if (chevronToggle && indicatorTypeRow) {
+        chevronToggle.addEventListener("change", () => {
+          indicatorTypeRow.style.display = chevronToggle.checked ? "" : "none";
+        });
+      }
 
       const choosePathBtn = this.modal.querySelector("#zs-btn-choose-path");
       const clearPathBtn = this.modal.querySelector("#zs-btn-clear-path");
@@ -8614,28 +8682,6 @@
         }
       });
 
-      // Stepper button events
-      this.modal.querySelectorAll(".zs-stepper-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-          e.preventDefault();
-          const targetId = btn.dataset.target;
-          const step = parseInt(btn.dataset.step, 10) || 1;
-          const input = this.modal.querySelector("#" + targetId);
-          if (input) {
-            const min = input.min !== "" ? parseInt(input.min, 10) : -Infinity;
-            const max = input.max !== "" ? parseInt(input.max, 10) : Infinity;
-            let current = parseInt(input.value, 10);
-            if (isNaN(current)) current = 0;
-            let nextVal = current + step;
-            if (nextVal < min) nextVal = min;
-            if (nextVal > max) nextVal = max;
-            input.value = nextVal;
-            input.dispatchEvent(new Event("input", { bubbles: true }));
-            input.dispatchEvent(new Event("change", { bubbles: true }));
-          }
-        });
-      });
-
       this.modal.querySelector("#zs-ag-reset").addEventListener("click", () => {
         const get = (id) => this.modal.querySelector("#" + id);
         get("zs-ag-enabled").checked = true;
@@ -8647,12 +8693,14 @@
         
         if (placementInput) placementInput.value = "sidebar";
         placementBtns.forEach(b => b.setAttribute("data-active", b.dataset.placement === "sidebar" ? "true" : "false"));
+        if (matrixWrapper) matrixWrapper.style.display = "";
         
         this.updateMatrixUI(7, 3);
-        if (get("zs-ag-compact-drawer")) get("zs-ag-compact-drawer").checked = false;
         get("zs-anim-type").value = "slide";
         get("zs-anim-speed").value = 450;
+        if (get("zs-anim-speed-slider")) get("zs-anim-speed-slider").value = 450;
         get("zs-max-apps").value = 21;
+        this.updatePreviewDemo("slide", 450);
       });
 
       this.modal.querySelector("#zs-tg-reset").addEventListener("click", () => {
@@ -8667,10 +8715,13 @@
         get("zs-tg-collapse").checked = false;
         get("zs-tg-thumbnails").checked = true;
         get("zs-tg-chevron").checked = true;
+        if (indicatorTypeRow) indicatorTypeRow.style.display = "";
+        if (get("zs-tg-indicator-type")) get("zs-tg-indicator-type").value = "circle";
         get("zs-tg-opacity").value = 85;
         get("zs-tg-opacity-val").textContent = "85%";
         document.documentElement.style.setProperty("--zentral-tabgroup-label-opacity", "0.85");
         document.documentElement.setAttribute("zentral-label-opacity-below-85", "false");
+        document.documentElement.setAttribute("zentral-indicator-type", "circle");
       });
 
       const opacityInput = this.modal.querySelector("#zs-tg-opacity");
