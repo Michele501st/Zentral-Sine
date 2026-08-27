@@ -975,11 +975,11 @@ panel[id*="tabgroup-editor"] {
 #zentral-settings-modal .zs-dialog {
   background: #18181c !important;
   color: #f2f2f7 !important;
-  width: 900px !important;
-  max-width: 94vw !important;
-  height: 620px !important;
-  min-height: 560px !important;
-  max-height: 88vh !important;
+  width: 1140px !important;
+  max-width: 95vw !important;
+  height: 740px !important;
+  min-height: 640px !important;
+  max-height: 90vh !important;
   border-radius: 14px !important;
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -1118,8 +1118,8 @@ panel[id*="tabgroup-editor"] {
 /* 2-Column Side-by-Side Grid for Settings Tab */
 #zentral-settings-modal .zs-columns {
   display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  gap: 22px !important;
+  grid-template-columns: 1.05fr 0.95fr !important;
+  gap: 24px !important;
   align-items: stretch !important;
   width: 100% !important;
   flex: 1 1 auto !important;
@@ -1132,14 +1132,41 @@ panel[id*="tabgroup-editor"] {
   height: 100% !important;
 }
 
+/* Section Header with Outside Toggle */
+#zentral-settings-modal .zs-section-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 2px 4px !important;
+  min-height: 26px !important;
+}
+
 #zentral-settings-modal .zs-section-title {
-  font-size: 11px !important;
+  font-size: 11.5px !important;
   text-transform: uppercase !important;
   font-weight: 700 !important;
   letter-spacing: 0.08em !important;
   color: var(--zen-primary-color, #707ac2) !important;
   opacity: 0.95 !important;
-  margin: 4px 0 0 2px !important;
+  margin: 0 !important;
+}
+
+#zentral-settings-modal .zs-header-toggle {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+#zentral-settings-modal .zs-toggle-status {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  color: var(--zen-primary-color, #707ac2) !important;
+  transition: color 0.18s ease !important;
+  user-select: none !important;
+}
+
+#zentral-settings-modal .zs-toggle-status[data-enabled="false"] {
+  color: rgba(255, 255, 255, 0.4) !important;
 }
 
 #zentral-settings-modal .zs-card {
@@ -1151,6 +1178,13 @@ panel[id*="tabgroup-editor"] {
   flex-direction: column !important;
   gap: 14px !important;
   flex: 1 1 auto !important;
+  transition: opacity 0.2s ease, filter 0.2s ease !important;
+}
+
+#zentral-settings-modal .zs-card[data-disabled="true"] {
+  opacity: 0.35 !important;
+  pointer-events: none !important;
+  filter: grayscale(0.65) !important;
 }
 
 #zentral-settings-modal .zs-row {
@@ -1179,6 +1213,140 @@ panel[id*="tabgroup-editor"] {
   color: rgba(255, 255, 255, 0.58) !important;
   margin-top: 2px !important;
   line-height: 1.35 !important;
+}
+
+/* Visual Placement Cards */
+#zentral-settings-modal .zs-placement-group {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+#zentral-settings-modal .zs-placement-cards {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 12px !important;
+}
+
+#zentral-settings-modal .zs-placement-btn {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 10px !important;
+  padding: 10px 10px 8px 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  color: #ffffff !important;
+  outline: none !important;
+}
+
+#zentral-settings-modal .zs-placement-btn:hover {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-1px) !important;
+}
+
+#zentral-settings-modal .zs-placement-btn[data-active="true"] {
+  background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 14%, rgba(255,255,255,0.03)) !important;
+  border-color: var(--zen-primary-color, #707ac2) !important;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--zen-primary-color, #707ac2) 22%, transparent) !important;
+}
+
+#zentral-settings-modal .zs-placement-svg-box {
+  width: 100% !important;
+  height: 52px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+#zentral-settings-modal .zs-placement-label {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.1px !important;
+}
+
+#zentral-settings-modal .zs-placement-sublabel {
+  font-size: 10.5px !important;
+  color: rgba(255, 255, 255, 0.55) !important;
+  margin-top: -3px !important;
+}
+
+/* 10x6 Matrix Selection Grid */
+#zentral-settings-modal .zs-matrix-wrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  background: rgba(0, 0, 0, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 10px !important;
+  padding: 10px 12px !important;
+}
+
+#zentral-settings-modal .zs-matrix-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+#zentral-settings-modal .zs-matrix-title {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #f2f2f7 !important;
+}
+
+#zentral-settings-modal .zs-matrix-readout {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  color: var(--zen-primary-color, #707ac2) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+#zentral-settings-modal .zs-matrix-badge {
+  background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 20%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent) !important;
+  padding: 1px 6px !important;
+  border-radius: 4px !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+}
+
+#zentral-settings-modal .zs-matrix-grid {
+  display: grid !important;
+  grid-template-columns: repeat(10, 1fr) !important;
+  grid-template-rows: repeat(6, 1fr) !important;
+  gap: 4px !important;
+  user-select: none !important;
+  touch-action: none !important;
+  padding: 2px 0 !important;
+}
+
+#zentral-settings-modal .zs-matrix-cell {
+  aspect-ratio: 1 / 1 !important;
+  min-height: 18px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  transition: background-color 0.1s ease, border-color 0.1s ease, transform 0.1s ease !important;
+}
+
+#zentral-settings-modal .zs-matrix-cell:hover,
+#zentral-settings-modal .zs-matrix-cell[data-hover="true"] {
+  background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 50%, rgba(255,255,255,0.2)) !important;
+  border-color: var(--zen-primary-color, #707ac2) !important;
+  transform: scale(1.08) !important;
+}
+
+#zentral-settings-modal .zs-matrix-cell[data-selected="true"] {
+  background: var(--zen-primary-color, #707ac2) !important;
+  border-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 80%, #ffffff) !important;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent) !important;
 }
 
 /* Stepper Controls */

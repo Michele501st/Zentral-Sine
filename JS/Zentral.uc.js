@@ -7277,15 +7277,36 @@
     /**
      * Reads preferences from ZentralCore and populates modal input fields and switches.
      */
+    /**
+     * Reads preferences from ZentralCore and populates modal input fields and switches.
+     */
     populate() {
       if (!this.modal) return;
       const get = (id) => this.modal.querySelector("#" + id);
       if (!get("zs-anim-speed")) return;
       
-      get("zs-ag-enabled").checked = Core.getPref(Constants.Apps.PREF_ENABLED, true) !== false;
-      if (get("zs-ag-placement")) {
-        get("zs-ag-placement").value = Core.getPref(Constants.Apps.PREF_PLACEMENT, "sidebar") || "sidebar";
+      const appsEnabled = Core.getPref(Constants.Apps.PREF_ENABLED, true) !== false;
+      if (get("zs-ag-enabled")) {
+        get("zs-ag-enabled").checked = appsEnabled;
+        if (get("zs-ag-status")) {
+          get("zs-ag-status").textContent = appsEnabled ? "Enabled" : "Disabled";
+          get("zs-ag-status").setAttribute("data-enabled", appsEnabled ? "true" : "false");
+        }
+        if (get("zs-ag-card")) {
+          get("zs-ag-card").setAttribute("data-disabled", !appsEnabled ? "true" : "false");
+        }
       }
+
+      const placement = Core.getPref(Constants.Apps.PREF_PLACEMENT, "sidebar") || "sidebar";
+      if (get("zs-ag-placement")) get("zs-ag-placement").value = placement;
+      this.modal.querySelectorAll(".zs-placement-btn").forEach(btn => {
+        btn.setAttribute("data-active", btn.dataset.placement === placement ? "true" : "false");
+      });
+
+      const cols = Core.getPref(Constants.Apps.PREF_APPS_PER_ROW, 7) || 7;
+      const rows = Core.getPref(Constants.Apps.PREF_MAX_ROWS, 3) || 3;
+      this.updateMatrixUI(cols, rows);
+
       if (get("zs-ag-compact-drawer")) {
         get("zs-ag-compact-drawer").checked = Core.getPref(Constants.Apps.PREF_COMPACT_DRAWER_ENABLED, false) === true;
       }
@@ -7295,10 +7316,19 @@
       get("zs-anim-type").value = Core.getPref(Constants.Apps.PREF_ANIMATION_TYPE, "slide") || "slide";
       get("zs-anim-speed").value = Core.getPref(Constants.Apps.PREF_ANIMATION_SPEED, 450) || 450;
       get("zs-max-apps").value = Core.getPref(Constants.Apps.PREF_MAX_APPS, 21) || 21;
-      get("zs-apps-row").value = Core.getPref(Constants.Apps.PREF_APPS_PER_ROW, 7) || 7;
-      get("zs-max-rows").value = Core.getPref(Constants.Apps.PREF_MAX_ROWS, 3) || 3;
 
-      get("zs-tg-enabled").checked = Core.getPref(Constants.TabGroups.PREF_ENABLED, true) !== false;
+      const tgEnabled = Core.getPref(Constants.TabGroups.PREF_ENABLED, true) !== false;
+      if (get("zs-tg-enabled")) {
+        get("zs-tg-enabled").checked = tgEnabled;
+        if (get("zs-tg-status")) {
+          get("zs-tg-status").textContent = tgEnabled ? "Enabled" : "Disabled";
+          get("zs-tg-status").setAttribute("data-enabled", tgEnabled ? "true" : "false");
+        }
+        if (get("zs-tg-card")) {
+          get("zs-tg-card").setAttribute("data-disabled", !tgEnabled ? "true" : "false");
+        }
+      }
+
       get("zs-tg-collapse").checked = Core.getPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH, false) === true;
       get("zs-tg-thumbnails").checked = Core.getPref(Constants.TabGroups.PREF_THUMBNAILS, true) !== false;
       get("zs-tg-chevron").checked = Core.getPref(Constants.TabGroups.PREF_SHOW_CHEVRON, true) !== false;
@@ -7317,6 +7347,30 @@
         get("zs-pref-logger-path").value = savedPath;
         this.updatePathUI(savedPath);
       }
+    }
+
+    /**
+     * Updates the 10x6 matrix selection visual state and hidden inputs.
+     * @param {number} cols - Columns count (1 to 10)
+     * @param {number} rows - Rows count (1 to 6)
+     */
+    updateMatrixUI(cols, rows) {
+      if (!this.modal) return;
+      const clampedCols = Math.max(1, Math.min(10, parseInt(cols, 10) || 1));
+      const clampedRows = Math.max(1, Math.min(6, parseInt(rows, 10) || 1));
+
+      const cells = this.modal.querySelectorAll(".zs-matrix-cell");
+      cells.forEach(cell => {
+        const c = parseInt(cell.dataset.col, 10);
+        const r = parseInt(cell.dataset.row, 10);
+        cell.setAttribute("data-selected", (c <= clampedCols && r <= clampedRows) ? "true" : "false");
+      });
+
+      const get = (id) => this.modal.querySelector("#" + id);
+      if (get("zs-apps-row")) get("zs-apps-row").value = clampedCols;
+      if (get("zs-max-rows")) get("zs-max-rows").value = clampedRows;
+      if (get("zs-matrix-dims")) get("zs-matrix-dims").textContent = `${clampedCols} Columns × ${clampedRows} Rows`;
+      if (get("zs-matrix-total-badge")) get("zs-matrix-total-badge").textContent = `${clampedCols * clampedRows} Visible Apps`;
     }
 
     /**
@@ -7417,11 +7471,11 @@
         .zs-dialog {
           background: #18181c !important;
           color: #f2f2f7 !important;
-          width: 900px;
-          max-width: 94vw;
-          height: 620px;
-          min-height: 560px;
-          max-height: 88vh;
+          width: 1140px;
+          max-width: 95vw;
+          height: 740px;
+          min-height: 640px;
+          max-height: 90vh;
           border-radius: 14px;
           box-shadow: 0 28px 70px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -7560,8 +7614,8 @@
         /* 2-Column Side-by-Side Grid for Settings Tab */
         .zs-columns {
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 22px;
+          grid-template-columns: 1.05fr 0.95fr;
+          gap: 24px;
           align-items: stretch;
           width: 100%;
           flex: 1 1 auto;
@@ -7574,14 +7628,41 @@
           height: 100%;
         }
 
+        /* Section Header with Outside Toggle */
+        .zs-section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 2px 4px;
+          min-height: 26px;
+        }
+
         .zs-section-title {
-          font-size: 11px;
+          font-size: 11.5px;
           text-transform: uppercase;
           font-weight: 700;
           letter-spacing: 0.08em;
           color: var(--zen-primary-color, #707ac2) !important;
           opacity: 0.95;
-          margin: 4px 0 0 2px;
+          margin: 0;
+        }
+
+        .zs-header-toggle {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .zs-toggle-status {
+          font-size: 11.5px;
+          font-weight: 600;
+          color: var(--zen-primary-color, #707ac2);
+          transition: color 0.18s ease;
+          user-select: none;
+        }
+
+        .zs-toggle-status[data-enabled="false"] {
+          color: rgba(255, 255, 255, 0.4);
         }
 
         .zs-card {
@@ -7593,6 +7674,13 @@
           flex-direction: column;
           gap: 14px;
           flex: 1 1 auto;
+          transition: opacity 0.2s ease, filter 0.2s ease;
+        }
+
+        .zs-card[data-disabled="true"] {
+          opacity: 0.35;
+          pointer-events: none;
+          filter: grayscale(0.65);
         }
 
         .zs-row {
@@ -7623,7 +7711,141 @@
           line-height: 1.35;
         }
 
-        /* Integrated Dark Stepper Container */
+        /* Visual Placement Cards */
+        .zs-placement-group {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .zs-placement-cards {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+
+        .zs-placement-btn {
+          background: rgba(255, 255, 255, 0.03);
+          border: 1.5px solid rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+          padding: 10px 10px 8px 10px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          cursor: pointer;
+          transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+          color: #ffffff;
+          outline: none;
+        }
+
+        .zs-placement-btn:hover {
+          background: rgba(255, 255, 255, 0.07);
+          border-color: rgba(255, 255, 255, 0.25);
+          transform: translateY(-1px);
+        }
+
+        .zs-placement-btn[data-active="true"] {
+          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 14%, rgba(255,255,255,0.03));
+          border-color: var(--zen-primary-color, #707ac2);
+          box-shadow: 0 0 16px color-mix(in srgb, var(--zen-primary-color, #707ac2) 22%, transparent);
+        }
+
+        .zs-placement-svg-box {
+          width: 100%;
+          height: 52px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .zs-placement-label {
+          font-size: 12.5px;
+          font-weight: 600;
+          letter-spacing: -0.1px;
+        }
+
+        .zs-placement-sublabel {
+          font-size: 10.5px;
+          color: rgba(255, 255, 255, 0.55);
+          margin-top: -3px;
+        }
+
+        /* 10x6 Matrix Selection Grid */
+        .zs-matrix-wrapper {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          background: rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 10px;
+          padding: 10px 12px;
+        }
+
+        .zs-matrix-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .zs-matrix-title {
+          font-size: 12px;
+          font-weight: 600;
+          color: #f2f2f7;
+        }
+
+        .zs-matrix-readout {
+          font-size: 11.5px;
+          font-weight: 600;
+          color: var(--zen-primary-color, #707ac2);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .zs-matrix-badge {
+          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 20%, transparent);
+          border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent);
+          padding: 1px 6px;
+          border-radius: 4px;
+          font-size: 10.5px;
+          font-weight: 700;
+        }
+
+        .zs-matrix-grid {
+          display: grid;
+          grid-template-columns: repeat(10, 1fr);
+          grid-template-rows: repeat(6, 1fr);
+          gap: 4px;
+          user-select: none;
+          touch-action: none;
+          padding: 2px 0;
+        }
+
+        .zs-matrix-cell {
+          aspect-ratio: 1 / 1;
+          min-height: 18px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background-color 0.1s ease, border-color 0.1s ease, transform 0.1s ease;
+        }
+
+        .zs-matrix-cell:hover,
+        .zs-matrix-cell[data-hover="true"] {
+          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 50%, rgba(255,255,255,0.2));
+          border-color: var(--zen-primary-color, #707ac2);
+          transform: scale(1.08);
+        }
+
+        .zs-matrix-cell[data-selected="true"] {
+          background: var(--zen-primary-color, #707ac2);
+          border-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 80%, #ffffff);
+          box-shadow: 0 0 6px color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent);
+        }
+
+        /* Stepper Controls */
         .zs-stepper {
           display: inline-flex;
           align-items: center;
@@ -7699,7 +7921,7 @@
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        /* Sleek select box */
+        /* Dropdown Select */
         .zs-select {
           min-width: 160px;
           background: #242429 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>') no-repeat right 10px center !important;
@@ -7922,6 +8144,14 @@
       const content = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
       content.className = "zs-dialog";
       
+      // Generate 60 matrix cells (6 rows x 10 cols)
+      let matrixCellsHtml = "";
+      for (let r = 1; r <= 6; r++) {
+        for (let c = 1; c <= 10; c++) {
+          matrixCellsHtml += `<div class="zs-matrix-cell" data-row="${r}" data-col="${c}" title="Row ${r}, Col ${c}"></div>`;
+        }
+      }
+
       const htmlStr = `
         <div class="zs-header">
           <div class="zs-title-group">
@@ -7941,29 +8171,83 @@
           <!-- Tab Panel 1: Settings (2-Column Side-by-Side) -->
           <div class="zs-tab-panel" id="zs-panel-settings" data-tab="settings" data-active="true">
             <div class="zs-columns">
-              <!-- Column 1: Apps Grid -->
+              <!-- Column 1: Apps -->
               <div class="zs-col">
-                <div class="zs-section-title">Apps Grid</div>
-                <div class="zs-card">
-                  <div class="zs-row">
-                    <div class="zs-label-container">
-                      <span class="zs-label">Enable Apps Grid</span>
-                    </div>
+                <div class="zs-section-header">
+                  <div class="zs-section-title">Apps</div>
+                  <div class="zs-header-toggle">
+                    <span id="zs-ag-status" class="zs-toggle-status" data-enabled="true">Enabled</span>
                     <label class="zs-switch">
                       <input type="checkbox" id="zs-ag-enabled" />
                       <span class="zs-slider"></span>
                     </label>
                   </div>
+                </div>
 
-                  <div class="zs-row">
+                <div class="zs-card" id="zs-ag-card">
+                  <!-- Visual Placement Cards -->
+                  <div class="zs-placement-group">
                     <div class="zs-label-container">
-                      <span class="zs-label">Apps placement</span>
-                      <span class="zs-sublabel">Dock in Sidebar or in a dedicated Vertical Bar on opposite edge</span>
+                      <span class="zs-label">Apps Placement</span>
+                      <span class="zs-sublabel">Choose between Sidebar dock or Side Strip on opposite edge</span>
                     </div>
-                    <select id="zs-ag-placement" class="zs-select">
-                      <option value="sidebar">Sidebar</option>
-                      <option value="vertical-bar">Vertical Bar</option>
-                    </select>
+                    <input type="hidden" id="zs-ag-placement" value="sidebar" />
+                    <div class="zs-placement-cards">
+                      <button type="button" class="zs-placement-btn" id="zs-placement-sidebar" data-placement="sidebar" data-active="true" title="Dock Apps Box inside Zen Sidebar">
+                        <div class="zs-placement-svg-box">
+                          <svg width="108" height="48" viewBox="0 0 120 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="1" y="1" width="118" height="52" rx="5" fill="#141416" stroke="rgba(255,255,255,0.15)" stroke-width="1.2"/>
+                            <line x1="1" y1="12" x2="119" y2="12" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+                            <circle cx="7" cy="6.5" r="2" fill="rgba(255,255,255,0.25)"/>
+                            <circle cx="13" cy="6.5" r="2" fill="rgba(255,255,255,0.25)"/>
+                            <circle cx="19" cy="6.5" r="2" fill="rgba(255,255,255,0.25)"/>
+                            <line x1="28" y1="12" x2="28" y2="53" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+                            <rect x="4" y="16" width="20" height="18" rx="3" fill="var(--zen-primary-color, #707ac2)" fill-opacity="0.85" stroke="var(--zen-primary-color, #707ac2)" stroke-width="1"/>
+                            <rect x="5" y="38" width="18" height="3" rx="1.5" fill="rgba(255,255,255,0.2)"/>
+                            <rect x="5" y="44" width="14" height="3" rx="1.5" fill="rgba(255,255,255,0.12)"/>
+                            <rect x="36" y="20" width="74" height="26" rx="3" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                          </svg>
+                        </div>
+                        <span class="zs-placement-label">Sidebar</span>
+                        <span class="zs-placement-sublabel">Apps Box</span>
+                      </button>
+
+                      <button type="button" class="zs-placement-btn" id="zs-placement-strip" data-placement="vertical-bar" data-active="false" title="Dock Apps Bar as dedicated strip on opposite edge">
+                        <div class="zs-placement-svg-box">
+                          <svg width="108" height="48" viewBox="0 0 120 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="1" y="1" width="118" height="52" rx="5" fill="#141416" stroke="rgba(255,255,255,0.15)" stroke-width="1.2"/>
+                            <line x1="1" y1="12" x2="119" y2="12" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+                            <circle cx="7" cy="6.5" r="2" fill="rgba(255,255,255,0.25)"/>
+                            <circle cx="13" cy="6.5" r="2" fill="rgba(255,255,255,0.25)"/>
+                            <circle cx="19" cy="6.5" r="2" fill="rgba(255,255,255,0.25)"/>
+                            <line x1="28" y1="12" x2="28" y2="53" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+                            <rect x="5" y="18" width="18" height="3" rx="1.5" fill="rgba(255,255,255,0.2)"/>
+                            <rect x="5" y="24" width="14" height="3" rx="1.5" fill="rgba(255,255,255,0.12)"/>
+                            <rect x="5" y="30" width="16" height="3" rx="1.5" fill="rgba(255,255,255,0.12)"/>
+                            <rect x="36" y="20" width="68" height="26" rx="3" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                            <rect x="110" y="14" width="6" height="36" rx="2" fill="var(--zen-primary-color, #707ac2)" fill-opacity="0.85" stroke="var(--zen-primary-color, #707ac2)" stroke-width="1"/>
+                          </svg>
+                        </div>
+                        <span class="zs-placement-label">Side Strip</span>
+                        <span class="zs-placement-sublabel">Apps Bar</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- 10x6 Selection Matrix -->
+                  <div class="zs-matrix-wrapper">
+                    <div class="zs-matrix-header">
+                      <span class="zs-matrix-title">Grid Dimensions</span>
+                      <div class="zs-matrix-readout">
+                        <span id="zs-matrix-dims">7 Columns × 3 Rows</span>
+                        <span id="zs-matrix-total-badge" class="zs-matrix-badge">21 Visible Apps</span>
+                      </div>
+                    </div>
+                    <input type="hidden" id="zs-apps-row" value="7" />
+                    <input type="hidden" id="zs-max-rows" value="3" />
+                    <div class="zs-matrix-grid" id="zs-matrix-grid">
+                      ${matrixCellsHtml}
+                    </div>
                   </div>
 
                   <div class="zs-row">
@@ -8025,58 +8309,24 @@
                     </div>
                   </div>
 
-                  <div class="zs-row">
-                    <div class="zs-label-container">
-                      <span class="zs-label">Apps per row (max 10)</span>
-                    </div>
-                    <div class="zs-stepper">
-                      <input type="number" id="zs-apps-row" class="zs-input-number" min="1" max="10" step="1" />
-                      <div class="zs-stepper-btns">
-                        <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-apps-row" data-step="1" title="Increase">
-                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                        </button>
-                        <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-apps-row" data-step="-1" title="Decrease">
-                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="zs-row">
-                    <div class="zs-label-container">
-                      <span class="zs-label">Max rows before scroll</span>
-                    </div>
-                    <div class="zs-stepper">
-                      <input type="number" id="zs-max-rows" class="zs-input-number" min="1" max="10" step="1" />
-                      <div class="zs-stepper-btns">
-                        <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-max-rows" data-step="1" title="Increase">
-                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                        </button>
-                        <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-max-rows" data-step="-1" title="Decrease">
-                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button id="zs-ag-reset" class="zs-reset-btn">Reset Apps Grid Defaults</button>
+                  <button id="zs-ag-reset" class="zs-reset-btn">Reset Apps Defaults</button>
                 </div>
               </div>
 
               <!-- Column 2: Tab Groups -->
               <div class="zs-col">
-                <div class="zs-section-title">Tab Groups</div>
-                <div class="zs-card">
-                  <div class="zs-row">
-                    <div class="zs-label-container">
-                      <span class="zs-label">Enable tab groups</span>
-                    </div>
+                <div class="zs-section-header">
+                  <div class="zs-section-title">Tab Groups</div>
+                  <div class="zs-header-toggle">
+                    <span id="zs-tg-status" class="zs-toggle-status" data-enabled="true">Enabled</span>
                     <label class="zs-switch">
                       <input type="checkbox" id="zs-tg-enabled" />
                       <span class="zs-slider"></span>
                     </label>
                   </div>
+                </div>
 
+                <div class="zs-card" id="zs-tg-card">
                   <div class="zs-row">
                     <div class="zs-label-container">
                       <span class="zs-label">Collapse groups at Startup</span>
@@ -8129,7 +8379,7 @@
 
           <!-- Tab Panel 2: Diagnostics -->
           <div class="zs-tab-panel" id="zs-panel-diagnostics" data-tab="diagnostics" data-active="false">
-            <div class="zs-section-title">Diagnostic Logging</div>
+            <div class="zs-section-title" style="margin-bottom: 2px;">Diagnostic Logging</div>
             <div class="zs-card">
               <div class="zs-row">
                 <div class="zs-label-container">
@@ -8149,7 +8399,7 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px; max-width: 55%;">
                   <input type="hidden" id="zs-pref-logger-path" />
-                  <button type="button" id="zs-btn-choose-path" class="zs-reset-btn" style="margin: 0; padding: 5px 10px; font-size: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: inherit; max-width: 220px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 6px;" title="Click to choose export directory">
+                  <button type="button" id="zs-btn-choose-path" class="zs-reset-btn" style="margin: 0; padding: 5px 10px; font-size: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: inherit; max-width: 240px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 6px;" title="Click to choose export directory">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
                     <span id="zs-btn-choose-path-label">Default Folder</span>
                   </button>
@@ -8198,6 +8448,85 @@
       this.modal.querySelector("#zs-close").addEventListener("click", () => this.close());
       this.modal.querySelector("#zs-cancel").addEventListener("click", () => this.close());
       this.modal.querySelector("#zs-save").addEventListener("click", () => this.save());
+
+      // Header Enable/Disable toggle sync
+      const agToggle = this.modal.querySelector("#zs-ag-enabled");
+      const agStatus = this.modal.querySelector("#zs-ag-status");
+      const agCard = this.modal.querySelector("#zs-ag-card");
+      if (agToggle) {
+        agToggle.addEventListener("change", () => {
+          const isEnabled = agToggle.checked;
+          if (agStatus) {
+            agStatus.textContent = isEnabled ? "Enabled" : "Disabled";
+            agStatus.setAttribute("data-enabled", isEnabled ? "true" : "false");
+          }
+          if (agCard) agCard.setAttribute("data-disabled", !isEnabled ? "true" : "false");
+        });
+      }
+
+      const tgToggle = this.modal.querySelector("#zs-tg-enabled");
+      const tgStatus = this.modal.querySelector("#zs-tg-status");
+      const tgCard = this.modal.querySelector("#zs-tg-card");
+      if (tgToggle) {
+        tgToggle.addEventListener("change", () => {
+          const isEnabled = tgToggle.checked;
+          if (tgStatus) {
+            tgStatus.textContent = isEnabled ? "Enabled" : "Disabled";
+            tgStatus.setAttribute("data-enabled", isEnabled ? "true" : "false");
+          }
+          if (tgCard) tgCard.setAttribute("data-disabled", !isEnabled ? "true" : "false");
+        });
+      }
+
+      // Placement Visual Cards selection
+      const placementBtns = this.modal.querySelectorAll(".zs-placement-btn");
+      const placementInput = this.modal.querySelector("#zs-ag-placement");
+      placementBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+          const placement = btn.dataset.placement;
+          if (placementInput) placementInput.value = placement;
+          placementBtns.forEach(b => b.setAttribute("data-active", b === btn ? "true" : "false"));
+        });
+      });
+
+      // 10x6 Selection Matrix Mouse Handlers
+      let isDraggingMatrix = false;
+      const matrixGrid = this.modal.querySelector("#zs-matrix-grid");
+      const matrixCells = this.modal.querySelectorAll(".zs-matrix-cell");
+
+      matrixCells.forEach(cell => {
+        cell.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          isDraggingMatrix = true;
+          const c = parseInt(cell.dataset.col, 10);
+          const r = parseInt(cell.dataset.row, 10);
+          this.updateMatrixUI(c, r);
+        });
+
+        cell.addEventListener("mouseenter", () => {
+          const c = parseInt(cell.dataset.col, 10);
+          const r = parseInt(cell.dataset.row, 10);
+          if (isDraggingMatrix) {
+            this.updateMatrixUI(c, r);
+          } else {
+            matrixCells.forEach(other => {
+              const oc = parseInt(other.dataset.col, 10);
+              const or = parseInt(other.dataset.row, 10);
+              other.setAttribute("data-hover", (oc <= c && or <= r) ? "true" : "false");
+            });
+          }
+        });
+      });
+
+      if (matrixGrid) {
+        matrixGrid.addEventListener("mouseleave", () => {
+          matrixCells.forEach(c => c.removeAttribute("data-hover"));
+        });
+      }
+
+      window.addEventListener("mouseup", () => {
+        if (isDraggingMatrix) isDraggingMatrix = false;
+      });
 
       const choosePathBtn = this.modal.querySelector("#zs-btn-choose-path");
       const clearPathBtn = this.modal.querySelector("#zs-btn-clear-path");
@@ -8310,18 +8639,31 @@
       this.modal.querySelector("#zs-ag-reset").addEventListener("click", () => {
         const get = (id) => this.modal.querySelector("#" + id);
         get("zs-ag-enabled").checked = true;
-        if (get("zs-ag-placement")) get("zs-ag-placement").value = "sidebar";
+        if (agStatus) {
+          agStatus.textContent = "Enabled";
+          agStatus.setAttribute("data-enabled", "true");
+        }
+        if (agCard) agCard.removeAttribute("data-disabled");
+        
+        if (placementInput) placementInput.value = "sidebar";
+        placementBtns.forEach(b => b.setAttribute("data-active", b.dataset.placement === "sidebar" ? "true" : "false"));
+        
+        this.updateMatrixUI(7, 3);
         if (get("zs-ag-compact-drawer")) get("zs-ag-compact-drawer").checked = false;
         get("zs-anim-type").value = "slide";
         get("zs-anim-speed").value = 450;
         get("zs-max-apps").value = 21;
-        get("zs-apps-row").value = 7;
-        get("zs-max-rows").value = 3;
       });
 
       this.modal.querySelector("#zs-tg-reset").addEventListener("click", () => {
         const get = (id) => this.modal.querySelector("#" + id);
         get("zs-tg-enabled").checked = true;
+        if (tgStatus) {
+          tgStatus.textContent = "Enabled";
+          tgStatus.setAttribute("data-enabled", "true");
+        }
+        if (tgCard) tgCard.removeAttribute("data-disabled");
+        
         get("zs-tg-collapse").checked = false;
         get("zs-tg-thumbnails").checked = true;
         get("zs-tg-chevron").checked = true;
