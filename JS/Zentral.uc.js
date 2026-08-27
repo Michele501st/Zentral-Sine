@@ -7163,10 +7163,10 @@
     open() {
       if (!this.modal) {
         this.createModal();
-      } else {
-        this.modal.style.display = "flex";
-        this.populate();
       }
+      this.modal.setAttribute("data-open", "true");
+      this.modal.style.setProperty("display", "flex", "important");
+      this.populate();
       this.updatePosition();
 
       if (!this._resizeHandler) {
@@ -7179,7 +7179,10 @@
      * Closes the settings modal dialog.
      */
     close() {
-      if (this.modal) this.modal.style.display = "none";
+      if (this.modal) {
+        this.modal.setAttribute("data-open", "false");
+        this.modal.style.setProperty("display", "none", "important");
+      }
       if (this._resizeHandler) {
         window.removeEventListener("resize", this._resizeHandler);
         this._resizeHandler = null;
@@ -7381,11 +7384,19 @@
           backdrop-filter: blur(16px) saturate(140%);
           -webkit-backdrop-filter: blur(16px) saturate(140%);
           z-index: 2147483647;
-          display: flex;
+          display: none;
           align-items: center;
           justify-content: center;
           font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        #zentral-settings-modal[data-open="true"] {
+          display: flex !important;
           animation: zsFadeIn 0.18s ease-out;
+        }
+
+        #zentral-settings-modal[data-open="false"] {
+          display: none !important;
         }
 
         @keyframes zsFadeIn {
@@ -7406,8 +7417,11 @@
         .zs-dialog {
           background: #18181c !important;
           color: #f2f2f7 !important;
-          width: 540px;
-          max-width: 90vw;
+          width: 900px;
+          max-width: 94vw;
+          height: 620px;
+          min-height: 560px;
+          max-height: 88vh;
           border-radius: 14px;
           box-shadow: 0 28px 70px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -7418,13 +7432,14 @@
         }
 
         .zs-header {
-          padding: 16px 24px 14px 24px;
+          padding: 16px 28px 14px 28px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           display: flex;
           justify-content: space-between;
           align-items: center;
           background: rgba(255, 255, 255, 0.02);
           color: #ffffff !important;
+          flex-shrink: 0;
         }
 
         .zs-title-group {
@@ -7476,10 +7491,11 @@
         .zs-tab-bar {
           display: flex;
           position: relative;
-          padding: 0 24px;
+          padding: 0 28px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           background: rgba(255, 255, 255, 0.02);
-          gap: 20px;
+          gap: 24px;
+          flex-shrink: 0;
         }
 
         .zs-tab-btn {
@@ -7516,12 +7532,12 @@
 
         /* Modal Body & Tab Panels */
         .zs-body {
-          padding: 20px 24px 24px 24px;
+          padding: 20px 28px 24px 28px;
           display: flex;
           flex-direction: column;
+          flex: 1 1 auto;
           gap: 16px;
           overflow-y: auto;
-          max-height: 68vh;
           scrollbar-width: thin;
           scrollbar-gutter: stable;
           background: #18181c !important;
@@ -7533,11 +7549,29 @@
           flex-direction: column;
           gap: 16px;
           width: 100%;
+          flex: 1 1 auto;
         }
 
         .zs-tab-panel[data-active="true"] {
           display: flex;
           animation: zsTabFadeIn 0.18s ease-out;
+        }
+
+        /* 2-Column Side-by-Side Grid for Settings Tab */
+        .zs-columns {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 22px;
+          align-items: stretch;
+          width: 100%;
+          flex: 1 1 auto;
+        }
+
+        .zs-col {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          height: 100%;
         }
 
         .zs-section-title {
@@ -7554,10 +7588,11 @@
           background: rgba(255, 255, 255, 0.04) !important;
           border: 1px solid rgba(255, 255, 255, 0.07) !important;
           border-radius: 12px;
-          padding: 14px 18px;
+          padding: 16px 18px;
           display: flex;
           flex-direction: column;
           gap: 14px;
+          flex: 1 1 auto;
         }
 
         .zs-row {
@@ -7805,12 +7840,13 @@
         }
 
         .zs-footer {
-          padding: 14px 24px;
+          padding: 14px 28px;
           background: rgba(255, 255, 255, 0.02) !important;
           border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
           display: flex;
           justify-content: flex-end;
           gap: 12px;
+          flex-shrink: 0;
         }
 
         .zs-btn-cancel {
@@ -7881,6 +7917,7 @@
       this.injectStyles();
       this.modal = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
       this.modal.id = "zentral-settings-modal";
+      this.modal.setAttribute("data-open", "true");
       
       const content = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
       content.className = "zs-dialog";
@@ -7901,184 +7938,192 @@
         </div>
 
         <div class="zs-body">
-          <!-- Tab Panel 1: Settings -->
+          <!-- Tab Panel 1: Settings (2-Column Side-by-Side) -->
           <div class="zs-tab-panel" id="zs-panel-settings" data-tab="settings" data-active="true">
-            <div class="zs-section-title">Apps Grid</div>
-            <div class="zs-card">
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Enable Apps Grid</span>
-                </div>
-                <label class="zs-switch">
-                  <input type="checkbox" id="zs-ag-enabled" />
-                  <span class="zs-slider"></span>
-                </label>
-              </div>
-
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Apps placement</span>
-                  <span class="zs-sublabel">Dock in Sidebar or in a dedicated Vertical Bar on the opposite edge</span>
-                </div>
-                <select id="zs-ag-placement" class="zs-select">
-                  <option value="sidebar">Sidebar</option>
-                  <option value="vertical-bar">Vertical Bar (Opposite Edge)</option>
-                </select>
-              </div>
-
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Compact Sidebar Apps Drawer <span class="zs-badge">Experimental</span></span>
-                  <span class="zs-sublabel">Hover top 1/3 screen edge in compact mode to reveal vertical Apps drawer</span>
-                </div>
-                <label class="zs-switch">
-                  <input type="checkbox" id="zs-ag-compact-drawer" />
-                  <span class="zs-slider"></span>
-                </label>
-              </div>
-
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Animation type</span>
-                </div>
-                <select id="zs-anim-type" class="zs-select">
-                  <option value="slide">Smooth Slide</option>
-                  <option value="spring-gentle">Spring (Gentle)</option>
-                  <option value="spring-bouncy">Spring (Bouncy)</option>
-                  <option value="spring-snappy">Spring (Snappy)</option>
-                  <option value="elastic">Elastic Bounce</option>
-                  <option value="none">None (Instant)</option>
-                </select>
-              </div>
-
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Animation speed (ms)</span>
-                </div>
-                <div class="zs-stepper">
-                  <input type="number" id="zs-anim-speed" class="zs-input-number" min="50" max="2000" step="50" />
-                  <div class="zs-stepper-btns">
-                    <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-anim-speed" data-step="50" title="Increase">
-                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                    </button>
-                    <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-anim-speed" data-step="-50" title="Decrease">
-                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                    </button>
+            <div class="zs-columns">
+              <!-- Column 1: Apps Grid -->
+              <div class="zs-col">
+                <div class="zs-section-title">Apps Grid</div>
+                <div class="zs-card">
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Enable Apps Grid</span>
+                    </div>
+                    <label class="zs-switch">
+                      <input type="checkbox" id="zs-ag-enabled" />
+                      <span class="zs-slider"></span>
+                    </label>
                   </div>
-                </div>
-              </div>
 
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Max total apps</span>
-                </div>
-                <div class="zs-stepper">
-                  <input type="number" id="zs-max-apps" class="zs-input-number" min="1" max="100" step="1" />
-                  <div class="zs-stepper-btns">
-                    <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-max-apps" data-step="1" title="Increase">
-                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                    </button>
-                    <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-max-apps" data-step="-1" title="Decrease">
-                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                    </button>
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Apps placement</span>
+                      <span class="zs-sublabel">Dock in Sidebar or in a dedicated Vertical Bar on opposite edge</span>
+                    </div>
+                    <select id="zs-ag-placement" class="zs-select">
+                      <option value="sidebar">Sidebar</option>
+                      <option value="vertical-bar">Vertical Bar</option>
+                    </select>
                   </div>
-                </div>
-              </div>
 
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Apps per row (max 10)</span>
-                </div>
-                <div class="zs-stepper">
-                  <input type="number" id="zs-apps-row" class="zs-input-number" min="1" max="10" step="1" />
-                  <div class="zs-stepper-btns">
-                    <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-apps-row" data-step="1" title="Increase">
-                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                    </button>
-                    <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-apps-row" data-step="-1" title="Decrease">
-                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                    </button>
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Compact Apps Drawer <span class="zs-badge">Experimental</span></span>
+                      <span class="zs-sublabel">Hover top 1/3 screen edge in compact mode</span>
+                    </div>
+                    <label class="zs-switch">
+                      <input type="checkbox" id="zs-ag-compact-drawer" />
+                      <span class="zs-slider"></span>
+                    </label>
                   </div>
-                </div>
-              </div>
 
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Max rows before scroll</span>
-                </div>
-                <div class="zs-stepper">
-                  <input type="number" id="zs-max-rows" class="zs-input-number" min="1" max="10" step="1" />
-                  <div class="zs-stepper-btns">
-                    <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-max-rows" data-step="1" title="Increase">
-                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                    </button>
-                    <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-max-rows" data-step="-1" title="Decrease">
-                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                    </button>
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Animation type</span>
+                    </div>
+                    <select id="zs-anim-type" class="zs-select">
+                      <option value="slide">Smooth Slide</option>
+                      <option value="spring-gentle">Spring (Gentle)</option>
+                      <option value="spring-bouncy">Spring (Bouncy)</option>
+                      <option value="spring-snappy">Spring (Snappy)</option>
+                      <option value="elastic">Elastic Bounce</option>
+                      <option value="none">None (Instant)</option>
+                    </select>
                   </div>
+
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Animation speed (ms)</span>
+                    </div>
+                    <div class="zs-stepper">
+                      <input type="number" id="zs-anim-speed" class="zs-input-number" min="50" max="2000" step="50" />
+                      <div class="zs-stepper-btns">
+                        <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-anim-speed" data-step="50" title="Increase">
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                        </button>
+                        <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-anim-speed" data-step="-50" title="Decrease">
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Max total apps</span>
+                    </div>
+                    <div class="zs-stepper">
+                      <input type="number" id="zs-max-apps" class="zs-input-number" min="1" max="100" step="1" />
+                      <div class="zs-stepper-btns">
+                        <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-max-apps" data-step="1" title="Increase">
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                        </button>
+                        <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-max-apps" data-step="-1" title="Decrease">
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Apps per row (max 10)</span>
+                    </div>
+                    <div class="zs-stepper">
+                      <input type="number" id="zs-apps-row" class="zs-input-number" min="1" max="10" step="1" />
+                      <div class="zs-stepper-btns">
+                        <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-apps-row" data-step="1" title="Increase">
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                        </button>
+                        <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-apps-row" data-step="-1" title="Decrease">
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Max rows before scroll</span>
+                    </div>
+                    <div class="zs-stepper">
+                      <input type="number" id="zs-max-rows" class="zs-input-number" min="1" max="10" step="1" />
+                      <div class="zs-stepper-btns">
+                        <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-max-rows" data-step="1" title="Increase">
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                        </button>
+                        <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-max-rows" data-step="-1" title="Decrease">
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button id="zs-ag-reset" class="zs-reset-btn">Reset Apps Grid Defaults</button>
                 </div>
               </div>
 
-              <button id="zs-ag-reset" class="zs-reset-btn">Reset Apps Grid Defaults</button>
-            </div>
+              <!-- Column 2: Tab Groups -->
+              <div class="zs-col">
+                <div class="zs-section-title">Tab Groups</div>
+                <div class="zs-card">
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Enable tab groups</span>
+                    </div>
+                    <label class="zs-switch">
+                      <input type="checkbox" id="zs-tg-enabled" />
+                      <span class="zs-slider"></span>
+                    </label>
+                  </div>
 
-            <div class="zs-section-title">Tab Groups</div>
-            <div class="zs-card">
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Enable tab groups</span>
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Collapse groups at Startup</span>
+                      <span class="zs-sublabel">Disable to remember group states</span>
+                    </div>
+                    <label class="zs-switch">
+                      <input type="checkbox" id="zs-tg-collapse" />
+                      <span class="zs-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Groups Thumbnails</span>
+                      <span class="zs-sublabel">Show thumbnails for tab groups</span>
+                    </div>
+                    <label class="zs-switch">
+                      <input type="checkbox" id="zs-tg-thumbnails" />
+                      <span class="zs-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Show Group Chevron</span>
+                      <span class="zs-sublabel">Display expansion chevron icon</span>
+                    </div>
+                    <label class="zs-switch">
+                      <input type="checkbox" id="zs-tg-chevron" />
+                      <span class="zs-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Group Labels Opacity</span>
+                      <span class="zs-sublabel">Adjust label pill transparency</span>
+                    </div>
+                    <div class="zs-range-container">
+                      <input type="range" id="zs-tg-opacity" class="zs-range-slider" min="10" max="100" step="5" />
+                      <span id="zs-tg-opacity-val" class="zs-range-value">85%</span>
+                    </div>
+                  </div>
+
+                  <button id="zs-tg-reset" class="zs-reset-btn">Reset Tab Groups Defaults</button>
                 </div>
-                <label class="zs-switch">
-                  <input type="checkbox" id="zs-tg-enabled" />
-                  <span class="zs-slider"></span>
-                </label>
               </div>
-
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Collapse groups at Startup</span>
-                  <span class="zs-sublabel">Disable to remember group states</span>
-                </div>
-                <label class="zs-switch">
-                  <input type="checkbox" id="zs-tg-collapse" />
-                  <span class="zs-slider"></span>
-                </label>
-              </div>
-
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Groups Thumbnails</span>
-                  <span class="zs-sublabel">Show thumbnails for tab groups</span>
-                </div>
-                <label class="zs-switch">
-                  <input type="checkbox" id="zs-tg-thumbnails" />
-                  <span class="zs-slider"></span>
-                </label>
-              </div>
-
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Show Group Chevron</span>
-                  <span class="zs-sublabel">Display expansion chevron icon near title</span>
-                </div>
-                <label class="zs-switch">
-                  <input type="checkbox" id="zs-tg-chevron" />
-                  <span class="zs-slider"></span>
-                </label>
-              </div>
-
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Group Labels Opacity</span>
-                  <span class="zs-sublabel">Adjust label pill transparency (10% - 100%)</span>
-                </div>
-                <div class="zs-range-container">
-                  <input type="range" id="zs-tg-opacity" class="zs-range-slider" min="10" max="100" step="5" />
-                  <span id="zs-tg-opacity-val" class="zs-range-value">85%</span>
-                </div>
-              </div>
-
-              <button id="zs-tg-reset" class="zs-reset-btn">Reset Tab Groups Defaults</button>
             </div>
           </div>
 
@@ -8104,7 +8149,7 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px; max-width: 55%;">
                   <input type="hidden" id="zs-pref-logger-path" />
-                  <button type="button" id="zs-btn-choose-path" class="zs-reset-btn" style="margin: 0; padding: 5px 10px; font-size: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: inherit; max-width: 180px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 6px;" title="Click to choose export directory">
+                  <button type="button" id="zs-btn-choose-path" class="zs-reset-btn" style="margin: 0; padding: 5px 10px; font-size: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: inherit; max-width: 220px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 6px;" title="Click to choose export directory">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
                     <span id="zs-btn-choose-path-label">Default Folder</span>
                   </button>
@@ -8232,6 +8277,12 @@
 
       this.modal.addEventListener("mousedown", (e) => {
         if (e.target === this.modal) this.close();
+      });
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && this.modal && this.modal.getAttribute("data-open") === "true") {
+          this.close();
+        }
       });
 
       // Stepper button events

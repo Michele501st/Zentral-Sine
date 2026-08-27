@@ -942,11 +942,19 @@ panel[id*="tabgroup-editor"] {
   backdrop-filter: blur(16px) saturate(140%) !important;
   -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
   z-index: 2147483647 !important;
-  display: flex !important;
+  display: none !important;
   align-items: center !important;
   justify-content: center !important;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+#zentral-settings-modal[data-open="true"] {
+  display: flex !important;
   animation: zsFadeIn 0.18s ease-out !important;
+}
+
+#zentral-settings-modal[data-open="false"] {
+  display: none !important;
 }
 
 @keyframes zsFadeIn {
@@ -967,8 +975,11 @@ panel[id*="tabgroup-editor"] {
 #zentral-settings-modal .zs-dialog {
   background: #18181c !important;
   color: #f2f2f7 !important;
-  width: 540px !important;
-  max-width: 90vw !important;
+  width: 900px !important;
+  max-width: 94vw !important;
+  height: 620px !important;
+  min-height: 560px !important;
+  max-height: 88vh !important;
   border-radius: 14px !important;
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -979,13 +990,14 @@ panel[id*="tabgroup-editor"] {
 }
 
 #zentral-settings-modal .zs-header {
-  padding: 16px 24px 14px 24px !important;
+  padding: 16px 28px 14px 28px !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
   background: rgba(255, 255, 255, 0.02) !important;
   color: #ffffff !important;
+  flex-shrink: 0 !important;
 }
 
 #zentral-settings-modal .zs-title-group {
@@ -1037,10 +1049,11 @@ panel[id*="tabgroup-editor"] {
 #zentral-settings-modal .zs-tab-bar {
   display: flex !important;
   position: relative !important;
-  padding: 0 24px !important;
+  padding: 0 28px !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   background: rgba(255, 255, 255, 0.02) !important;
-  gap: 20px !important;
+  gap: 24px !important;
+  flex-shrink: 0 !important;
 }
 
 #zentral-settings-modal .zs-tab-btn {
@@ -1077,12 +1090,12 @@ panel[id*="tabgroup-editor"] {
 
 /* Modal Body & Tab Panels */
 #zentral-settings-modal .zs-body {
-  padding: 20px 24px 24px 24px !important;
+  padding: 20px 28px 24px 28px !important;
   display: flex !important;
   flex-direction: column !important;
+  flex: 1 1 auto !important;
   gap: 16px !important;
   overflow-y: auto !important;
-  max-height: 68vh !important;
   scrollbar-width: thin !important;
   scrollbar-gutter: stable !important;
   background: #18181c !important;
@@ -1094,11 +1107,29 @@ panel[id*="tabgroup-editor"] {
   flex-direction: column !important;
   gap: 16px !important;
   width: 100% !important;
+  flex: 1 1 auto !important;
 }
 
 #zentral-settings-modal .zs-tab-panel[data-active="true"] {
   display: flex !important;
   animation: zsTabFadeIn 0.18s ease-out !important;
+}
+
+/* 2-Column Side-by-Side Grid for Settings Tab */
+#zentral-settings-modal .zs-columns {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 22px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  flex: 1 1 auto !important;
+}
+
+#zentral-settings-modal .zs-col {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  height: 100% !important;
 }
 
 #zentral-settings-modal .zs-section-title {
@@ -1115,10 +1146,11 @@ panel[id*="tabgroup-editor"] {
   background: rgba(255, 255, 255, 0.04) !important;
   border: 1px solid rgba(255, 255, 255, 0.07) !important;
   border-radius: 12px !important;
-  padding: 14px 18px !important;
+  padding: 16px 18px !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 14px !important;
+  flex: 1 1 auto !important;
 }
 
 #zentral-settings-modal .zs-row {
