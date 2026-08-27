@@ -7398,12 +7398,17 @@
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
+        @keyframes zsTabFadeIn {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
         .zs-dialog {
           background: #18181c !important;
           color: #f2f2f7 !important;
-          width: 480px;
-          max-width: 92vw;
-          border-radius: 16px;
+          width: 540px;
+          max-width: 90vw;
+          border-radius: 14px;
           box-shadow: 0 28px 70px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
           display: flex;
@@ -7413,7 +7418,7 @@
         }
 
         .zs-header {
-          padding: 16px 22px;
+          padding: 16px 24px 14px 24px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           display: flex;
           justify-content: space-between;
@@ -7430,10 +7435,20 @@
 
         .zs-title {
           margin: 0;
-          font-size: 15px;
+          font-size: 16px;
           font-weight: 600;
           letter-spacing: -0.2px;
           color: #ffffff !important;
+        }
+
+        .zs-version-badge {
+          font-size: 11px;
+          padding: 2px 7px;
+          border-radius: 10px;
+          background: color-mix(in srgb, currentColor 10%, transparent);
+          opacity: 0.75;
+          font-weight: 600;
+          margin-left: 8px;
         }
 
         .zs-close-btn {
@@ -7457,16 +7472,72 @@
           background: rgba(255, 255, 255, 0.1) !important;
         }
 
+        /* Tab Bar with Underline Indicator */
+        .zs-tab-bar {
+          display: flex;
+          position: relative;
+          padding: 0 24px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.02);
+          gap: 20px;
+        }
+
+        .zs-tab-btn {
+          background: transparent;
+          border: none;
+          padding: 12px 4px;
+          font-size: 13.5px;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.55);
+          cursor: pointer;
+          position: relative;
+          transition: color 0.15s ease;
+          outline: none;
+        }
+
+        .zs-tab-btn:hover {
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        .zs-tab-btn[data-active="true"] {
+          color: #ffffff;
+        }
+
+        .zs-tab-btn[data-active="true"]::after {
+          content: "";
+          position: absolute;
+          bottom: -1px;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: var(--zen-primary-color, #707ac2);
+          border-radius: 2px 2px 0 0;
+        }
+
+        /* Modal Body & Tab Panels */
         .zs-body {
-          padding: 20px 22px;
+          padding: 20px 24px 24px 24px;
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 16px;
           overflow-y: auto;
-          max-height: 72vh;
+          max-height: 68vh;
           scrollbar-width: thin;
+          scrollbar-gutter: stable;
           background: #18181c !important;
           color: #f2f2f7 !important;
+        }
+
+        .zs-tab-panel {
+          display: none;
+          flex-direction: column;
+          gap: 16px;
+          width: 100%;
+        }
+
+        .zs-tab-panel[data-active="true"] {
+          display: flex;
+          animation: zsTabFadeIn 0.18s ease-out;
         }
 
         .zs-section-title {
@@ -7474,19 +7545,19 @@
           text-transform: uppercase;
           font-weight: 700;
           letter-spacing: 0.08em;
-          color: var(--zen-primary-color, #ff5555) !important;
+          color: var(--zen-primary-color, #707ac2) !important;
           opacity: 0.95;
-          margin: 6px 0 2px 0;
+          margin: 4px 0 0 2px;
         }
 
         .zs-card {
           background: rgba(255, 255, 255, 0.04) !important;
           border: 1px solid rgba(255, 255, 255, 0.07) !important;
           border-radius: 12px;
-          padding: 12px 14px;
+          padding: 14px 18px;
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 14px;
         }
 
         .zs-row {
@@ -7494,23 +7565,27 @@
           justify-content: space-between;
           align-items: center;
           gap: 16px;
+          min-height: 28px;
         }
 
         .zs-label-container {
           display: flex;
           flex-direction: column;
+          flex: 1 1 auto;
+          min-width: 0;
         }
 
         .zs-label {
-          font-size: 13px;
+          font-size: 13.5px;
           font-weight: 500;
           color: #f2f2f7 !important;
         }
 
         .zs-sublabel {
-          font-size: 11px;
-          color: rgba(255, 255, 255, 0.6) !important;
+          font-size: 11.5px;
+          color: rgba(255, 255, 255, 0.58) !important;
           margin-top: 2px;
+          line-height: 1.35;
         }
 
         /* Integrated Dark Stepper Container */
@@ -7522,18 +7597,19 @@
           border-radius: 8px;
           overflow: hidden;
           transition: border-color 0.15s ease, box-shadow 0.15s ease;
-          width: 86px;
+          width: 90px;
           height: 32px;
+          flex-shrink: 0;
         }
 
         .zs-stepper:focus-within {
-          border-color: var(--zen-primary-color, #ff5555) !important;
-          box-shadow: 0 0 0 2px rgba(255, 85, 85, 0.3) !important;
+          border-color: var(--zen-primary-color, #707ac2) !important;
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--zen-primary-color, #707ac2) 30%, transparent) !important;
         }
 
         .zs-stepper .zs-input-number {
           flex: 1;
-          width: 54px !important;
+          width: 58px !important;
           background: transparent !important;
           border: none !important;
           color: #ffffff !important;
@@ -7580,7 +7656,7 @@
         }
 
         .zs-stepper-btn:active {
-          background: var(--zen-primary-color, #ff5555);
+          background: var(--zen-primary-color, #707ac2);
           color: #ffffff;
         }
 
@@ -7590,19 +7666,20 @@
 
         /* Sleek select box */
         .zs-select {
-          width: 155px;
+          min-width: 160px;
           background: #242429 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>') no-repeat right 10px center !important;
           -moz-appearance: none !important;
           appearance: none !important;
           border: 1px solid rgba(255, 255, 255, 0.16) !important;
           border-radius: 8px;
           color: #ffffff !important;
-          padding: 6px 28px 6px 10px;
+          padding: 6px 28px 6px 12px;
           font-size: 13px;
           font-weight: 500;
           outline: none;
           cursor: pointer;
           transition: border-color 0.15s ease;
+          flex-shrink: 0;
         }
 
         .zs-select:hover {
@@ -7610,7 +7687,7 @@
         }
 
         .zs-select:focus {
-          border-color: var(--zen-primary-color, #ff5555) !important;
+          border-color: var(--zen-primary-color, #707ac2) !important;
         }
 
         .zs-select option {
@@ -7656,7 +7733,7 @@
         }
 
         .zs-switch input:checked + .zs-slider {
-          background-color: var(--zen-primary-color, #ff5555) !important;
+          background-color: var(--zen-primary-color, #707ac2) !important;
           border-color: transparent !important;
         }
 
@@ -7667,17 +7744,18 @@
         .zs-range-container {
           display: flex;
           align-items: center;
-          gap: 10px;
-          width: 180px;
+          gap: 12px;
+          min-width: 160px;
+          flex-shrink: 0;
         }
 
         .zs-range-slider {
           flex: 1;
           appearance: none;
           -webkit-appearance: none;
-          height: 6px;
-          border-radius: 3px;
-          background: rgba(255, 255, 255, 0.16) !important;
+          height: 4px;
+          border-radius: 2px;
+          background: rgba(255, 255, 255, 0.2) !important;
           outline: none;
           cursor: pointer;
         }
@@ -7688,8 +7766,8 @@
           width: 16px;
           height: 16px;
           border-radius: 50%;
-          background: var(--zen-primary-color, #ff5555) !important;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+          background: #ffffff !important;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.4);
           cursor: pointer;
           transition: transform 0.15s ease;
         }
@@ -7699,76 +7777,79 @@
         }
 
         .zs-range-value {
-          font-size: 12px;
+          font-size: 12.5px;
           font-weight: 600;
-          width: 40px;
+          min-width: 36px;
           text-align: right;
           color: #f2f2f7 !important;
-          opacity: 0.9;
         }
 
         .zs-reset-btn {
-          padding: 5px 12px;
-          font-size: 11px;
-          font-weight: 500;
-          border-radius: 6px;
-          background: rgba(255, 255, 255, 0.08) !important;
-          border: 1px solid rgba(255, 255, 255, 0.12) !important;
-          color: #f2f2f7 !important;
-          cursor: pointer;
-          opacity: 0.85;
-          transition: all 0.15s ease;
           align-self: flex-end;
+          background: transparent !important;
+          border: 1px solid rgba(255, 255, 255, 0.12) !important;
+          color: rgba(255, 255, 255, 0.7) !important;
+          padding: 6px 12px;
+          border-radius: 6px;
+          font-size: 11.5px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          margin-top: 4px;
         }
 
         .zs-reset-btn:hover {
-          opacity: 1;
-          background: rgba(255, 255, 255, 0.14) !important;
+          background: rgba(255, 255, 255, 0.08) !important;
+          color: #ffffff !important;
+          border-color: rgba(255, 255, 255, 0.25) !important;
         }
 
         .zs-footer {
-          padding: 14px 22px;
+          padding: 14px 24px;
           background: rgba(255, 255, 255, 0.02) !important;
           border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
           display: flex;
           justify-content: flex-end;
-          gap: 10px;
+          gap: 12px;
         }
 
         .zs-btn-cancel {
-          padding: 7px 16px;
+          padding: 8px 16px;
           border-radius: 8px;
           background: transparent !important;
-          border: 1px solid rgba(255, 255, 255, 0.16) !important;
+          border: 1px solid rgba(255, 255, 255, 0.14) !important;
           color: #f2f2f7 !important;
           font-size: 13px;
           font-weight: 500;
           cursor: pointer;
-          opacity: 0.85;
           transition: all 0.15s ease;
         }
 
         .zs-btn-cancel:hover {
-          opacity: 1;
           background: rgba(255, 255, 255, 0.08) !important;
+          color: #ffffff;
         }
 
         .zs-btn-save {
-          padding: 7px 18px;
+          padding: 8px 20px;
           border-radius: 8px;
-          background: var(--zen-primary-color, #ff5555) !important;
+          background: var(--zen-primary-color, #707ac2) !important;
           border: none;
           color: #ffffff !important;
           font-size: 13px;
           font-weight: 600;
           cursor: pointer;
-          box-shadow: 0 2px 8px color-mix(in srgb, var(--zen-primary-color, #ff5555) 40%, transparent);
+          box-shadow: 0 2px 8px color-mix(in srgb, var(--zen-primary-color, #707ac2) 30%, transparent);
           transition: all 0.15s ease;
         }
 
         .zs-btn-save:hover {
           filter: brightness(1.1);
           transform: translateY(-1px);
+        }
+
+        .zs-btn-save:active {
+          transform: scale(0.98);
         }
 
         .zs-badge {
@@ -7807,229 +7888,238 @@
       const htmlStr = `
         <div class="zs-header">
           <div class="zs-title-group">
-            <h2 class="zs-title">Zentral Settings <span style="font-size: 11px; padding: 2px 7px; border-radius: 10px; background: color-mix(in srgb, currentColor 10%, transparent); opacity: 0.75; font-weight: 600; margin-left: 8px;">v0.1.6</span></h2>
+            <h2 class="zs-title">Zentral Settings <span class="zs-version-badge">v0.1.6</span></h2>
           </div>
           <button id="zs-close" class="zs-close-btn" title="Close Settings">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 1l12 12M13 1L1 13"/></svg>
           </button>
         </div>
 
+        <div class="zs-tab-bar">
+          <button type="button" class="zs-tab-btn" data-tab="settings" data-active="true">Settings</button>
+          <button type="button" class="zs-tab-btn" data-tab="diagnostics" data-active="false">Diagnostics</button>
+        </div>
+
         <div class="zs-body">
-          <div class="zs-section-title">Apps Grid</div>
-          <div class="zs-card">
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Enable Apps Grid</span>
+          <!-- Tab Panel 1: Settings -->
+          <div class="zs-tab-panel" id="zs-panel-settings" data-tab="settings" data-active="true">
+            <div class="zs-section-title">Apps Grid</div>
+            <div class="zs-card">
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Enable Apps Grid</span>
+                </div>
+                <label class="zs-switch">
+                  <input type="checkbox" id="zs-ag-enabled" />
+                  <span class="zs-slider"></span>
+                </label>
               </div>
-              <label class="zs-switch">
-                <input type="checkbox" id="zs-ag-enabled" />
-                <span class="zs-slider"></span>
-              </label>
-            </div>
 
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Apps placement</span>
-                <span class="zs-sublabel">Dock in Sidebar or in a dedicated Vertical Bar on the opposite edge</span>
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Apps placement</span>
+                  <span class="zs-sublabel">Dock in Sidebar or in a dedicated Vertical Bar on the opposite edge</span>
+                </div>
+                <select id="zs-ag-placement" class="zs-select">
+                  <option value="sidebar">Sidebar</option>
+                  <option value="vertical-bar">Vertical Bar (Opposite Edge)</option>
+                </select>
               </div>
-              <select id="zs-ag-placement" class="zs-select">
-                <option value="sidebar">Sidebar</option>
-                <option value="vertical-bar">Vertical Bar (Opposite Edge)</option>
-              </select>
-            </div>
 
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Compact Sidebar Apps Drawer <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: color-mix(in srgb, #ff6b6b 20%, transparent); color: #ff6b6b; font-weight: 600; margin-left: 6px; text-transform: uppercase;">Experimental</span></span>
-                <span class="zs-sublabel">Hover top 1/3 screen edge in compact mode to reveal vertical Apps drawer</span>
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Compact Sidebar Apps Drawer <span class="zs-badge">Experimental</span></span>
+                  <span class="zs-sublabel">Hover top 1/3 screen edge in compact mode to reveal vertical Apps drawer</span>
+                </div>
+                <label class="zs-switch">
+                  <input type="checkbox" id="zs-ag-compact-drawer" />
+                  <span class="zs-slider"></span>
+                </label>
               </div>
-              <label class="zs-switch">
-                <input type="checkbox" id="zs-ag-compact-drawer" />
-                <span class="zs-slider"></span>
-              </label>
-            </div>
 
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Animation type</span>
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Animation type</span>
+                </div>
+                <select id="zs-anim-type" class="zs-select">
+                  <option value="slide">Smooth Slide</option>
+                  <option value="spring-gentle">Spring (Gentle)</option>
+                  <option value="spring-bouncy">Spring (Bouncy)</option>
+                  <option value="spring-snappy">Spring (Snappy)</option>
+                  <option value="elastic">Elastic Bounce</option>
+                  <option value="none">None (Instant)</option>
+                </select>
               </div>
-              <select id="zs-anim-type" class="zs-select">
-                <option value="slide">Smooth Slide</option>
-                <option value="spring-gentle">Spring (Gentle)</option>
-                <option value="spring-bouncy">Spring (Bouncy)</option>
-                <option value="spring-snappy">Spring (Snappy)</option>
-                <option value="elastic">Elastic Bounce</option>
-                <option value="none">None (Instant)</option>
-              </select>
-            </div>
 
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Animation speed (ms)</span>
-              </div>
-              <div class="zs-stepper">
-                <input type="number" id="zs-anim-speed" class="zs-input-number" min="50" max="2000" step="50" />
-                <div class="zs-stepper-btns">
-                  <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-anim-speed" data-step="50" title="Increase">
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                  </button>
-                  <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-anim-speed" data-step="-50" title="Decrease">
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                  </button>
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Animation speed (ms)</span>
+                </div>
+                <div class="zs-stepper">
+                  <input type="number" id="zs-anim-speed" class="zs-input-number" min="50" max="2000" step="50" />
+                  <div class="zs-stepper-btns">
+                    <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-anim-speed" data-step="50" title="Increase">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                    </button>
+                    <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-anim-speed" data-step="-50" title="Decrease">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Max total apps</span>
-              </div>
-              <div class="zs-stepper">
-                <input type="number" id="zs-max-apps" class="zs-input-number" min="1" max="100" step="1" />
-                <div class="zs-stepper-btns">
-                  <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-max-apps" data-step="1" title="Increase">
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                  </button>
-                  <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-max-apps" data-step="-1" title="Decrease">
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                  </button>
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Max total apps</span>
+                </div>
+                <div class="zs-stepper">
+                  <input type="number" id="zs-max-apps" class="zs-input-number" min="1" max="100" step="1" />
+                  <div class="zs-stepper-btns">
+                    <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-max-apps" data-step="1" title="Increase">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                    </button>
+                    <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-max-apps" data-step="-1" title="Decrease">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Apps per row (max 10)</span>
-              </div>
-              <div class="zs-stepper">
-                <input type="number" id="zs-apps-row" class="zs-input-number" min="1" max="10" step="1" />
-                <div class="zs-stepper-btns">
-                  <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-apps-row" data-step="1" title="Increase">
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                  </button>
-                  <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-apps-row" data-step="-1" title="Decrease">
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                  </button>
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Apps per row (max 10)</span>
+                </div>
+                <div class="zs-stepper">
+                  <input type="number" id="zs-apps-row" class="zs-input-number" min="1" max="10" step="1" />
+                  <div class="zs-stepper-btns">
+                    <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-apps-row" data-step="1" title="Increase">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                    </button>
+                    <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-apps-row" data-step="-1" title="Decrease">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Max rows before scroll</span>
-              </div>
-              <div class="zs-stepper">
-                <input type="number" id="zs-max-rows" class="zs-input-number" min="1" max="10" step="1" />
-                <div class="zs-stepper-btns">
-                  <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-max-rows" data-step="1" title="Increase">
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                  </button>
-                  <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-max-rows" data-step="-1" title="Decrease">
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                  </button>
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Max rows before scroll</span>
+                </div>
+                <div class="zs-stepper">
+                  <input type="number" id="zs-max-rows" class="zs-input-number" min="1" max="10" step="1" />
+                  <div class="zs-stepper-btns">
+                    <button type="button" class="zs-stepper-btn zs-stepper-up" data-target="zs-max-rows" data-step="1" title="Increase">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                    </button>
+                    <button type="button" class="zs-stepper-btn zs-stepper-down" data-target="zs-max-rows" data-step="-1" title="Decrease">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
+
+              <button id="zs-ag-reset" class="zs-reset-btn">Reset Apps Grid Defaults</button>
             </div>
 
-            <button id="zs-ag-reset" class="zs-reset-btn">Reset Apps Grid Defaults</button>
+            <div class="zs-section-title">Tab Groups</div>
+            <div class="zs-card">
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Enable tab groups</span>
+                </div>
+                <label class="zs-switch">
+                  <input type="checkbox" id="zs-tg-enabled" />
+                  <span class="zs-slider"></span>
+                </label>
+              </div>
+
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Collapse groups at Startup</span>
+                  <span class="zs-sublabel">Disable to remember group states</span>
+                </div>
+                <label class="zs-switch">
+                  <input type="checkbox" id="zs-tg-collapse" />
+                  <span class="zs-slider"></span>
+                </label>
+              </div>
+
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Groups Thumbnails</span>
+                  <span class="zs-sublabel">Show thumbnails for tab groups</span>
+                </div>
+                <label class="zs-switch">
+                  <input type="checkbox" id="zs-tg-thumbnails" />
+                  <span class="zs-slider"></span>
+                </label>
+              </div>
+
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Show Group Chevron</span>
+                  <span class="zs-sublabel">Display expansion chevron icon near title</span>
+                </div>
+                <label class="zs-switch">
+                  <input type="checkbox" id="zs-tg-chevron" />
+                  <span class="zs-slider"></span>
+                </label>
+              </div>
+
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Group Labels Opacity</span>
+                  <span class="zs-sublabel">Adjust label pill transparency (10% - 100%)</span>
+                </div>
+                <div class="zs-range-container">
+                  <input type="range" id="zs-tg-opacity" class="zs-range-slider" min="10" max="100" step="5" />
+                  <span id="zs-tg-opacity-val" class="zs-range-value">85%</span>
+                </div>
+              </div>
+
+              <button id="zs-tg-reset" class="zs-reset-btn">Reset Tab Groups Defaults</button>
+            </div>
           </div>
 
-          <div class="zs-section-title">Tab Groups</div>
-          <div class="zs-card">
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Enable tab groups</span>
+          <!-- Tab Panel 2: Diagnostics -->
+          <div class="zs-tab-panel" id="zs-panel-diagnostics" data-tab="diagnostics" data-active="false">
+            <div class="zs-section-title">Diagnostic Logging</div>
+            <div class="zs-card">
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Enable Diagnostic Logging</span>
+                  <span class="zs-sublabel">Starts Zentral Logger in the background to capture internal layout events</span>
+                </div>
+                <label class="zs-switch">
+                  <input type="checkbox" id="zs-pref-logger-enabled" />
+                  <span class="zs-slider"></span>
+                </label>
               </div>
-              <label class="zs-switch">
-                <input type="checkbox" id="zs-tg-enabled" />
-                <span class="zs-slider"></span>
-              </label>
-            </div>
 
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Collapse groups at Startup</span>
-                <span class="zs-sublabel">Disable to remember group states</span>
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Export Log Path</span>
+                  <span class="zs-sublabel" id="zs-pref-logger-path-desc">Directory where diagnostic logs are saved</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; max-width: 55%;">
+                  <input type="hidden" id="zs-pref-logger-path" />
+                  <button type="button" id="zs-btn-choose-path" class="zs-reset-btn" style="margin: 0; padding: 5px 10px; font-size: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: inherit; max-width: 180px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 6px;" title="Click to choose export directory">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+                    <span id="zs-btn-choose-path-label">Default Folder</span>
+                  </button>
+                  <button type="button" id="zs-btn-clear-path" title="Reset to default folder (chrome/logs)" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); cursor: pointer; padding: 4px 8px; display: none; align-items: center; justify-content: center; font-size: 11px; border-radius: 5px;">✕</button>
+                </div>
               </div>
-              <label class="zs-switch">
-                <input type="checkbox" id="zs-tg-collapse" />
-                <span class="zs-slider"></span>
-              </label>
-            </div>
 
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Groups Thumbnails</span>
-                <span class="zs-sublabel">Show thumbnails for tab groups</span>
-              </div>
-              <label class="zs-switch">
-                <input type="checkbox" id="zs-tg-thumbnails" />
-                <span class="zs-slider"></span>
-              </label>
-            </div>
-
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Show Group Chevron</span>
-                <span class="zs-sublabel">Display expansion chevron icon near title</span>
-              </div>
-              <label class="zs-switch">
-                <input type="checkbox" id="zs-tg-chevron" />
-                <span class="zs-slider"></span>
-              </label>
-            </div>
-
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Group Labels Opacity</span>
-                <span class="zs-sublabel">Adjust label pill transparency (10% - 100%)</span>
-              </div>
-              <div class="zs-range-container">
-                <input type="range" id="zs-tg-opacity" class="zs-range-slider" min="10" max="100" step="5" />
-                <span id="zs-tg-opacity-val" class="zs-range-value">85%</span>
+              <div class="zs-row">
+                <div class="zs-label-container">
+                  <span class="zs-label">Capture Log</span>
+                  <span class="zs-sublabel">Generate and save a diagnostic log file instantly. (Shortcut: <kbd style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); border-radius: 3px; padding: 1px 4px; font-size: 10px;">Alt</kbd>+<kbd style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); border-radius: 3px; padding: 1px 4px; font-size: 10px;">L</kbd>)</span>
+                </div>
+                <button id="zs-btn-capture-log" class="zs-btn-save" style="margin: 0; padding: 6px 16px; font-size: 12.5px;">Export</button>
               </div>
             </div>
-
-            <button id="zs-tg-reset" class="zs-reset-btn">Reset Tab Groups Defaults</button>
-          </div>
-
-          <div class="zs-section-title">Diagnostics</div>
-          <div class="zs-card">
-            
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Enable Diagnostic Logging</span>
-                <span class="zs-sublabel">Starts Zentral Logger in the background to capture internal layout events</span>
-              </div>
-              <label class="zs-switch">
-                <input type="checkbox" id="zs-pref-logger-enabled" />
-                <span class="zs-slider"></span>
-              </label>
-            </div>
-
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Export Log Path</span>
-                <span class="zs-sublabel" id="zs-pref-logger-path-desc">Directory where diagnostic logs are saved</span>
-              </div>
-              <div style="display: flex; align-items: center; gap: 6px; max-width: 55%;">
-                <input type="hidden" id="zs-pref-logger-path" />
-                <button type="button" id="zs-btn-choose-path" class="zs-reset-btn" style="margin: 0; padding: 5px 10px; font-size: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: inherit; max-width: 180px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 6px;" title="Click to choose export directory">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
-                  <span id="zs-btn-choose-path-label">Default Folder</span>
-                </button>
-                <button type="button" id="zs-btn-clear-path" title="Reset to default folder (chrome/logs)" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); cursor: pointer; padding: 4px 8px; display: none; align-items: center; justify-content: center; font-size: 11px; border-radius: 5px;">✕</button>
-              </div>
-            </div>
-
-            <div class="zs-row">
-              <div class="zs-label-container">
-                <span class="zs-label">Capture Log</span>
-                <span class="zs-sublabel">Generate and save a diagnostic log file instantly. (Shortcut: <kbd>Alt</kbd>+<kbd>L</kbd>)</span>
-              </div>
-              <button id="zs-btn-capture-log" class="zs-reset-btn" style="background:var(--zen-primary-color); color:#fff; border:none; margin: 0; min-width: 75px; text-align: center; transition: background 0.2s ease, transform 0.1s ease;">Export</button>
-            </div>
-
           </div>
         </div>
 
@@ -8049,6 +8139,17 @@
       const container = document.getElementById("browser") || document.body || document.documentElement;
       container.appendChild(this.modal);
       
+      // Tab Switching Logic
+      const tabBtns = this.modal.querySelectorAll(".zs-tab-btn");
+      const tabPanels = this.modal.querySelectorAll(".zs-tab-panel");
+      tabBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+          const targetTab = btn.dataset.tab;
+          tabBtns.forEach(b => b.setAttribute("data-active", b === btn ? "true" : "false"));
+          tabPanels.forEach(p => p.setAttribute("data-active", p.dataset.tab === targetTab ? "true" : "false"));
+        });
+      });
+
       this.modal.querySelector("#zs-close").addEventListener("click", () => this.close());
       this.modal.querySelector("#zs-cancel").addEventListener("click", () => this.close());
       this.modal.querySelector("#zs-save").addEventListener("click", () => this.save());
