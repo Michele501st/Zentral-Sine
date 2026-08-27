@@ -941,13 +941,13 @@ panel[id*="tabgroup-editor"] {
  * ========================================================================== */
 :root[zentral-apps-placement="vertical-bar"]:not([zentral-apps-autohide="true"]) #zentral-apps-vertical-bar {
   position: relative !important;
-  width: 38px !important;
-  min-width: 38px !important;
-  max-width: 38px !important;
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
   height: 100% !important;
   max-height: 100% !important;
   min-height: 0 !important;
-  flex: 0 0 38px !important;
+  flex: 0 0 42px !important;
   flex-shrink: 0 !important;
   z-index: 10 !important;
   background: transparent !important;
@@ -977,9 +977,9 @@ panel[id*="tabgroup-editor"] {
  * ========================================================================== */
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar {
   position: fixed !important;
-  width: 44px !important;
-  min-width: 44px !important;
-  max-width: 44px !important;
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
   z-index: 2147483500 !important;
   background-color: var(--zen-colors-base, rgb(19, 19, 19)) !important;
   border-radius: var(--zen-native-inner-radius, 10px) !important;
@@ -991,7 +991,7 @@ panel[id*="tabgroup-editor"] {
 }
 
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar #zen-apps-sidebar-grid {
-  padding: 0 4px !important;
+  padding: 0 6px !important;
 }
 
 /* Zen Theme Wallpaper / Gradient Layer */
@@ -1228,10 +1228,6 @@ panel[id*="tabgroup-editor"] {
 
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn:active {
   transform: scale(0.96) !important;
-}
-
-:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-badge {
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4), 0 0 0 1.5px var(--zen-colors-base, #131313) !important;
 }
 
 /* Default / Non-autohide Vertical Bar (Clean standard tile styling) */
