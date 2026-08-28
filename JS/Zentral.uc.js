@@ -7269,19 +7269,19 @@
           left: 0;
           right: 0;
           height: 100vh;
-          background: rgba(0, 0, 0, 0.65);
-          backdrop-filter: blur(16px) saturate(140%);
-          -webkit-backdrop-filter: blur(16px) saturate(140%);
+          background: rgba(8, 8, 12, 0.72);
+          backdrop-filter: blur(24px) saturate(160%) brightness(0.85);
+          -webkit-backdrop-filter: blur(24px) saturate(160%) brightness(0.85);
           z-index: 2147483647;
           display: none;
           align-items: center;
           justify-content: center;
-          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
         }
 
         #zentral-settings-modal[data-open="true"] {
           display: flex !important;
-          animation: zsFadeIn 0.18s ease-out;
+          animation: zsFadeIn 0.20s ease-out;
         }
 
         #zentral-settings-modal[data-open="false"] {
@@ -7294,39 +7294,53 @@
         }
 
         @keyframes zsModalPop {
-          from { opacity: 0; transform: scale(0.96) translateY(10px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
+          from {
+            opacity: 0;
+            transform: scale(0.96) translateY(12px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
         }
 
         @keyframes zsTabFadeIn {
-          from { opacity: 0; transform: translateY(4px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(5px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         .zs-dialog {
-          background: #18181c !important;
+          background: linear-gradient(180deg, #1c1c22 0%, #131317 100%) !important;
           color: #f2f2f7 !important;
           width: 1260px;
           max-width: 95vw;
           height: 860px;
           min-height: 740px;
           max-height: 94vh;
-          border-radius: 14px;
-          box-shadow: 0 28px 70px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-radius: 16px;
+          box-shadow: 0 32px 80px rgba(0, 0, 0, 0.8),
+                      0 0 0 1px rgba(255, 255, 255, 0.08),
+                      inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+          border: 1px solid rgba(255, 255, 255, 0.09) !important;
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          animation: zsModalPop 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+          animation: zsModalPop 0.24s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .zs-header {
           padding: 16px 28px 14px 28px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.07);
           display: flex;
           justify-content: space-between;
           align-items: center;
-          background: rgba(255, 255, 255, 0.02);
+          background: rgba(255, 255, 255, 0.015);
           color: #ffffff !important;
           flex-shrink: 0;
         }
@@ -7340,49 +7354,55 @@
         .zs-title {
           margin: 0;
           font-size: 16px;
-          font-weight: 600;
-          letter-spacing: -0.2px;
+          font-weight: 700;
+          letter-spacing: -0.25px;
           color: #ffffff !important;
         }
 
         .zs-version-badge {
           font-size: 11px;
-          padding: 2px 7px;
-          border-radius: 10px;
-          background: color-mix(in srgb, currentColor 10%, transparent);
-          opacity: 0.75;
+          padding: 2px 8px;
+          border-radius: 12px;
+          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 18%, transparent);
+          border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 35%, transparent);
+          color: var(--zen-primary-color, #707ac2);
           font-weight: 600;
           margin-left: 8px;
+          letter-spacing: 0.02em;
         }
 
         .zs-close-btn {
           background: transparent;
           border: none;
-          color: #f2f2f7 !important;
+          color: rgba(255, 255, 255, 0.7) !important;
           cursor: pointer;
-          width: 26px;
-          height: 26px;
-          border-radius: 6px;
+          width: 28px;
+          height: 28px;
+          border-radius: 7px;
           display: flex;
           align-items: center;
           justify-content: center;
-          opacity: 0.7;
-          transition: all 0.15s ease;
+          transition: all 0.16s ease;
           padding: 0;
         }
 
         .zs-close-btn:hover {
-          opacity: 1;
+          color: #ffffff !important;
           background: rgba(255, 255, 255, 0.1) !important;
+          transform: scale(1.05);
         }
 
-        /* Tab Bar with Underline Indicator */
+        .zs-close-btn:active {
+          transform: scale(0.95);
+        }
+
+        /* Tab Bar with Animated Glow Indicator */
         .zs-tab-bar {
           display: flex;
           position: relative;
           padding: 0 28px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          background: rgba(255, 255, 255, 0.02);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+          background: rgba(255, 255, 255, 0.01);
           gap: 24px;
           flex-shrink: 0;
         }
@@ -7390,13 +7410,13 @@
         .zs-tab-btn {
           background: transparent;
           border: none;
-          padding: 11px 2px;
+          padding: 12px 4px;
           font-size: 13.5px;
           font-weight: 600;
           color: rgba(255, 255, 255, 0.55);
           cursor: pointer;
           position: relative;
-          transition: color 0.15s ease;
+          transition: color 0.18s ease;
           outline: none;
         }
 
@@ -7414,9 +7434,10 @@
           bottom: -1px;
           left: 0;
           right: 0;
-          height: 2px;
+          height: 2.5px;
           background: var(--zen-primary-color, #707ac2);
-          border-radius: 2px 2px 0 0;
+          border-radius: 3px 3px 0 0;
+          box-shadow: 0 0 10px color-mix(in srgb, var(--zen-primary-color, #707ac2) 60%, transparent);
         }
 
         /* Modal Body & Tab Panels */
@@ -7427,7 +7448,7 @@
           flex: 1 1 auto;
           gap: 12px;
           overflow: hidden;
-          background: #18181c !important;
+          background: transparent !important;
           color: #f2f2f7 !important;
         }
 
@@ -7441,7 +7462,7 @@
 
         .zs-tab-panel[data-active="true"] {
           display: flex;
-          animation: zsTabFadeIn 0.18s ease-out;
+          animation: zsTabFadeIn 0.20s ease-out;
         }
 
         /* 2-Column Side-by-Side Grid for Settings Tab */
@@ -7451,6 +7472,7 @@
           gap: 22px;
           align-items: stretch;
           width: 100%;
+          height: 100%;
           flex: 1 1 auto;
         }
 
@@ -7471,7 +7493,7 @@
         }
 
         .zs-section-title {
-          font-size: 11px;
+          font-size: 11.5px;
           text-transform: uppercase;
           font-weight: 700;
           letter-spacing: 0.08em;
@@ -7490,7 +7512,7 @@
           font-size: 11px;
           font-weight: 600;
           color: var(--zen-primary-color, #707ac2);
-          transition: color 0.18s ease;
+          transition: color 0.20s ease;
           user-select: none;
         }
 
@@ -7498,22 +7520,25 @@
           color: rgba(255, 255, 255, 0.4);
         }
 
+        /* Glassmorphic Settings Cards */
         .zs-card {
-          background: rgba(255, 255, 255, 0.04) !important;
-          border: 1px solid rgba(255, 255, 255, 0.07) !important;
-          border-radius: 12px;
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.015) 100%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.08) !important;
+          border-radius: 14px;
           padding: 14px 16px;
           display: flex;
           flex-direction: column;
           gap: 10px;
           flex: 1 1 auto;
-          transition: opacity 0.2s ease, filter 0.2s ease;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          transition: opacity 0.28s ease, filter 0.28s ease, transform 0.28s ease;
         }
 
         .zs-card[data-disabled="true"] {
-          opacity: 0.35;
+          opacity: 0.32;
+          filter: grayscale(0.7) blur(0.2px);
+          transform: scale(0.995);
           pointer-events: none;
-          filter: grayscale(0.65);
         }
 
         .zs-row {
@@ -7533,7 +7558,8 @@
 
         .zs-label {
           font-size: 13px;
-          font-weight: 500;
+          font-weight: 550;
+          letter-spacing: -0.1px;
           color: #f2f2f7 !important;
         }
 
@@ -7541,7 +7567,7 @@
           font-size: 11px;
           color: rgba(255, 255, 255, 0.55) !important;
           margin-top: 1px;
-          line-height: 1.3;
+          line-height: 1.35;
         }
 
         /* Visual Placement Cards */
@@ -7559,16 +7585,16 @@
 
         .zs-placement-btn {
           position: relative;
-          background: rgba(255, 255, 255, 0.03);
-          border: 2px solid rgba(255, 255, 255, 0.09);
-          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.025);
+          border: 1.5px solid rgba(255, 255, 255, 0.09);
+          border-radius: 11px;
           padding: 10px 10px 8px 10px;
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 5px;
           cursor: pointer;
-          transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+          transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
           color: #ffffff;
           outline: none;
           transform: none;
@@ -7576,15 +7602,17 @@
         }
 
         .zs-placement-btn:hover {
-          background: rgba(255, 255, 255, 0.07);
-          border-color: rgba(255, 255, 255, 0.25);
+          background: rgba(255, 255, 255, 0.06);
+          border-color: rgba(255, 255, 255, 0.22);
           transform: none;
         }
 
         .zs-placement-btn[data-active="true"] {
-          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 18%, rgba(255,255,255,0.04));
-          border-color: var(--zen-primary-color, #707ac2);
-          box-shadow: 0 0 0 1px var(--zen-primary-color, #707ac2), 0 4px 18px color-mix(in srgb, var(--zen-primary-color, #707ac2) 30%, transparent);
+          background: linear-gradient(180deg, color-mix(in srgb, var(--zen-primary-color, #707ac2) 18%, rgba(255,255,255,0.03)) 0%, color-mix(in srgb, var(--zen-primary-color, #707ac2) 8%, rgba(255,255,255,0.01)) 100%);
+          border: 2px solid var(--zen-primary-color, #707ac2);
+          box-shadow: 0 0 0 1px var(--zen-primary-color, #707ac2),
+                      0 6px 22px color-mix(in srgb, var(--zen-primary-color, #707ac2) 28%, transparent),
+                      inset 0 0 12px color-mix(in srgb, var(--zen-primary-color, #707ac2) 10%, transparent);
           transform: none;
         }
 
@@ -7618,22 +7646,23 @@
           margin-top: -3px;
         }
 
-        /* Horizontal Stepper (- [value] +) */
+        /* Horizontal Capsule Stepper (- [value] +) */
         .zs-h-stepper {
           display: inline-flex;
           align-items: center;
-          background: rgba(255, 255, 255, 0.07);
-          border: 1px solid rgba(255, 255, 255, 0.16);
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.14);
           border-radius: 8px;
           overflow: hidden;
           height: 28px;
+          box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
           transition: border-color 0.15s ease, box-shadow 0.15s ease;
           flex-shrink: 0;
         }
 
         .zs-h-stepper:focus-within {
           border-color: var(--zen-primary-color, #707ac2) !important;
-          box-shadow: 0 0 0 2px color-mix(in srgb, var(--zen-primary-color, #707ac2) 30%, transparent) !important;
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--zen-primary-color, #707ac2) 30%, transparent) !important;
         }
 
         .zs-h-btn {
@@ -7671,6 +7700,7 @@
           text-align: center;
           font-size: 13px;
           font-weight: 600;
+          font-feature-settings: "tnum" 1;
           outline: none;
           -moz-appearance: textfield;
           appearance: textfield;
@@ -7688,20 +7718,21 @@
           display: flex;
           flex-direction: column;
           gap: 6px;
-          background: rgba(0, 0, 0, 0.22);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 10px;
-          padding: 8px 12px;
+          background: rgba(0, 0, 0, 0.28);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 12px;
+          padding: 10px 12px;
+          box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
           overflow: hidden;
           max-height: 220px;
           opacity: 1;
           transform: translateY(0);
-          transition: max-height 0.26s cubic-bezier(0.25, 1, 0.5, 1),
-                      opacity 0.20s ease,
-                      padding 0.26s cubic-bezier(0.25, 1, 0.5, 1),
-                      margin 0.26s cubic-bezier(0.25, 1, 0.5, 1),
-                      border-width 0.26s ease,
-                      transform 0.26s cubic-bezier(0.25, 1, 0.5, 1);
+          transition: max-height 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+                      opacity 0.22s ease,
+                      padding 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+                      margin 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+                      border-width 0.32s ease,
+                      transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .zs-matrix-wrapper[data-hidden="true"] {
@@ -7740,10 +7771,11 @@
         .zs-matrix-badge {
           background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 20%, transparent);
           border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent);
-          padding: 1px 5px;
+          padding: 1px 6px;
           border-radius: 4px;
           font-size: 10px;
           font-weight: 700;
+          letter-spacing: 0.02em;
         }
 
         .zs-matrix-grid {
@@ -7762,18 +7794,18 @@
           width: 100%;
           min-height: 12px;
           max-height: 24px;
-          background: rgba(255, 255, 255, 0.07);
-          border: 1px solid rgba(255, 255, 255, 0.11);
-          border-radius: 3px;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 3.5px;
           cursor: pointer;
-          transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease, transform 0.12s ease;
+          transition: all 0.12s ease;
           transform: none;
         }
 
         /* Unselected slot hover preview */
         .zs-matrix-cell:hover,
         .zs-matrix-cell[data-hover="true"] {
-          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 45%, rgba(255,255,255,0.15));
+          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 45%, rgba(255,255,255,0.12));
           border-color: var(--zen-primary-color, #707ac2);
           transform: none;
         }
@@ -7782,17 +7814,18 @@
         .zs-matrix-cell[data-selected="true"] {
           background: var(--zen-primary-color, #707ac2);
           border-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 75%, #ffffff);
-          box-shadow: 0 0 5px color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent);
+          box-shadow: 0 0 6px color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent);
         }
 
-        /* Selected slot hover highlight: distinct luminous glow and white border */
+        /* Selected slot hover highlight: luminous neon halo and bright white glow */
         .zs-matrix-cell[data-selected="true"]:hover,
         .zs-matrix-cell[data-selected="true"][data-hover="true"] {
           background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 75%, #ffffff) !important;
           border-color: #ffffff !important;
-          box-shadow: 0 0 10px rgba(255, 255, 255, 0.75), inset 0 0 0 1px #ffffff !important;
-          filter: brightness(1.22) !important;
-          transform: scale(1.06) !important;
+          box-shadow: 0 0 12px rgba(255, 255, 255, 0.8), inset 0 0 0 1px #ffffff !important;
+          filter: brightness(1.25) !important;
+          transform: scale(1.08) !important;
+          z-index: 2 !important;
         }
 
         /* Animation Speed Input & Slider Composite */
@@ -7822,6 +7855,7 @@
           color: #ffffff !important;
           font-size: 12px !important;
           font-weight: 600 !important;
+          font-feature-settings: "tnum" 1;
           text-align: right !important;
           outline: none !important;
           -moz-appearance: textfield !important;
@@ -7842,23 +7876,25 @@
           user-select: none;
         }
 
-        /* Animation Preview Demo Box */
+        /* Animation Preview Sandbox Demo Box */
         .zs-anim-preview-group {
           display: flex;
           flex-direction: column;
           gap: 6px;
-          background: rgba(0, 0, 0, 0.22);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 10px;
+          background: rgba(0, 0, 0, 0.28);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 12px;
           padding: 8px 12px;
+          box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
         }
 
         .zs-anim-preview-box {
           position: relative;
           height: 64px;
-          background: #121215;
+          background: #101014;
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 8px;
+          box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
           overflow: hidden;
           display: flex;
           align-items: center;
@@ -7869,7 +7905,7 @@
         .zs-anim-preview-sidebar {
           width: 32px;
           height: 100%;
-          background: rgba(255, 255, 255, 0.04);
+          background: rgba(255, 255, 255, 0.035);
           border-right: 1px solid rgba(255, 255, 255, 0.08);
           display: flex;
           flex-direction: column;
@@ -7898,7 +7934,7 @@
           background: rgba(255, 255, 255, 0.08);
           border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, rgba(255,255,255,0.1));
           border-radius: 6px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+          box-shadow: 0 4px 14px rgba(0,0,0,0.55);
           overflow: hidden;
           display: flex;
           flex-direction: column;
@@ -7912,7 +7948,8 @@
                       transform var(--zs-preview-anim-duration, 0.45s) var(--zs-preview-anim-curve, cubic-bezier(0.25, 1, 0.5, 1));
         }
 
-        .zs-anim-preview-box:hover .zs-anim-preview-panel {
+        .zs-anim-preview-box:hover .zs-anim-preview-panel,
+        .zs-anim-preview-box[data-preview-active="true"] .zs-anim-preview-panel {
           width: 130px;
           opacity: 1;
           transform: translateX(0) scale(1);
@@ -7941,38 +7978,41 @@
           transition: opacity 0.15s ease;
         }
 
-        .zs-anim-preview-box:hover .zs-anim-preview-hint {
+        .zs-anim-preview-box:hover .zs-anim-preview-hint,
+        .zs-anim-preview-box[data-preview-active="true"] .zs-anim-preview-hint {
           opacity: 0;
         }
 
         /* Dropdown Select */
         .zs-select {
           min-width: 150px;
-          background: #242429 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>') no-repeat right 10px center !important;
+          background: #222228 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>') no-repeat right 10px center !important;
           -moz-appearance: none !important;
           appearance: none !important;
-          border: 1px solid rgba(255, 255, 255, 0.16) !important;
+          border: 1px solid rgba(255, 255, 255, 0.14) !important;
           border-radius: 8px;
           color: #ffffff !important;
-          padding: 5px 26px 5px 10px;
+          padding: 6px 28px 6px 11px;
           font-size: 12.5px;
           font-weight: 500;
           outline: none;
           cursor: pointer;
-          transition: border-color 0.15s ease;
+          transition: all 0.15s ease;
           flex-shrink: 0;
         }
 
         .zs-select:hover {
           border-color: rgba(255, 255, 255, 0.35) !important;
+          background-color: #26262d !important;
         }
 
         .zs-select:focus {
           border-color: var(--zen-primary-color, #707ac2) !important;
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--zen-primary-color, #707ac2) 30%, transparent) !important;
         }
 
         .zs-select option {
-          background-color: #242429 !important;
+          background-color: #222228 !important;
           color: #f2f2f7 !important;
         }
 
@@ -7982,11 +8022,11 @@
           max-height: 48px;
           opacity: 1;
           transform: translateY(0);
-          transition: max-height 0.24s cubic-bezier(0.25, 1, 0.5, 1),
-                      opacity 0.18s ease,
-                      margin 0.24s cubic-bezier(0.25, 1, 0.5, 1),
-                      padding 0.24s cubic-bezier(0.25, 1, 0.5, 1),
-                      transform 0.24s cubic-bezier(0.25, 1, 0.5, 1);
+          transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                      opacity 0.20s ease,
+                      margin 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                      padding 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                      transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         #zs-tg-indicator-type-row[data-hidden="true"] {
@@ -8000,11 +8040,12 @@
           pointer-events: none !important;
         }
 
+        /* Apple/Zen Toggle Switch */
         .zs-switch {
           position: relative;
           display: inline-block;
-          width: 36px;
-          height: 20px;
+          width: 38px;
+          height: 22px;
           flex-shrink: 0;
         }
 
@@ -8027,14 +8068,14 @@
         .zs-slider:before {
           position: absolute;
           content: "";
-          height: 14px;
-          width: 14px;
+          height: 16px;
+          width: 16px;
           left: 2px;
           bottom: 2px;
           background-color: #ffffff;
           transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
           border-radius: 50%;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          box-shadow: 0 2px 5px rgba(0,0,0,0.35);
         }
 
         .zs-switch input:checked + .zs-slider {
@@ -8046,6 +8087,7 @@
           transform: translateX(16px);
         }
 
+        /* Range Slider */
         .zs-range-container {
           display: flex;
           align-items: center;
@@ -8060,42 +8102,45 @@
           -webkit-appearance: none;
           height: 4px;
           border-radius: 2px;
-          background: rgba(255, 255, 255, 0.2) !important;
+          background: rgba(255, 255, 255, 0.18) !important;
           outline: none;
           cursor: pointer;
+          transition: background-color 0.15s ease;
         }
 
         .zs-range-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 15px;
-          height: 15px;
+          width: 16px;
+          height: 16px;
           border-radius: 50%;
           background: #ffffff !important;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+          box-shadow: 0 1px 5px rgba(0,0,0,0.45);
           cursor: pointer;
-          transition: transform 0.1s ease;
+          transition: transform 0.12s ease, box-shadow 0.12s ease;
         }
 
         .zs-range-slider::-webkit-slider-thumb:hover {
-          transform: scale(1.15);
+          transform: scale(1.18);
+          box-shadow: 0 0 0 4px color-mix(in srgb, var(--zen-primary-color, #707ac2) 35%, transparent);
         }
 
         .zs-range-value {
           font-size: 12px;
           font-weight: 600;
-          min-width: 34px;
+          font-feature-settings: "tnum" 1;
+          min-width: 36px;
           text-align: right;
           color: #f2f2f7 !important;
         }
 
         .zs-reset-btn {
           align-self: flex-end;
-          background: transparent !important;
+          background: rgba(255, 255, 255, 0.03) !important;
           border: 1px solid rgba(255, 255, 255, 0.12) !important;
           color: rgba(255, 255, 255, 0.7) !important;
-          padding: 5px 10px;
-          border-radius: 6px;
+          padding: 5px 12px;
+          border-radius: 7px;
           font-size: 11px;
           font-weight: 500;
           cursor: pointer;
@@ -8107,23 +8152,28 @@
           background: rgba(255, 255, 255, 0.08) !important;
           color: #ffffff !important;
           border-color: rgba(255, 255, 255, 0.25) !important;
+          transform: translateY(-0.5px);
+        }
+
+        .zs-reset-btn:active {
+          transform: scale(0.97);
         }
 
         .zs-footer {
-          padding: 12px 28px;
-          background: rgba(255, 255, 255, 0.02) !important;
-          border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+          padding: 13px 28px;
+          background: rgba(255, 255, 255, 0.015) !important;
+          border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
           display: flex;
           justify-content: flex-end;
-          gap: 10px;
+          gap: 12px;
           flex-shrink: 0;
         }
 
         .zs-btn-cancel {
-          padding: 7px 14px;
-          border-radius: 7px;
-          background: transparent !important;
-          border: 1px solid rgba(255, 255, 255, 0.14) !important;
+          padding: 8px 16px;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.03) !important;
+          border: 1px solid rgba(255, 255, 255, 0.13) !important;
           color: #f2f2f7 !important;
           font-size: 12.5px;
           font-weight: 500;
@@ -8132,30 +8182,36 @@
         }
 
         .zs-btn-cancel:hover {
-          background: rgba(255, 255, 255, 0.08) !important;
+          background: rgba(255, 255, 255, 0.09) !important;
+          border-color: rgba(255, 255, 255, 0.22) !important;
           color: #ffffff;
         }
 
+        .zs-btn-cancel:active {
+          transform: scale(0.97);
+        }
+
         .zs-btn-save {
-          padding: 8px 20px;
+          padding: 8px 22px;
           border-radius: 8px;
-          background: var(--zen-primary-color, #707ac2) !important;
-          border: none;
+          background: linear-gradient(180deg, color-mix(in srgb, var(--zen-primary-color, #707ac2) 90%, #ffffff) 0%, var(--zen-primary-color, #707ac2) 100%) !important;
+          border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 60%, #ffffff) !important;
           color: #ffffff !important;
           font-size: 13px;
-          font-weight: 600;
+          font-weight: 650;
           cursor: pointer;
-          box-shadow: 0 2px 8px color-mix(in srgb, var(--zen-primary-color, #707ac2) 30%, transparent);
+          box-shadow: 0 2px 10px color-mix(in srgb, var(--zen-primary-color, #707ac2) 35%, transparent);
           transition: all 0.15s ease;
         }
 
         .zs-btn-save:hover {
           filter: brightness(1.1);
           transform: translateY(-1px);
+          box-shadow: 0 4px 16px color-mix(in srgb, var(--zen-primary-color, #707ac2) 50%, transparent);
         }
 
         .zs-btn-save:active {
-          transform: scale(0.98);
+          transform: scale(0.97);
         }
       `;
       try {
@@ -8335,7 +8391,7 @@
                   <div class="zs-anim-preview-group">
                     <div class="zs-label-container">
                       <span class="zs-label">Animation Preview</span>
-                      <span class="zs-sublabel">Hover below to test opening/closing speed and easing curve</span>
+                      <span class="zs-sublabel">Hover or click below to test opening/closing speed and easing curve</span>
                     </div>
                     <div class="zs-anim-preview-box" id="zs-anim-preview-box">
                       <div class="zs-anim-preview-sidebar">
@@ -8349,7 +8405,7 @@
                         <div class="zs-anim-preview-line" style="width: 65%;"></div>
                         <div class="zs-anim-preview-line" style="width: 75%;"></div>
                       </div>
-                      <span class="zs-anim-preview-hint">Hover to preview</span>
+                      <span class="zs-anim-preview-hint">Hover or click to preview</span>
                     </div>
                   </div>
 
@@ -8617,6 +8673,19 @@
       const animTypeSelect = this.modal.querySelector("#zs-anim-type");
       const animSpeedSlider = this.modal.querySelector("#zs-anim-speed-slider");
       const animSpeedInput = this.modal.querySelector("#zs-anim-speed");
+      const animPreviewBox = this.modal.querySelector("#zs-anim-preview-box");
+
+      let previewPulseTimeout = null;
+      if (animPreviewBox) {
+        animPreviewBox.addEventListener("click", () => {
+          animPreviewBox.setAttribute("data-preview-active", "true");
+          if (previewPulseTimeout) clearTimeout(previewPulseTimeout);
+          const speed = parseInt(animSpeedInput ? animSpeedInput.value : "450", 10) || 450;
+          previewPulseTimeout = setTimeout(() => {
+            if (animPreviewBox) animPreviewBox.removeAttribute("data-preview-active");
+          }, Math.max(speed + 500, 1000));
+        });
+      }
 
       const onAnimChange = () => {
         const type = animTypeSelect ? animTypeSelect.value : "slide";
