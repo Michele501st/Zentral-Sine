@@ -7115,6 +7115,7 @@
       get("zs-anim-type").value = animType;
       get("zs-anim-speed").value = animSpeed;
       if (get("zs-anim-speed-slider")) get("zs-anim-speed-slider").value = animSpeed;
+      if (get("zs-anim-speed-badge")) get("zs-anim-speed-badge").textContent = `${animSpeed} ms`;
       get("zs-max-apps").value = maxApps;
 
       this.updatePreviewDemo(animType, animSpeed);
@@ -7126,8 +7127,8 @@
           get("zs-tg-status").textContent = tgEnabled ? "Enabled" : "Disabled";
           get("zs-tg-status").setAttribute("data-enabled", tgEnabled ? "true" : "false");
         }
-        if (get("zs-tg-card")) {
-          get("zs-tg-card").setAttribute("data-disabled", !tgEnabled ? "true" : "false");
+        if (get("zs-tg-col")) {
+          get("zs-tg-col").setAttribute("data-disabled", !tgEnabled ? "true" : "false");
         }
       }
 
@@ -7151,7 +7152,7 @@
       const opacity = Core.getPref(Constants.TabGroups.PREF_LABEL_OPACITY, 85) || 85;
       if (get("zs-tg-opacity")) {
         get("zs-tg-opacity").value = opacity;
-        if (get("zs-tg-opacity-val")) get("zs-tg-opacity-val").textContent = opacity + "%";
+        if (get("zs-tg-opacity-badge")) get("zs-tg-opacity-badge").textContent = opacity + "%";
       }
       
       if (get("zs-pref-logger-enabled")) {
@@ -7269,19 +7270,19 @@
           left: 0;
           right: 0;
           height: 100vh;
-          background: rgba(8, 8, 12, 0.72);
-          backdrop-filter: blur(24px) saturate(160%) brightness(0.85);
-          -webkit-backdrop-filter: blur(24px) saturate(160%) brightness(0.85);
+          background: rgba(0, 0, 0, 0.75);
+          backdrop-filter: blur(20px) saturate(140%);
+          -webkit-backdrop-filter: blur(20px) saturate(140%);
           z-index: 2147483647;
           display: none;
           align-items: center;
           justify-content: center;
-          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+          font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         #zentral-settings-modal[data-open="true"] {
           display: flex !important;
-          animation: zsFadeIn 0.20s ease-out;
+          animation: zsFadeIn 0.18s ease-out;
         }
 
         #zentral-settings-modal[data-open="false"] {
@@ -7296,7 +7297,7 @@
         @keyframes zsModalPop {
           from {
             opacity: 0;
-            transform: scale(0.96) translateY(12px);
+            transform: scale(0.97) translateY(8px);
           }
           to {
             opacity: 1;
@@ -7307,7 +7308,7 @@
         @keyframes zsTabFadeIn {
           from {
             opacity: 0;
-            transform: translateY(5px);
+            transform: translateY(4px);
           }
           to {
             opacity: 1;
@@ -7316,93 +7317,82 @@
         }
 
         .zs-dialog {
-          background: linear-gradient(180deg, #1c1c22 0%, #131317 100%) !important;
-          color: #f2f2f7 !important;
-          width: 1260px;
-          max-width: 95vw;
-          height: 860px;
-          min-height: 740px;
-          max-height: 94vh;
-          border-radius: 16px;
-          box-shadow: 0 32px 80px rgba(0, 0, 0, 0.8),
-                      0 0 0 1px rgba(255, 255, 255, 0.08),
-                      inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+          background: #0d0d12 !important;
+          color: #e4e4e7 !important;
+          width: 1120px !important;
+          max-width: 95vw !important;
+          height: 780px !important;
+          max-height: 94vh !important;
+          border-radius: 14px !important;
+          box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
           border: 1px solid rgba(255, 255, 255, 0.09) !important;
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          animation: zsModalPop 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+          animation: zsModalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .zs-header {
-          padding: 16px 28px 14px 28px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+          padding: 18px 32px 14px 32px;
+          background: #13131a !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          background: rgba(255, 255, 255, 0.015);
-          color: #ffffff !important;
+          color: #ffffff;
           flex-shrink: 0;
         }
 
         .zs-title-group {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
         }
 
         .zs-title {
           margin: 0;
-          font-size: 16px;
-          font-weight: 700;
-          letter-spacing: -0.25px;
-          color: #ffffff !important;
+          font-size: 18px;
+          font-weight: 600;
+          letter-spacing: -0.02em;
+          color: #ffffff;
         }
 
         .zs-version-badge {
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
           font-size: 11px;
           padding: 2px 8px;
-          border-radius: 12px;
-          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 18%, transparent);
-          border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 35%, transparent);
-          color: var(--zen-primary-color, #707ac2);
-          font-weight: 600;
-          margin-left: 8px;
-          letter-spacing: 0.02em;
+          border-radius: 9999px;
+          background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 12%, transparent);
+          border: 1px solid color-mix(in srgb, var(--zen-primary-color, #6366f1) 25%, transparent);
+          color: color-mix(in srgb, var(--zen-primary-color, #6366f1) 85%, #ffffff);
+          font-weight: 500;
         }
 
         .zs-close-btn {
           background: transparent;
           border: none;
-          color: rgba(255, 255, 255, 0.7) !important;
+          color: #71717a;
           cursor: pointer;
           width: 28px;
           height: 28px;
-          border-radius: 7px;
+          border-radius: 6px;
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: all 0.16s ease;
+          transition: all 0.15s ease;
           padding: 0;
         }
 
         .zs-close-btn:hover {
-          color: #ffffff !important;
-          background: rgba(255, 255, 255, 0.1) !important;
-          transform: scale(1.05);
+          color: #ffffff;
+          background: #27272a;
         }
 
-        .zs-close-btn:active {
-          transform: scale(0.95);
-        }
-
-        /* Tab Bar with Animated Glow Indicator */
         .zs-tab-bar {
           display: flex;
-          position: relative;
-          padding: 0 28px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-          background: rgba(255, 255, 255, 0.01);
+          padding: 0 32px;
+          background: #13131a !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
           gap: 24px;
           flex-shrink: 0;
         }
@@ -7410,22 +7400,23 @@
         .zs-tab-btn {
           background: transparent;
           border: none;
-          padding: 12px 4px;
+          padding: 10px 4px;
           font-size: 13.5px;
-          font-weight: 600;
-          color: rgba(255, 255, 255, 0.55);
+          font-weight: 500;
+          color: #71717a;
           cursor: pointer;
           position: relative;
-          transition: color 0.18s ease;
+          transition: color 0.15s ease;
           outline: none;
         }
 
         .zs-tab-btn:hover {
-          color: rgba(255, 255, 255, 0.9);
+          color: #d4d4d8;
         }
 
         .zs-tab-btn[data-active="true"] {
           color: #ffffff;
+          font-weight: 600;
         }
 
         .zs-tab-btn[data-active="true"]::after {
@@ -7434,42 +7425,36 @@
           bottom: -1px;
           left: 0;
           right: 0;
-          height: 2.5px;
-          background: var(--zen-primary-color, #707ac2);
-          border-radius: 3px 3px 0 0;
-          box-shadow: 0 0 10px color-mix(in srgb, var(--zen-primary-color, #707ac2) 60%, transparent);
+          height: 2px;
+          background: var(--zen-primary-color, #6366f1);
         }
 
-        /* Modal Body & Tab Panels */
         .zs-body {
-          padding: 16px 28px 18px 28px;
+          padding: 22px 32px;
           display: flex;
           flex-direction: column;
           flex: 1 1 auto;
-          gap: 12px;
           overflow: hidden;
-          background: transparent !important;
-          color: #f2f2f7 !important;
+          background: #0d0d12 !important;
         }
 
         .zs-tab-panel {
           display: none;
           flex-direction: column;
-          gap: 12px;
           width: 100%;
           flex: 1 1 auto;
+          height: 100%;
         }
 
         .zs-tab-panel[data-active="true"] {
-          display: flex;
-          animation: zsTabFadeIn 0.20s ease-out;
+          display: flex !important;
+          animation: zsTabFadeIn 0.18s ease-out;
         }
 
-        /* 2-Column Side-by-Side Grid for Settings Tab */
         .zs-columns {
           display: grid;
-          grid-template-columns: 1.05fr 0.95fr;
-          gap: 22px;
+          grid-template-columns: 1fr 1fr;
+          gap: 36px;
           align-items: stretch;
           width: 100%;
           height: 100%;
@@ -7479,66 +7464,47 @@
         .zs-col {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 14px;
           height: 100%;
+          min-width: 0;
         }
 
-        /* Section Header with Outside Toggle */
+        .zs-col[data-disabled="true"] {
+          opacity: 0.35;
+          pointer-events: none;
+          filter: grayscale(0.65);
+        }
+
         .zs-section-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 2px 4px;
-          min-height: 24px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          padding-bottom: 8px;
+          margin-bottom: 2px;
+          flex-shrink: 0;
         }
 
         .zs-section-title {
-          font-size: 11.5px;
+          font-size: 11px;
           text-transform: uppercase;
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          color: var(--zen-primary-color, #707ac2) !important;
-          opacity: 0.95;
+          font-weight: 600;
+          letter-spacing: 0.1em;
+          color: #71717a;
           margin: 0;
         }
 
         .zs-header-toggle {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
         }
 
         .zs-toggle-status {
-          font-size: 11px;
-          font-weight: 600;
-          color: var(--zen-primary-color, #707ac2);
-          transition: color 0.20s ease;
+          font-size: 12px;
+          font-weight: 500;
+          color: #a1a1aa;
           user-select: none;
-        }
-
-        .zs-toggle-status[data-enabled="false"] {
-          color: rgba(255, 255, 255, 0.4);
-        }
-
-        /* Glassmorphic Settings Cards */
-        .zs-card {
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.015) 100%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.08) !important;
-          border-radius: 14px;
-          padding: 14px 16px;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          flex: 1 1 auto;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-          transition: opacity 0.28s ease, filter 0.28s ease, transform 0.28s ease;
-        }
-
-        .zs-card[data-disabled="true"] {
-          opacity: 0.32;
-          filter: grayscale(0.7) blur(0.2px);
-          transform: scale(0.995);
-          pointer-events: none;
         }
 
         .zs-row {
@@ -7546,7 +7512,7 @@
           justify-content: space-between;
           align-items: center;
           gap: 14px;
-          min-height: 26px;
+          min-height: 30px;
         }
 
         .zs-label-container {
@@ -7557,24 +7523,22 @@
         }
 
         .zs-label {
-          font-size: 13px;
-          font-weight: 550;
-          letter-spacing: -0.1px;
-          color: #f2f2f7 !important;
+          font-size: 13.5px;
+          font-weight: 500;
+          color: #ffffff;
         }
 
         .zs-sublabel {
-          font-size: 11px;
-          color: rgba(255, 255, 255, 0.55) !important;
-          margin-top: 1px;
+          font-size: 11.5px;
+          color: #a1a1aa;
+          margin-top: 2px;
           line-height: 1.35;
         }
 
-        /* Visual Placement Cards */
         .zs-placement-group {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
         }
 
         .zs-placement-cards {
@@ -7585,48 +7549,49 @@
 
         .zs-placement-btn {
           position: relative;
-          background: rgba(255, 255, 255, 0.025);
-          border: 1.5px solid rgba(255, 255, 255, 0.09);
-          border-radius: 11px;
-          padding: 10px 10px 8px 10px;
+          background: rgba(24, 24, 27, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          padding: 12px 10px 10px 10px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 5px;
+          gap: 8px;
           cursor: pointer;
-          transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
-          color: #ffffff;
+          transition: all 0.16s ease;
+          color: #a1a1aa;
           outline: none;
-          transform: none;
           user-select: none;
         }
 
         .zs-placement-btn:hover {
-          background: rgba(255, 255, 255, 0.06);
-          border-color: rgba(255, 255, 255, 0.22);
-          transform: none;
+          border-color: rgba(255, 255, 255, 0.18);
+          background: rgba(39, 39, 42, 0.4);
+          color: #e4e4e7;
         }
 
         .zs-placement-btn[data-active="true"] {
-          background: linear-gradient(180deg, color-mix(in srgb, var(--zen-primary-color, #707ac2) 18%, rgba(255,255,255,0.03)) 0%, color-mix(in srgb, var(--zen-primary-color, #707ac2) 8%, rgba(255,255,255,0.01)) 100%);
-          border: 2px solid var(--zen-primary-color, #707ac2);
-          box-shadow: 0 0 0 1px var(--zen-primary-color, #707ac2),
-                      0 6px 22px color-mix(in srgb, var(--zen-primary-color, #707ac2) 28%, transparent),
-                      inset 0 0 12px color-mix(in srgb, var(--zen-primary-color, #707ac2) 10%, transparent);
-          transform: none;
+          border-color: var(--zen-primary-color, #6366f1);
+          background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 6%, transparent);
+          box-shadow: 0 0 0 1px color-mix(in srgb, var(--zen-primary-color, #6366f1) 40%, transparent);
+          color: color-mix(in srgb, var(--zen-primary-color, #6366f1) 85%, #ffffff);
         }
 
         .zs-placement-btn[data-active="true"] .zs-placement-label {
-          color: var(--zen-primary-color, #707ac2);
-          font-weight: 700;
+          color: color-mix(in srgb, var(--zen-primary-color, #6366f1) 85%, #ffffff);
+          font-weight: 600;
         }
 
         .zs-placement-svg-box {
-          width: 100%;
-          height: 60px;
+          width: 128px;
+          height: 64px;
+          border-radius: 6px;
+          background: #18181b;
+          border: 1px solid rgba(255, 255, 255, 0.1);
           display: flex;
           align-items: center;
           justify-content: center;
+          overflow: hidden;
           pointer-events: none;
         }
 
@@ -7635,44 +7600,32 @@
         }
 
         .zs-placement-label {
-          font-size: 12.5px;
-          font-weight: 600;
-          letter-spacing: -0.1px;
+          font-size: 13px;
+          font-weight: 500;
         }
 
-        .zs-placement-sublabel {
-          font-size: 10.5px;
-          color: rgba(255, 255, 255, 0.5);
-          margin-top: -3px;
-        }
-
-        /* Horizontal Capsule Stepper (- [value] +) */
         .zs-h-stepper {
           display: inline-flex;
           align-items: center;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.14);
+          gap: 2px;
+          background: #18181b;
+          border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 8px;
-          overflow: hidden;
-          height: 28px;
-          box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
-          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+          padding: 2px;
+          height: 32px;
+          box-sizing: border-box;
           flex-shrink: 0;
-        }
-
-        .zs-h-stepper:focus-within {
-          border-color: var(--zen-primary-color, #707ac2) !important;
-          box-shadow: 0 0 0 3px color-mix(in srgb, var(--zen-primary-color, #707ac2) 30%, transparent) !important;
         }
 
         .zs-h-btn {
           width: 28px;
-          height: 100%;
+          height: 28px;
           background: transparent;
           border: none;
-          color: rgba(255, 255, 255, 0.8);
+          border-radius: 5px;
+          color: #a1a1aa;
           font-size: 15px;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -7683,24 +7636,24 @@
         }
 
         .zs-h-btn:hover {
-          background: rgba(255, 255, 255, 0.14);
+          background: #27272a;
           color: #ffffff;
         }
 
         .zs-h-btn:active {
-          background: var(--zen-primary-color, #707ac2);
+          background: var(--zen-primary-color, #6366f1);
           color: #ffffff;
         }
 
         .zs-h-val {
-          width: 44px;
+          width: 32px;
           background: transparent;
           border: none;
           color: #ffffff;
           text-align: center;
           font-size: 13px;
           font-weight: 600;
-          font-feature-settings: "tnum" 1;
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
           outline: none;
           -moz-appearance: textfield;
           appearance: textfield;
@@ -7713,16 +7666,66 @@
           margin: 0;
         }
 
-        /* 10x6 Selection Matrix with Smooth Slide Collapse */
+        .zs-stacked-slider {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          width: 100%;
+        }
+
+        .zs-stacked-slider-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+        }
+
+        .zs-mono-badge {
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          font-size: 11px;
+          background: #27272a;
+          color: #d4d4d8;
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-weight: 500;
+          letter-spacing: 0.02em;
+        }
+
+        .zs-range-slider {
+          width: 100%;
+          height: 5px;
+          border-radius: 9999px;
+          background: #27272a;
+          outline: none;
+          -webkit-appearance: none;
+          appearance: none;
+          cursor: pointer;
+          transition: background-color 0.15s ease;
+        }
+
+        .zs-range-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 15px;
+          height: 15px;
+          border-radius: 50%;
+          background: #ffffff;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+          cursor: pointer;
+          transition: transform 0.12s ease, box-shadow 0.12s ease;
+        }
+
+        .zs-range-slider::-webkit-slider-thumb:hover {
+          transform: scale(1.15);
+          box-shadow: 0 0 0 4px color-mix(in srgb, var(--zen-primary-color, #6366f1) 35%, transparent);
+        }
+
         .zs-matrix-wrapper {
           display: flex;
           flex-direction: column;
           gap: 6px;
-          background: rgba(0, 0, 0, 0.28);
-          border: 1px solid rgba(255, 255, 255, 0.07);
+          background: rgba(24, 24, 27, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 12px;
           padding: 10px 12px;
-          box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
           overflow: hidden;
           max-height: 220px;
           opacity: 1;
@@ -7754,28 +7757,28 @@
         }
 
         .zs-matrix-title {
-          font-size: 11.5px;
+          font-size: 12px;
           font-weight: 600;
-          color: #f2f2f7;
+          color: #ffffff;
         }
 
         .zs-matrix-readout {
           font-size: 11px;
-          font-weight: 600;
-          color: var(--zen-primary-color, #707ac2);
+          font-weight: 500;
+          color: var(--zen-primary-color, #6366f1);
           display: flex;
           align-items: center;
           gap: 6px;
         }
 
         .zs-matrix-badge {
-          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 20%, transparent);
-          border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent);
+          background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 18%, transparent);
+          border: 1px solid color-mix(in srgb, var(--zen-primary-color, #6366f1) 35%, transparent);
           padding: 1px 6px;
           border-radius: 4px;
           font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 0.02em;
+          font-weight: 600;
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         }
 
         .zs-matrix-grid {
@@ -7795,106 +7798,50 @@
           min-height: 12px;
           max-height: 24px;
           background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 3.5px;
           cursor: pointer;
           transition: all 0.12s ease;
-          transform: none;
         }
 
-        /* Unselected slot hover preview */
         .zs-matrix-cell:hover,
         .zs-matrix-cell[data-hover="true"] {
-          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 45%, rgba(255,255,255,0.12));
-          border-color: var(--zen-primary-color, #707ac2);
-          transform: none;
+          background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 45%, rgba(255,255,255,0.12));
+          border-color: var(--zen-primary-color, #6366f1);
         }
 
-        /* Selected slot normal */
         .zs-matrix-cell[data-selected="true"] {
-          background: var(--zen-primary-color, #707ac2);
-          border-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 75%, #ffffff);
-          box-shadow: 0 0 6px color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent);
+          background: var(--zen-primary-color, #6366f1);
+          border-color: color-mix(in srgb, var(--zen-primary-color, #6366f1) 75%, #ffffff);
+          box-shadow: 0 0 6px color-mix(in srgb, var(--zen-primary-color, #6366f1) 40%, transparent);
         }
 
-        /* Selected slot hover highlight: luminous neon halo and bright white glow */
         .zs-matrix-cell[data-selected="true"]:hover,
         .zs-matrix-cell[data-selected="true"][data-hover="true"] {
-          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 75%, #ffffff) !important;
-          border-color: #ffffff !important;
-          box-shadow: 0 0 12px rgba(255, 255, 255, 0.8), inset 0 0 0 1px #ffffff !important;
-          filter: brightness(1.25) !important;
-          transform: scale(1.08) !important;
-          z-index: 2 !important;
+          background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 75%, #ffffff);
+          border-color: #ffffff;
+          box-shadow: 0 0 12px rgba(255, 255, 255, 0.8), inset 0 0 0 1px #ffffff;
+          filter: brightness(1.25);
+          transform: scale(1.08);
+          z-index: 2;
         }
 
-        /* Animation Speed Input & Slider Composite */
-        .zs-speed-container {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          min-width: 170px;
-          flex-shrink: 0;
-        }
-
-        .zs-speed-input-box {
-          display: inline-flex;
-          align-items: center;
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          border-radius: 6px;
-          padding: 2px 6px;
-          width: 58px;
-          box-sizing: border-box;
-        }
-
-        .zs-speed-input {
-          width: 34px;
-          background: transparent !important;
-          border: none !important;
-          color: #ffffff !important;
-          font-size: 12px !important;
-          font-weight: 600 !important;
-          font-feature-settings: "tnum" 1;
-          text-align: right !important;
-          outline: none !important;
-          -moz-appearance: textfield !important;
-          appearance: textfield !important;
-          padding: 0 !important;
-        }
-
-        .zs-speed-input::-webkit-outer-spin-button,
-        .zs-speed-input::-webkit-inner-spin-button {
-          -webkit-appearance: none !important;
-          margin: 0 !important;
-        }
-
-        .zs-speed-unit {
-          font-size: 11px;
-          color: rgba(255, 255, 255, 0.6);
-          margin-left: 2px;
-          user-select: none;
-        }
-
-        /* Animation Preview Sandbox Demo Box */
         .zs-anim-preview-group {
           display: flex;
           flex-direction: column;
           gap: 6px;
-          background: rgba(0, 0, 0, 0.28);
-          border: 1px solid rgba(255, 255, 255, 0.07);
+          background: rgba(24, 24, 27, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 12px;
           padding: 8px 12px;
-          box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
         }
 
         .zs-anim-preview-box {
           position: relative;
-          height: 64px;
-          background: #101014;
+          height: 56px;
+          background: #131316;
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 8px;
-          box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
           overflow: hidden;
           display: flex;
           align-items: center;
@@ -7903,7 +7850,7 @@
         }
 
         .zs-anim-preview-sidebar {
-          width: 32px;
+          width: 28px;
           height: 100%;
           background: rgba(255, 255, 255, 0.035);
           border-right: 1px solid rgba(255, 255, 255, 0.08);
@@ -7911,35 +7858,35 @@
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 6px;
+          gap: 5px;
           flex-shrink: 0;
           z-index: 2;
         }
 
         .zs-anim-preview-dot {
-          width: 14px;
-          height: 14px;
-          border-radius: 4px;
+          width: 12px;
+          height: 12px;
+          border-radius: 3.5px;
           background: rgba(255, 255, 255, 0.15);
         }
 
         .zs-anim-preview-panel {
           position: absolute;
-          left: 33px;
-          top: 6px;
-          bottom: 6px;
+          left: 29px;
+          top: 5px;
+          bottom: 5px;
           width: 0;
           max-width: 140px;
           opacity: 0;
           background: rgba(255, 255, 255, 0.08);
-          border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, rgba(255,255,255,0.1));
+          border: 1px solid color-mix(in srgb, var(--zen-primary-color, #6366f1) 40%, rgba(255,255,255,0.1));
           border-radius: 6px;
           box-shadow: 0 4px 14px rgba(0,0,0,0.55);
           overflow: hidden;
           display: flex;
           flex-direction: column;
-          padding: 6px 8px;
-          gap: 4px;
+          padding: 5px 8px;
+          gap: 3px;
           box-sizing: border-box;
           pointer-events: none;
           transform: translateX(-10px) scale(0.95);
@@ -7950,30 +7897,30 @@
 
         .zs-anim-preview-box:hover .zs-anim-preview-panel,
         .zs-anim-preview-box[data-preview-active="true"] .zs-anim-preview-panel {
-          width: 130px;
+          width: 125px;
           opacity: 1;
           transform: translateX(0) scale(1);
         }
 
         .zs-anim-preview-pill {
-          height: 6px;
-          width: 50px;
+          height: 5px;
+          width: 44px;
           border-radius: 3px;
-          background: var(--zen-primary-color, #707ac2);
+          background: var(--zen-primary-color, #6366f1);
         }
 
         .zs-anim-preview-line {
-          height: 4px;
+          height: 3.5px;
           border-radius: 2px;
           background: rgba(255, 255, 255, 0.2);
-          margin-top: 2px;
+          margin-top: 1px;
         }
 
         .zs-anim-preview-hint {
           position: absolute;
           right: 12px;
           font-size: 11px;
-          color: rgba(255, 255, 255, 0.4);
+          color: #71717a;
           pointer-events: none;
           transition: opacity 0.15s ease;
         }
@@ -7983,17 +7930,16 @@
           opacity: 0;
         }
 
-        /* Dropdown Select */
         .zs-select {
-          min-width: 150px;
-          background: #222228 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>') no-repeat right 10px center !important;
-          -moz-appearance: none !important;
-          appearance: none !important;
-          border: 1px solid rgba(255, 255, 255, 0.14) !important;
+          min-width: 140px;
+          background: #18181b url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>') no-repeat right 10px center;
+          -moz-appearance: none;
+          appearance: none;
+          border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 8px;
-          color: #ffffff !important;
-          padding: 6px 28px 6px 11px;
-          font-size: 12.5px;
+          color: #ffffff;
+          padding: 6px 28px 6px 12px;
+          font-size: 13px;
           font-weight: 500;
           outline: none;
           cursor: pointer;
@@ -8002,21 +7948,20 @@
         }
 
         .zs-select:hover {
-          border-color: rgba(255, 255, 255, 0.35) !important;
-          background-color: #26262d !important;
+          border-color: rgba(255, 255, 255, 0.25);
+          background-color: #27272a;
         }
 
         .zs-select:focus {
-          border-color: var(--zen-primary-color, #707ac2) !important;
-          box-shadow: 0 0 0 3px color-mix(in srgb, var(--zen-primary-color, #707ac2) 30%, transparent) !important;
+          border-color: var(--zen-primary-color, #6366f1);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--zen-primary-color, #6366f1) 30%, transparent);
         }
 
         .zs-select option {
-          background-color: #222228 !important;
-          color: #f2f2f7 !important;
+          background-color: #18181b;
+          color: #e4e4e7;
         }
 
-        /* Conditional Indicator Type Row with Smooth Slide */
         #zs-tg-indicator-type-row {
           overflow: hidden;
           max-height: 48px;
@@ -8040,12 +7985,11 @@
           pointer-events: none !important;
         }
 
-        /* Apple/Zen Toggle Switch */
         .zs-switch {
           position: relative;
           display: inline-block;
-          width: 38px;
-          height: 22px;
+          width: 36px;
+          height: 20px;
           flex-shrink: 0;
         }
 
@@ -8059,10 +8003,9 @@
           position: absolute;
           cursor: pointer;
           inset: 0;
-          background-color: rgba(255, 255, 255, 0.16) !important;
+          background-color: #3f3f46;
           transition: background-color 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
-          border-radius: 20px;
-          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-radius: 9999px;
         }
 
         .zs-slider:before {
@@ -8075,143 +8018,93 @@
           background-color: #ffffff;
           transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
           border-radius: 50%;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.35);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
         }
 
         .zs-switch input:checked + .zs-slider {
-          background-color: var(--zen-primary-color, #707ac2) !important;
-          border-color: transparent !important;
+          background-color: var(--zen-primary-color, #6366f1);
         }
 
         .zs-switch input:checked + .zs-slider:before {
           transform: translateX(16px);
         }
 
-        /* Range Slider */
-        .zs-range-container {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          min-width: 150px;
-          flex-shrink: 0;
-        }
-
-        .zs-range-slider {
-          flex: 1;
-          appearance: none;
-          -webkit-appearance: none;
-          height: 4px;
-          border-radius: 2px;
-          background: rgba(255, 255, 255, 0.18) !important;
-          outline: none;
-          cursor: pointer;
-          transition: background-color 0.15s ease;
-        }
-
-        .zs-range-slider::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background: #ffffff !important;
-          box-shadow: 0 1px 5px rgba(0,0,0,0.45);
-          cursor: pointer;
-          transition: transform 0.12s ease, box-shadow 0.12s ease;
-        }
-
-        .zs-range-slider::-webkit-slider-thumb:hover {
-          transform: scale(1.18);
-          box-shadow: 0 0 0 4px color-mix(in srgb, var(--zen-primary-color, #707ac2) 35%, transparent);
-        }
-
-        .zs-range-value {
-          font-size: 12px;
-          font-weight: 600;
-          font-feature-settings: "tnum" 1;
-          min-width: 36px;
-          text-align: right;
-          color: #f2f2f7 !important;
-        }
-
         .zs-reset-btn {
-          align-self: flex-end;
-          background: rgba(255, 255, 255, 0.03) !important;
-          border: 1px solid rgba(255, 255, 255, 0.12) !important;
-          color: rgba(255, 255, 255, 0.7) !important;
-          padding: 5px 12px;
-          border-radius: 7px;
-          font-size: 11px;
+          align-self: flex-start;
+          background: #18181b;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: #d4d4d8;
+          padding: 6px 14px;
+          border-radius: 8px;
+          font-size: 12.5px;
           font-weight: 500;
           cursor: pointer;
           transition: all 0.15s ease;
-          margin-top: 2px;
+          margin-top: auto;
         }
 
         .zs-reset-btn:hover {
-          background: rgba(255, 255, 255, 0.08) !important;
-          color: #ffffff !important;
-          border-color: rgba(255, 255, 255, 0.25) !important;
-          transform: translateY(-0.5px);
+          background: #27272a;
+          color: #ffffff;
+          border-color: rgba(255, 255, 255, 0.2);
         }
 
         .zs-reset-btn:active {
-          transform: scale(0.97);
+          transform: scale(0.98);
         }
 
         .zs-footer {
-          padding: 13px 28px;
-          background: rgba(255, 255, 255, 0.015) !important;
-          border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+          padding: 16px 32px;
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
           display: flex;
           justify-content: flex-end;
           gap: 12px;
+          background: #13131a;
           flex-shrink: 0;
         }
 
         .zs-btn-cancel {
-          padding: 8px 16px;
+          background: transparent;
+          border: none;
+          color: #a1a1aa;
+          padding: 8px 18px;
           border-radius: 8px;
-          background: rgba(255, 255, 255, 0.03) !important;
-          border: 1px solid rgba(255, 255, 255, 0.13) !important;
-          color: #f2f2f7 !important;
-          font-size: 12.5px;
+          font-size: 13.5px;
           font-weight: 500;
           cursor: pointer;
           transition: all 0.15s ease;
         }
 
         .zs-btn-cancel:hover {
-          background: rgba(255, 255, 255, 0.09) !important;
-          border-color: rgba(255, 255, 255, 0.22) !important;
+          background: #27272a;
           color: #ffffff;
         }
 
         .zs-btn-cancel:active {
-          transform: scale(0.97);
+          transform: scale(0.98);
         }
 
         .zs-btn-save {
+          background: var(--zen-primary-color, #6366f1);
+          border: none;
+          color: #ffffff;
           padding: 8px 22px;
           border-radius: 8px;
-          background: linear-gradient(180deg, color-mix(in srgb, var(--zen-primary-color, #707ac2) 90%, #ffffff) 0%, var(--zen-primary-color, #707ac2) 100%) !important;
-          border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 60%, #ffffff) !important;
-          color: #ffffff !important;
-          font-size: 13px;
-          font-weight: 650;
+          font-size: 13.5px;
+          font-weight: 600;
           cursor: pointer;
-          box-shadow: 0 2px 10px color-mix(in srgb, var(--zen-primary-color, #707ac2) 35%, transparent);
+          box-shadow: 0 4px 14px color-mix(in srgb, var(--zen-primary-color, #6366f1) 40%, transparent);
           transition: all 0.15s ease;
         }
 
         .zs-btn-save:hover {
           filter: brightness(1.1);
           transform: translateY(-1px);
-          box-shadow: 0 4px 16px color-mix(in srgb, var(--zen-primary-color, #707ac2) 50%, transparent);
+          box-shadow: 0 6px 18px color-mix(in srgb, var(--zen-primary-color, #6366f1) 50%, transparent);
         }
 
         .zs-btn-save:active {
-          transform: scale(0.97);
+          transform: scale(0.98);
         }
       `;
       try {
@@ -8244,10 +8137,11 @@
       const htmlStr = `
         <div class="zs-header">
           <div class="zs-title-group">
-            <h2 class="zs-title">Zentral Settings <span class="zs-version-badge">v0.1.6</span></h2>
+            <h2 class="zs-title">Zentral Settings</h2>
+            <span class="zs-version-badge">v0.1.6</span>
           </div>
           <button id="zs-close" class="zs-close-btn" title="Close Settings">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 1l12 12M13 1L1 13"/></svg>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l12 12M13 1L1 13"/></svg>
           </button>
         </div>
 
@@ -8257,13 +8151,13 @@
         </div>
 
         <div class="zs-body">
-          <!-- Tab Panel 1: Settings (2-Column Side-by-Side) -->
+          <!-- Tab Panel 1: Settings (2-Column Open Layout) -->
           <div class="zs-tab-panel" id="zs-panel-settings" data-tab="settings" data-active="true">
             <div class="zs-columns">
               <!-- Column 1: Apps -->
-              <div class="zs-col">
+              <div class="zs-col" id="zs-ag-col">
                 <div class="zs-section-header">
-                  <div class="zs-section-title">Apps</div>
+                  <h3 class="zs-section-title">Apps</h3>
                   <div class="zs-header-toggle">
                     <span id="zs-ag-status" class="zs-toggle-status" data-enabled="true">Enabled</span>
                     <label class="zs-switch">
@@ -8273,150 +8167,126 @@
                   </div>
                 </div>
 
-                <div class="zs-card" id="zs-ag-card">
-                  <!-- Visual Placement Cards -->
-                  <div class="zs-placement-group">
-                    <div class="zs-label-container">
-                      <span class="zs-label">Apps Placement</span>
-                      <span class="zs-sublabel">Choose where the Apps will be located</span>
-                    </div>
-                    <input type="hidden" id="zs-ag-placement" value="sidebar" />
-                    <div class="zs-placement-cards">
-                      <button type="button" class="zs-placement-btn" id="zs-placement-sidebar" data-placement="sidebar" data-active="true" title="Dock Apps Box inside Zen Sidebar">
-                        <div class="zs-placement-svg-box">
-                          <svg width="142" height="60" viewBox="0 0 142 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="1" y="1" width="140" height="58" rx="6" fill="#131316" stroke="rgba(255,255,255,0.18)" stroke-width="1.2"/>
-                            <line x1="1" y1="13" x2="141" y2="13" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-                            <circle cx="8" cy="7" r="2" fill="rgba(255,255,255,0.3)"/>
-                            <circle cx="15" cy="7" r="2" fill="rgba(255,255,255,0.3)"/>
-                            <circle cx="22" cy="7" r="2" fill="rgba(255,255,255,0.3)"/>
-                            <line x1="36" y1="13" x2="36" y2="59" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-                            <rect x="5" y="17" width="26" height="20" rx="3.5" fill="var(--zen-primary-color, #707ac2)" fill-opacity="0.88" stroke="var(--zen-primary-color, #707ac2)" stroke-width="1"/>
-                            <rect x="6" y="41" width="24" height="3" rx="1.5" fill="rgba(255,255,255,0.22)"/>
-                            <rect x="6" y="47" width="18" height="3" rx="1.5" fill="rgba(255,255,255,0.15)"/>
-                            <rect x="6" y="53" width="21" height="2.5" rx="1.2" fill="rgba(255,255,255,0.1)"/>
-                            <rect x="44" y="21" width="90" height="32" rx="4" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-                          </svg>
+                <!-- Apps Placement -->
+                <div class="zs-placement-group">
+                  <div class="zs-label-container">
+                    <span class="zs-label">Apps Placement</span>
+                    <span class="zs-sublabel">Choose where the Apps will be located across the interface</span>
+                  </div>
+                  <input type="hidden" id="zs-ag-placement" value="sidebar" />
+                  <div class="zs-placement-cards">
+                    <button type="button" class="zs-placement-btn" id="zs-placement-sidebar" data-placement="sidebar" data-active="true" title="Dock Apps Box inside Zen Sidebar">
+                      <div class="zs-placement-svg-box">
+                        <div style="width: 128px; height: 64px; background: #18181b; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); display: flex; padding: 5px; gap: 5px; box-sizing: border-box; overflow: hidden;">
+                          <div style="width: 24px; height: 100%; background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 22%, transparent); border: 1px solid color-mix(in srgb, var(--zen-primary-color, #6366f1) 45%, transparent); border-radius: 3px;"></div>
+                          <div style="flex: 1; height: 100%; background: rgba(255,255,255,0.05); border-radius: 3px;"></div>
                         </div>
-                        <span class="zs-placement-label">Sidebar</span>
-                        <span class="zs-placement-sublabel">Apps Box</span>
-                      </button>
+                      </div>
+                      <span class="zs-placement-label">Sidebar</span>
+                    </button>
 
-                      <button type="button" class="zs-placement-btn" id="zs-placement-strip" data-placement="vertical-bar" data-active="false" title="Dock Apps Bar as dedicated strip on opposite edge">
-                        <div class="zs-placement-svg-box">
-                          <svg width="142" height="60" viewBox="0 0 142 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="1" y="1" width="140" height="58" rx="6" fill="#131316" stroke="rgba(255,255,255,0.18)" stroke-width="1.2"/>
-                            <line x1="1" y1="13" x2="141" y2="13" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-                            <circle cx="8" cy="7" r="2" fill="rgba(255,255,255,0.3)"/>
-                            <circle cx="15" cy="7" r="2" fill="rgba(255,255,255,0.3)"/>
-                            <circle cx="22" cy="7" r="2" fill="rgba(255,255,255,0.3)"/>
-                            <line x1="36" y1="13" x2="36" y2="59" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-                            <rect x="6" y="19" width="24" height="3" rx="1.5" fill="rgba(255,255,255,0.22)"/>
-                            <rect x="6" y="26" width="18" height="3" rx="1.5" fill="rgba(255,255,255,0.15)"/>
-                            <rect x="6" y="33" width="22" height="3" rx="1.5" fill="rgba(255,255,255,0.15)"/>
-                            <rect x="6" y="40" width="15" height="3" rx="1.5" fill="rgba(255,255,255,0.1)"/>
-                            <rect x="44" y="21" width="82" height="32" rx="4" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-                            <rect x="131" y="16" width="6.5" height="38" rx="2.5" fill="var(--zen-primary-color, #707ac2)" fill-opacity="0.9" stroke="var(--zen-primary-color, #707ac2)" stroke-width="1"/>
-                          </svg>
+                    <button type="button" class="zs-placement-btn" id="zs-placement-strip" data-placement="vertical-bar" data-active="false" title="Dock Apps Bar as dedicated strip on opposite edge">
+                      <div class="zs-placement-svg-box">
+                        <div style="width: 128px; height: 64px; background: #18181b; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); display: flex; padding: 5px; gap: 5px; box-sizing: border-box; overflow: hidden;">
+                          <div style="flex: 1; height: 100%; background: rgba(255,255,255,0.05); border-radius: 3px;"></div>
+                          <div style="width: 10px; height: 100%; background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 22%, transparent); border: 1px solid color-mix(in srgb, var(--zen-primary-color, #6366f1) 45%, transparent); border-radius: 3px;"></div>
                         </div>
-                        <span class="zs-placement-label">Apps Bar</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Apps Number Cap -->
-                  <div class="zs-row">
-                    <div class="zs-label-container">
-                      <span class="zs-label">Apps Number Cap</span>
-                      <span class="zs-sublabel">Choose the maximum number of Apps you can add</span>
-                    </div>
-                    <div class="zs-h-stepper">
-                      <button type="button" class="zs-h-btn zs-h-dec" data-target="zs-max-apps" data-step="-1">−</button>
-                      <input type="number" id="zs-max-apps" class="zs-h-val" min="1" max="100" step="1" />
-                      <button type="button" class="zs-h-btn zs-h-inc" data-target="zs-max-apps" data-step="1">+</button>
-                    </div>
-                  </div>
-
-                  <!-- 10x6 Selection Matrix (Apps Box) -->
-                  <div class="zs-matrix-wrapper" id="zs-matrix-wrapper">
-                    <div class="zs-matrix-header">
-                      <div class="zs-label-container">
-                        <span class="zs-matrix-title">Apps Box</span>
-                        <span class="zs-sublabel">Choose how many Apps are allowed in each row and how many rows are allowed to be shown in the Apps Box before you have to scroll down to reach other Apps</span>
                       </div>
-                      <div class="zs-matrix-readout">
-                        <span id="zs-matrix-dims">7 Columns × 3 Rows</span>
-                        <span id="zs-matrix-total-badge" class="zs-matrix-badge">21 Visible Apps</span>
-                      </div>
-                    </div>
-                    <input type="hidden" id="zs-apps-row" value="7" />
-                    <input type="hidden" id="zs-max-rows" value="3" />
-                    <div class="zs-matrix-grid" id="zs-matrix-grid">
-                      ${matrixCellsHtml}
-                    </div>
+                      <span class="zs-placement-label">Apps Bar</span>
+                    </button>
                   </div>
+                </div>
 
-                  <!-- Panel Animation -->
-                  <div class="zs-row">
+                <!-- 10x6 Selection Matrix (Apps Box) -->
+                <div class="zs-matrix-wrapper" id="zs-matrix-wrapper">
+                  <div class="zs-matrix-header">
                     <div class="zs-label-container">
-                      <span class="zs-label">Panel Animation</span>
-                      <span class="zs-sublabel">Choose how the opening/closing Apps panels should be animated</span>
+                      <span class="zs-matrix-title">Apps Box</span>
+                      <span class="zs-sublabel">Choose how many Apps per row and visible rows</span>
                     </div>
-                    <select id="zs-anim-type" class="zs-select">
-                      <option value="slide">Smooth Slide</option>
-                      <option value="spring-snappy">Snappy Spring</option>
-                      <option value="spring-gentle">Gentle Spring</option>
-                      <option value="spring-bouncy">Bouncy Spring</option>
-                      <option value="elastic">Elastic</option>
-                      <option value="none">Instant</option>
-                    </select>
+                    <div class="zs-matrix-readout">
+                      <span id="zs-matrix-dims">7 Columns × 3 Rows</span>
+                      <span id="zs-matrix-total-badge" class="zs-matrix-badge">21 Visible Apps</span>
+                    </div>
                   </div>
+                  <input type="hidden" id="zs-apps-row" value="7" />
+                  <input type="hidden" id="zs-max-rows" value="3" />
+                  <div class="zs-matrix-grid" id="zs-matrix-grid">
+                    ${matrixCellsHtml}
+                  </div>
+                </div>
 
-                  <!-- Animation Speed -->
-                  <div class="zs-row">
+                <!-- Apps Number Cap -->
+                <div class="zs-row">
+                  <div class="zs-label-container">
+                    <span class="zs-label">Apps Number Cap</span>
+                    <span class="zs-sublabel">Maximum number of apps you can pin</span>
+                  </div>
+                  <div class="zs-h-stepper">
+                    <button type="button" class="zs-h-btn zs-h-dec" data-target="zs-max-apps" data-step="-1">−</button>
+                    <input type="number" id="zs-max-apps" class="zs-h-val" min="1" max="100" step="1" />
+                    <button type="button" class="zs-h-btn zs-h-inc" data-target="zs-max-apps" data-step="1">+</button>
+                  </div>
+                </div>
+
+                <!-- Panel Animation -->
+                <div class="zs-row">
+                  <div class="zs-label-container">
+                    <span class="zs-label">Panel Animation</span>
+                    <span class="zs-sublabel">Opening/closing apps panel easing</span>
+                  </div>
+                  <select id="zs-anim-type" class="zs-select">
+                    <option value="slide">Smooth Slide</option>
+                    <option value="spring-snappy">Snappy Spring</option>
+                    <option value="spring-gentle">Gentle Spring</option>
+                    <option value="spring-bouncy">Bouncy Spring</option>
+                    <option value="elastic">Elastic</option>
+                    <option value="none">Instant</option>
+                  </select>
+                </div>
+
+                <!-- Animation Speed -->
+                <div class="zs-stacked-slider">
+                  <div class="zs-stacked-slider-header">
                     <div class="zs-label-container">
                       <span class="zs-label">Animation Speed</span>
                       <span class="zs-sublabel">Adjust panel animation duration</span>
                     </div>
-                    <div class="zs-speed-container">
-                      <input type="range" id="zs-anim-speed-slider" class="zs-range-slider" min="0" max="2000" step="50" />
-                      <div class="zs-speed-input-box">
-                        <input type="number" id="zs-anim-speed" class="zs-speed-input" min="0" max="2000" step="50" />
-                        <span class="zs-speed-unit">ms</span>
-                      </div>
-                    </div>
+                    <span id="zs-anim-speed-badge" class="zs-mono-badge">450 ms</span>
                   </div>
-
-                  <!-- Animation Preview Demo -->
-                  <div class="zs-anim-preview-group">
-                    <div class="zs-label-container">
-                      <span class="zs-label">Animation Preview</span>
-                      <span class="zs-sublabel">Hover or click below to test opening/closing speed and easing curve</span>
-                    </div>
-                    <div class="zs-anim-preview-box" id="zs-anim-preview-box">
-                      <div class="zs-anim-preview-sidebar">
-                        <div class="zs-anim-preview-dot"></div>
-                        <div class="zs-anim-preview-dot"></div>
-                        <div class="zs-anim-preview-dot"></div>
-                      </div>
-                      <div class="zs-anim-preview-panel" id="zs-anim-preview-panel">
-                        <div class="zs-anim-preview-pill"></div>
-                        <div class="zs-anim-preview-line" style="width: 85%;"></div>
-                        <div class="zs-anim-preview-line" style="width: 65%;"></div>
-                        <div class="zs-anim-preview-line" style="width: 75%;"></div>
-                      </div>
-                      <span class="zs-anim-preview-hint">Hover or click to preview</span>
-                    </div>
-                  </div>
-
-                  <button id="zs-ag-reset" class="zs-reset-btn">Reset Apps Defaults</button>
+                  <input type="range" id="zs-anim-speed-slider" class="zs-range-slider" min="0" max="2000" step="25" />
+                  <input type="hidden" id="zs-anim-speed" value="450" />
                 </div>
+
+                <!-- Animation Preview Demo -->
+                <div class="zs-anim-preview-group">
+                  <div class="zs-label-container">
+                    <span class="zs-label">Animation Preview</span>
+                    <span class="zs-sublabel">Hover or click below to test opening/closing speed and easing curve</span>
+                  </div>
+                  <div class="zs-anim-preview-box" id="zs-anim-preview-box">
+                    <div class="zs-anim-preview-sidebar">
+                      <div class="zs-anim-preview-dot"></div>
+                      <div class="zs-anim-preview-dot"></div>
+                      <div class="zs-anim-preview-dot"></div>
+                    </div>
+                    <div class="zs-anim-preview-panel" id="zs-anim-preview-panel">
+                      <div class="zs-anim-preview-pill"></div>
+                      <div class="zs-anim-preview-line" style="width: 85%;"></div>
+                      <div class="zs-anim-preview-line" style="width: 65%;"></div>
+                      <div class="zs-anim-preview-line" style="width: 75%;"></div>
+                    </div>
+                    <span class="zs-anim-preview-hint">Hover or click to preview</span>
+                  </div>
+                </div>
+
+                <button id="zs-ag-reset" class="zs-reset-btn">Reset Apps Defaults</button>
               </div>
 
               <!-- Column 2: Tab Groups -->
-              <div class="zs-col">
+              <div class="zs-col" id="zs-tg-col">
                 <div class="zs-section-header">
-                  <div class="zs-section-title">Tab Groups</div>
+                  <h3 class="zs-section-title">Tab Groups</h3>
                   <div class="zs-header-toggle">
                     <span id="zs-tg-status" class="zs-toggle-status" data-enabled="true">Enabled</span>
                     <label class="zs-switch">
@@ -8426,71 +8296,72 @@
                   </div>
                 </div>
 
-                <div class="zs-card" id="zs-tg-card">
-                  <div class="zs-row">
-                    <div class="zs-label-container">
-                      <span class="zs-label">Close Groups at Startup</span>
-                    </div>
-                    <label class="zs-switch">
-                      <input type="checkbox" id="zs-tg-collapse" />
-                      <span class="zs-slider"></span>
-                    </label>
+                <div class="zs-row">
+                  <div class="zs-label-container">
+                    <span class="zs-label">Close Groups at Startup</span>
+                    <span class="zs-sublabel">Automatically fold groups when launching</span>
                   </div>
+                  <label class="zs-switch">
+                    <input type="checkbox" id="zs-tg-collapse" />
+                    <span class="zs-slider"></span>
+                  </label>
+                </div>
 
-                  <div class="zs-row">
-                    <div class="zs-label-container">
-                      <span class="zs-label">Groups Thumbnails</span>
-                      <span class="zs-sublabel">Shows interactive thumbnails when hovering a group label</span>
-                    </div>
-                    <label class="zs-switch">
-                      <input type="checkbox" id="zs-tg-thumbnails" />
-                      <span class="zs-slider"></span>
-                    </label>
+                <div class="zs-row">
+                  <div class="zs-label-container">
+                    <span class="zs-label">Group Thumbnails</span>
+                    <span class="zs-sublabel">Interactive thumbnails on hover</span>
                   </div>
+                  <label class="zs-switch">
+                    <input type="checkbox" id="zs-tg-thumbnails" />
+                    <span class="zs-slider"></span>
+                  </label>
+                </div>
 
-                  <div class="zs-row">
-                    <div class="zs-label-container">
-                      <span class="zs-label">Group Indicator</span>
-                      <span class="zs-sublabel">Shows open/close indicator next the group's name</span>
-                    </div>
-                    <label class="zs-switch">
-                      <input type="checkbox" id="zs-tg-chevron" />
-                      <span class="zs-slider"></span>
-                    </label>
+                <div class="zs-row">
+                  <div class="zs-label-container">
+                    <span class="zs-label">Group Indicator</span>
+                    <span class="zs-sublabel">Show open/close indicator next to name</span>
                   </div>
+                  <label class="zs-switch">
+                    <input type="checkbox" id="zs-tg-chevron" />
+                    <span class="zs-slider"></span>
+                  </label>
+                </div>
 
-                  <div class="zs-row" id="zs-tg-indicator-type-row">
-                    <div class="zs-label-container">
-                      <span class="zs-label">Indicator Type</span>
-                      <span class="zs-sublabel">Choose style of the group indicator</span>
-                    </div>
-                    <select id="zs-tg-indicator-type" class="zs-select">
-                      <option value="circle">Circle</option>
-                      <option value="chevron">Chevron</option>
-                    </select>
+                <div class="zs-row" id="zs-tg-indicator-type-row">
+                  <div class="zs-label-container">
+                    <span class="zs-label">Indicator Type</span>
+                    <span class="zs-sublabel">Choose the style of the indicator</span>
                   </div>
+                  <select id="zs-tg-indicator-type" class="zs-select">
+                    <option value="circle">Circle</option>
+                    <option value="chevron">Chevron</option>
+                  </select>
+                </div>
 
-                  <div class="zs-row">
+                <div class="zs-stacked-slider">
+                  <div class="zs-stacked-slider-header">
                     <div class="zs-label-container">
                       <span class="zs-label">Group Labels Opacity</span>
                       <span class="zs-sublabel">Adjust label pill transparency</span>
                     </div>
-                    <div class="zs-range-container">
-                      <input type="range" id="zs-tg-opacity" class="zs-range-slider" min="10" max="100" step="5" />
-                      <span id="zs-tg-opacity-val" class="zs-range-value">85%</span>
-                    </div>
+                    <span id="zs-tg-opacity-badge" class="zs-mono-badge">85%</span>
                   </div>
-
-                  <button id="zs-tg-reset" class="zs-reset-btn">Reset Tab Groups Defaults</button>
+                  <input type="range" id="zs-tg-opacity" class="zs-range-slider" min="10" max="100" step="5" />
                 </div>
+
+                <button id="zs-tg-reset" class="zs-reset-btn">Reset Tab Groups Defaults</button>
               </div>
             </div>
           </div>
 
           <!-- Tab Panel 2: Diagnostics -->
           <div class="zs-tab-panel" id="zs-panel-diagnostics" data-tab="diagnostics" data-active="false">
-            <div class="zs-section-title" style="margin-bottom: 2px;">Diagnostic Logging</div>
-            <div class="zs-card">
+            <div class="zs-section-header">
+              <h3 class="zs-section-title">Diagnostic Logging</h3>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 14px;">
               <div class="zs-row">
                 <div class="zs-label-container">
                   <span class="zs-label">Enable Diagnostic Logging</span>
@@ -8507,22 +8378,22 @@
                   <span class="zs-label">Export Log Path</span>
                   <span class="zs-sublabel" id="zs-pref-logger-path-desc">Directory where diagnostic logs are saved</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 6px; max-width: 55%;">
+                <div style="display: flex; align-items: center; gap: 8px; max-width: 55%;">
                   <input type="hidden" id="zs-pref-logger-path" />
-                  <button type="button" id="zs-btn-choose-path" class="zs-reset-btn" style="margin: 0; padding: 5px 10px; font-size: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: inherit; max-width: 240px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 6px;" title="Click to choose export directory">
+                  <button type="button" id="zs-btn-choose-path" class="zs-reset-btn" style="margin: 0; padding: 6px 12px; font-size: 12px; background: #18181b; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: inherit; max-width: 240px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 6px;" title="Click to choose export directory">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
                     <span id="zs-btn-choose-path-label">Default Folder</span>
                   </button>
-                  <button type="button" id="zs-btn-clear-path" title="Reset to default folder (chrome/logs)" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); cursor: pointer; padding: 4px 8px; display: none; align-items: center; justify-content: center; font-size: 11px; border-radius: 5px;">✕</button>
+                  <button type="button" id="zs-btn-clear-path" title="Reset to default folder (chrome/logs)" style="background: #18181b; border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); cursor: pointer; padding: 6px 10px; display: none; align-items: center; justify-content: center; font-size: 11px; border-radius: 6px;">✕</button>
                 </div>
               </div>
 
               <div class="zs-row">
                 <div class="zs-label-container">
                   <span class="zs-label">Capture Log</span>
-                  <span class="zs-sublabel">Generate and save a diagnostic log file instantly. (Shortcut: <kbd style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); border-radius: 3px; padding: 1px 4px; font-size: 10px;">Alt</kbd>+<kbd style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); border-radius: 3px; padding: 1px 4px; font-size: 10px;">L</kbd>)</span>
+                  <span class="zs-sublabel">Generate and save a diagnostic log file instantly. (Shortcut: <kbd style="background: #27272a; border: 1px solid rgba(255,255,255,0.14); border-radius: 4px; padding: 1px 5px; font-size: 11px;">Alt</kbd>+<kbd style="background: #27272a; border: 1px solid rgba(255,255,255,0.14); border-radius: 4px; padding: 1px 5px; font-size: 11px;">L</kbd>)</span>
                 </div>
-                <button id="zs-btn-capture-log" class="zs-btn-save" style="margin: 0; padding: 6px 16px; font-size: 12.5px;">Export</button>
+                <button id="zs-btn-capture-log" class="zs-btn-save" style="margin: 0; padding: 6px 18px; font-size: 12.5px;">Export</button>
               </div>
             </div>
           </div>
@@ -8562,7 +8433,7 @@
       // Header Enable/Disable toggle sync
       const agToggle = this.modal.querySelector("#zs-ag-enabled");
       const agStatus = this.modal.querySelector("#zs-ag-status");
-      const agCard = this.modal.querySelector("#zs-ag-card");
+      const agCol = this.modal.querySelector("#zs-ag-col");
       if (agToggle) {
         agToggle.addEventListener("change", () => {
           const isEnabled = agToggle.checked;
@@ -8570,13 +8441,13 @@
             agStatus.textContent = isEnabled ? "Enabled" : "Disabled";
             agStatus.setAttribute("data-enabled", isEnabled ? "true" : "false");
           }
-          if (agCard) agCard.setAttribute("data-disabled", !isEnabled ? "true" : "false");
+          if (agCol) agCol.setAttribute("data-disabled", !isEnabled ? "true" : "false");
         });
       }
 
       const tgToggle = this.modal.querySelector("#zs-tg-enabled");
       const tgStatus = this.modal.querySelector("#zs-tg-status");
-      const tgCard = this.modal.querySelector("#zs-tg-card");
+      const tgCol = this.modal.querySelector("#zs-tg-col");
       if (tgToggle) {
         tgToggle.addEventListener("change", () => {
           const isEnabled = tgToggle.checked;
@@ -8584,7 +8455,7 @@
             tgStatus.textContent = isEnabled ? "Enabled" : "Disabled";
             tgStatus.setAttribute("data-enabled", isEnabled ? "true" : "false");
           }
-          if (tgCard) tgCard.setAttribute("data-disabled", !isEnabled ? "true" : "false");
+          if (tgCol) tgCol.setAttribute("data-disabled", !isEnabled ? "true" : "false");
         });
       }
 
@@ -8673,6 +8544,7 @@
       const animTypeSelect = this.modal.querySelector("#zs-anim-type");
       const animSpeedSlider = this.modal.querySelector("#zs-anim-speed-slider");
       const animSpeedInput = this.modal.querySelector("#zs-anim-speed");
+      const animSpeedBadge = this.modal.querySelector("#zs-anim-speed-badge");
       const animPreviewBox = this.modal.querySelector("#zs-anim-preview-box");
 
       let previewPulseTimeout = null;
@@ -8695,6 +8567,7 @@
         if (speed <= 0 && type !== "none") {
           if (animTypeSelect) animTypeSelect.value = "none";
         }
+        if (animSpeedBadge) animSpeedBadge.textContent = `${speed} ms`;
         this.updatePreviewDemo(animTypeSelect ? animTypeSelect.value : type, speed);
       };
 
@@ -8748,6 +8621,18 @@
           } else {
             indicatorTypeRow.setAttribute("data-hidden", "true");
           }
+        });
+      }
+
+      // Tab Groups Opacity Slider Live Sync
+      const opacitySlider = this.modal.querySelector("#zs-tg-opacity");
+      const opacityBadge = this.modal.querySelector("#zs-tg-opacity-badge");
+      if (opacitySlider) {
+        opacitySlider.addEventListener("input", (e) => {
+          const val = parseInt(e.target.value, 10) || 85;
+          if (opacityBadge) opacityBadge.textContent = `${val}%`;
+          document.documentElement.style.setProperty("--zentral-tabgroup-label-opacity", (val / 100).toFixed(2));
+          document.documentElement.setAttribute("zentral-label-opacity-below-85", val < 85 ? "true" : "false");
         });
       }
 
@@ -8844,7 +8729,7 @@
           agStatus.textContent = "Enabled";
           agStatus.setAttribute("data-enabled", "true");
         }
-        if (agCard) agCard.removeAttribute("data-disabled");
+        if (agCol) agCol.removeAttribute("data-disabled");
         
         if (placementInput) placementInput.value = "sidebar";
         placementBtns.forEach(b => b.setAttribute("data-active", b.dataset.placement === "sidebar" ? "true" : "false"));
@@ -8854,6 +8739,7 @@
         get("zs-anim-type").value = "slide";
         get("zs-anim-speed").value = 450;
         if (get("zs-anim-speed-slider")) get("zs-anim-speed-slider").value = 450;
+        if (get("zs-anim-speed-badge")) get("zs-anim-speed-badge").textContent = "450 ms";
         get("zs-max-apps").value = 21;
         this.updatePreviewDemo("slide", 450);
       });
@@ -8865,7 +8751,7 @@
           tgStatus.textContent = "Enabled";
           tgStatus.setAttribute("data-enabled", "true");
         }
-        if (tgCard) tgCard.removeAttribute("data-disabled");
+        if (tgCol) tgCol.removeAttribute("data-disabled");
         
         get("zs-tg-collapse").checked = false;
         get("zs-tg-thumbnails").checked = true;
@@ -8873,22 +8759,11 @@
         if (indicatorTypeRow) indicatorTypeRow.removeAttribute("data-hidden");
         if (get("zs-tg-indicator-type")) get("zs-tg-indicator-type").value = "circle";
         get("zs-tg-opacity").value = 85;
-        get("zs-tg-opacity-val").textContent = "85%";
+        if (get("zs-tg-opacity-badge")) get("zs-tg-opacity-badge").textContent = "85%";
         document.documentElement.style.setProperty("--zentral-tabgroup-label-opacity", "0.85");
         document.documentElement.setAttribute("zentral-label-opacity-below-85", "false");
         document.documentElement.setAttribute("zentral-indicator-type", "circle");
       });
-
-      const opacityInput = this.modal.querySelector("#zs-tg-opacity");
-      const opacityVal = this.modal.querySelector("#zs-tg-opacity-val");
-      if (opacityInput && opacityVal) {
-        opacityInput.addEventListener("input", (e) => {
-          const val = parseInt(e.target.value);
-          opacityVal.textContent = val + "%";
-          document.documentElement.style.setProperty("--zentral-tabgroup-label-opacity", (val / 100).toFixed(2));
-          document.documentElement.setAttribute("zentral-label-opacity-below-85", val < 85 ? "true" : "false");
-        });
-      }
       
       this.populate();
     }
