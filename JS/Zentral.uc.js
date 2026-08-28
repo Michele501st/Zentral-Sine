@@ -7094,10 +7094,14 @@
         btn.setAttribute("data-active", btn.dataset.placement === placement ? "true" : "false");
       });
 
-      // Show/hide Apps Box Matrix based on placement
+      // Show/hide Apps Box Matrix with smooth slide animation based on placement
       const matrixWrapper = get("zs-matrix-wrapper");
       if (matrixWrapper) {
-        matrixWrapper.style.display = (placement === "sidebar") ? "" : "none";
+        if (placement === "sidebar") {
+          matrixWrapper.removeAttribute("data-hidden");
+        } else {
+          matrixWrapper.setAttribute("data-hidden", "true");
+        }
       }
 
       const cols = Core.getPref(Constants.Apps.PREF_APPS_PER_ROW, 7) || 7;
@@ -7134,7 +7138,11 @@
       get("zs-tg-chevron").checked = showIndicator;
       const indicatorTypeRow = get("zs-tg-indicator-type-row");
       if (indicatorTypeRow) {
-        indicatorTypeRow.style.display = showIndicator ? "" : "none";
+        if (showIndicator) {
+          indicatorTypeRow.removeAttribute("data-hidden");
+        } else {
+          indicatorTypeRow.setAttribute("data-hidden", "true");
+        }
       }
       if (get("zs-tg-indicator-type")) {
         get("zs-tg-indicator-type").value = Core.getPref(Constants.TabGroups.PREF_INDICATOR_TYPE, "circle") || "circle";
@@ -7298,10 +7306,10 @@
         .zs-dialog {
           background: #18181c !important;
           color: #f2f2f7 !important;
-          width: 1120px;
+          width: 1260px;
           max-width: 95vw;
-          height: 720px;
-          min-height: 600px;
+          height: 860px;
+          min-height: 740px;
           max-height: 94vh;
           border-radius: 14px;
           box-shadow: 0 28px 70px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
@@ -7313,7 +7321,7 @@
         }
 
         .zs-header {
-          padding: 14px 24px 12px 24px;
+          padding: 16px 28px 14px 28px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           display: flex;
           justify-content: space-between;
@@ -7331,20 +7339,20 @@
 
         .zs-title {
           margin: 0;
-          font-size: 15px;
+          font-size: 16px;
           font-weight: 600;
           letter-spacing: -0.2px;
           color: #ffffff !important;
         }
 
         .zs-version-badge {
-          font-size: 10.5px;
-          padding: 2px 6px;
-          border-radius: 8px;
+          font-size: 11px;
+          padding: 2px 7px;
+          border-radius: 10px;
           background: color-mix(in srgb, currentColor 10%, transparent);
           opacity: 0.75;
           font-weight: 600;
-          margin-left: 6px;
+          margin-left: 8px;
         }
 
         .zs-close-btn {
@@ -7372,18 +7380,18 @@
         .zs-tab-bar {
           display: flex;
           position: relative;
-          padding: 0 24px;
+          padding: 0 28px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           background: rgba(255, 255, 255, 0.02);
-          gap: 20px;
+          gap: 24px;
           flex-shrink: 0;
         }
 
         .zs-tab-btn {
           background: transparent;
           border: none;
-          padding: 10px 2px;
-          font-size: 13px;
+          padding: 11px 2px;
+          font-size: 13.5px;
           font-weight: 600;
           color: rgba(255, 255, 255, 0.55);
           cursor: pointer;
@@ -7413,19 +7421,14 @@
 
         /* Modal Body & Tab Panels */
         .zs-body {
-          padding: 14px 24px 16px 24px;
+          padding: 16px 28px 18px 28px;
           display: flex;
           flex-direction: column;
           flex: 1 1 auto;
           gap: 12px;
-          overflow-y: auto;
-          scrollbar-width: none;
+          overflow: hidden;
           background: #18181c !important;
           color: #f2f2f7 !important;
-        }
-
-        .zs-body::-webkit-scrollbar {
-          display: none;
         }
 
         .zs-tab-panel {
@@ -7444,8 +7447,8 @@
         /* 2-Column Side-by-Side Grid for Settings Tab */
         .zs-columns {
           display: grid;
-          grid-template-columns: 1.04fr 0.96fr;
-          gap: 20px;
+          grid-template-columns: 1.05fr 0.95fr;
+          gap: 22px;
           align-items: stretch;
           width: 100%;
           flex: 1 1 auto;
@@ -7499,7 +7502,7 @@
           background: rgba(255, 255, 255, 0.04) !important;
           border: 1px solid rgba(255, 255, 255, 0.07) !important;
           border-radius: 12px;
-          padding: 12px 14px;
+          padding: 14px 16px;
           display: flex;
           flex-direction: column;
           gap: 10px;
@@ -7541,7 +7544,7 @@
           line-height: 1.3;
         }
 
-        /* Visual Placement Cards (Highlight only - no pop up) */
+        /* Visual Placement Cards */
         .zs-placement-group {
           display: flex;
           flex-direction: column;
@@ -7551,54 +7554,66 @@
         .zs-placement-cards {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 10px;
+          gap: 12px;
         }
 
         .zs-placement-btn {
+          position: relative;
           background: rgba(255, 255, 255, 0.03);
-          border: 1.5px solid rgba(255, 255, 255, 0.1);
+          border: 2px solid rgba(255, 255, 255, 0.09);
           border-radius: 10px;
-          padding: 8px 8px 6px 8px;
+          padding: 10px 10px 8px 10px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 4px;
+          gap: 5px;
           cursor: pointer;
           transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
           color: #ffffff;
           outline: none;
           transform: none;
+          user-select: none;
         }
 
         .zs-placement-btn:hover {
           background: rgba(255, 255, 255, 0.07);
-          border-color: rgba(255, 255, 255, 0.28);
+          border-color: rgba(255, 255, 255, 0.25);
           transform: none;
         }
 
         .zs-placement-btn[data-active="true"] {
-          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 14%, rgba(255,255,255,0.03));
+          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 18%, rgba(255,255,255,0.04));
           border-color: var(--zen-primary-color, #707ac2);
-          box-shadow: 0 0 14px color-mix(in srgb, var(--zen-primary-color, #707ac2) 20%, transparent);
+          box-shadow: 0 0 0 1px var(--zen-primary-color, #707ac2), 0 4px 18px color-mix(in srgb, var(--zen-primary-color, #707ac2) 30%, transparent);
           transform: none;
+        }
+
+        .zs-placement-btn[data-active="true"] .zs-placement-label {
+          color: var(--zen-primary-color, #707ac2);
+          font-weight: 700;
         }
 
         .zs-placement-svg-box {
           width: 100%;
-          height: 48px;
+          height: 60px;
           display: flex;
           align-items: center;
           justify-content: center;
+          pointer-events: none;
+        }
+
+        .zs-placement-svg-box * {
+          pointer-events: none;
         }
 
         .zs-placement-label {
-          font-size: 12px;
+          font-size: 12.5px;
           font-weight: 600;
           letter-spacing: -0.1px;
         }
 
         .zs-placement-sublabel {
-          font-size: 10px;
+          font-size: 10.5px;
           color: rgba(255, 255, 255, 0.5);
           margin-top: -3px;
         }
@@ -7668,7 +7683,7 @@
           margin: 0;
         }
 
-        /* 10x6 Selection Matrix */
+        /* 10x6 Selection Matrix with Smooth Slide Collapse */
         .zs-matrix-wrapper {
           display: flex;
           flex-direction: column;
@@ -7676,7 +7691,29 @@
           background: rgba(0, 0, 0, 0.22);
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 10px;
-          padding: 8px 10px;
+          padding: 8px 12px;
+          overflow: hidden;
+          max-height: 220px;
+          opacity: 1;
+          transform: translateY(0);
+          transition: max-height 0.26s cubic-bezier(0.25, 1, 0.5, 1),
+                      opacity 0.20s ease,
+                      padding 0.26s cubic-bezier(0.25, 1, 0.5, 1),
+                      margin 0.26s cubic-bezier(0.25, 1, 0.5, 1),
+                      border-width 0.26s ease,
+                      transform 0.26s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .zs-matrix-wrapper[data-hidden="true"] {
+          max-height: 0 !important;
+          opacity: 0 !important;
+          padding-top: 0 !important;
+          padding-bottom: 0 !important;
+          margin-top: 0 !important;
+          margin-bottom: 0 !important;
+          border-width: 0 !important;
+          transform: translateY(-8px) !important;
+          pointer-events: none !important;
         }
 
         .zs-matrix-header {
@@ -7714,33 +7751,48 @@
           grid-template-columns: repeat(10, 1fr);
           grid-template-rows: repeat(6, 1fr);
           gap: 3px;
+          max-width: 320px;
           user-select: none;
           touch-action: none;
-          padding: 1px 0;
+          padding: 2px 0;
         }
 
         .zs-matrix-cell {
           aspect-ratio: 1 / 1;
-          min-height: 14px;
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          width: 100%;
+          min-height: 12px;
+          max-height: 24px;
+          background: rgba(255, 255, 255, 0.07);
+          border: 1px solid rgba(255, 255, 255, 0.11);
           border-radius: 3px;
           cursor: pointer;
-          transition: background-color 0.1s ease, border-color 0.1s ease;
+          transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease, transform 0.12s ease;
           transform: none;
         }
 
+        /* Unselected slot hover preview */
         .zs-matrix-cell:hover,
         .zs-matrix-cell[data-hover="true"] {
-          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 50%, rgba(255,255,255,0.2));
+          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 45%, rgba(255,255,255,0.15));
           border-color: var(--zen-primary-color, #707ac2);
           transform: none;
         }
 
+        /* Selected slot normal */
         .zs-matrix-cell[data-selected="true"] {
           background: var(--zen-primary-color, #707ac2);
-          border-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 80%, #ffffff);
+          border-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 75%, #ffffff);
           box-shadow: 0 0 5px color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent);
+        }
+
+        /* Selected slot hover highlight: distinct luminous glow and white border */
+        .zs-matrix-cell[data-selected="true"]:hover,
+        .zs-matrix-cell[data-selected="true"][data-hover="true"] {
+          background: color-mix(in srgb, var(--zen-primary-color, #707ac2) 75%, #ffffff) !important;
+          border-color: #ffffff !important;
+          box-shadow: 0 0 10px rgba(255, 255, 255, 0.75), inset 0 0 0 1px #ffffff !important;
+          filter: brightness(1.22) !important;
+          transform: scale(1.06) !important;
         }
 
         /* Animation Speed Input & Slider Composite */
@@ -7924,6 +7976,30 @@
           color: #f2f2f7 !important;
         }
 
+        /* Conditional Indicator Type Row with Smooth Slide */
+        #zs-tg-indicator-type-row {
+          overflow: hidden;
+          max-height: 48px;
+          opacity: 1;
+          transform: translateY(0);
+          transition: max-height 0.24s cubic-bezier(0.25, 1, 0.5, 1),
+                      opacity 0.18s ease,
+                      margin 0.24s cubic-bezier(0.25, 1, 0.5, 1),
+                      padding 0.24s cubic-bezier(0.25, 1, 0.5, 1),
+                      transform 0.24s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        #zs-tg-indicator-type-row[data-hidden="true"] {
+          max-height: 0 !important;
+          opacity: 0 !important;
+          margin-top: 0 !important;
+          margin-bottom: 0 !important;
+          padding-top: 0 !important;
+          padding-bottom: 0 !important;
+          transform: translateY(-6px) !important;
+          pointer-events: none !important;
+        }
+
         .zs-switch {
           position: relative;
           display: inline-block;
@@ -8034,7 +8110,7 @@
         }
 
         .zs-footer {
-          padding: 12px 24px;
+          padding: 12px 28px;
           background: rgba(255, 255, 255, 0.02) !important;
           border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
           display: flex;
@@ -8061,12 +8137,12 @@
         }
 
         .zs-btn-save {
-          padding: 7px 18px;
-          border-radius: 7px;
+          padding: 8px 20px;
+          border-radius: 8px;
           background: var(--zen-primary-color, #707ac2) !important;
           border: none;
           color: #ffffff !important;
-          font-size: 12.5px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
           box-shadow: 0 2px 8px color-mix(in srgb, var(--zen-primary-color, #707ac2) 30%, transparent);
@@ -8146,23 +8222,24 @@
                   <div class="zs-placement-group">
                     <div class="zs-label-container">
                       <span class="zs-label">Apps Placement</span>
-                      <span class="zs-sublabel">Choose where Apps will be located</span>
+                      <span class="zs-sublabel">Choose where the Apps will be located</span>
                     </div>
                     <input type="hidden" id="zs-ag-placement" value="sidebar" />
                     <div class="zs-placement-cards">
                       <button type="button" class="zs-placement-btn" id="zs-placement-sidebar" data-placement="sidebar" data-active="true" title="Dock Apps Box inside Zen Sidebar">
                         <div class="zs-placement-svg-box">
-                          <svg width="116" height="48" viewBox="0 0 120 54" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="1" y="1" width="118" height="52" rx="5" fill="#141416" stroke="rgba(255,255,255,0.15)" stroke-width="1.2"/>
-                            <line x1="1" y1="12" x2="119" y2="12" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-                            <circle cx="7" cy="6.5" r="2" fill="rgba(255,255,255,0.25)"/>
-                            <circle cx="13" cy="6.5" r="2" fill="rgba(255,255,255,0.25)"/>
-                            <circle cx="19" cy="6.5" r="2" fill="rgba(255,255,255,0.25)"/>
-                            <line x1="28" y1="12" x2="28" y2="53" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-                            <rect x="4" y="16" width="20" height="18" rx="3" fill="var(--zen-primary-color, #707ac2)" fill-opacity="0.85" stroke="var(--zen-primary-color, #707ac2)" stroke-width="1"/>
-                            <rect x="5" y="38" width="18" height="3" rx="1.5" fill="rgba(255,255,255,0.2)"/>
-                            <rect x="5" y="44" width="14" height="3" rx="1.5" fill="rgba(255,255,255,0.12)"/>
-                            <rect x="36" y="20" width="74" height="26" rx="3" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                          <svg width="142" height="60" viewBox="0 0 142 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="1" y="1" width="140" height="58" rx="6" fill="#131316" stroke="rgba(255,255,255,0.18)" stroke-width="1.2"/>
+                            <line x1="1" y1="13" x2="141" y2="13" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+                            <circle cx="8" cy="7" r="2" fill="rgba(255,255,255,0.3)"/>
+                            <circle cx="15" cy="7" r="2" fill="rgba(255,255,255,0.3)"/>
+                            <circle cx="22" cy="7" r="2" fill="rgba(255,255,255,0.3)"/>
+                            <line x1="36" y1="13" x2="36" y2="59" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+                            <rect x="5" y="17" width="26" height="20" rx="3.5" fill="var(--zen-primary-color, #707ac2)" fill-opacity="0.88" stroke="var(--zen-primary-color, #707ac2)" stroke-width="1"/>
+                            <rect x="6" y="41" width="24" height="3" rx="1.5" fill="rgba(255,255,255,0.22)"/>
+                            <rect x="6" y="47" width="18" height="3" rx="1.5" fill="rgba(255,255,255,0.15)"/>
+                            <rect x="6" y="53" width="21" height="2.5" rx="1.2" fill="rgba(255,255,255,0.1)"/>
+                            <rect x="44" y="21" width="90" height="32" rx="4" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
                           </svg>
                         </div>
                         <span class="zs-placement-label">Sidebar</span>
@@ -8171,18 +8248,19 @@
 
                       <button type="button" class="zs-placement-btn" id="zs-placement-strip" data-placement="vertical-bar" data-active="false" title="Dock Apps Bar as dedicated strip on opposite edge">
                         <div class="zs-placement-svg-box">
-                          <svg width="116" height="48" viewBox="0 0 120 54" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="1" y="1" width="118" height="52" rx="5" fill="#141416" stroke="rgba(255,255,255,0.15)" stroke-width="1.2"/>
-                            <line x1="1" y1="12" x2="119" y2="12" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-                            <circle cx="7" cy="6.5" r="2" fill="rgba(255,255,255,0.25)"/>
-                            <circle cx="13" cy="6.5" r="2" fill="rgba(255,255,255,0.25)"/>
-                            <circle cx="19" cy="6.5" r="2" fill="rgba(255,255,255,0.25)"/>
-                            <line x1="28" y1="12" x2="28" y2="53" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-                            <rect x="5" y="18" width="18" height="3" rx="1.5" fill="rgba(255,255,255,0.2)"/>
-                            <rect x="5" y="24" width="14" height="3" rx="1.5" fill="rgba(255,255,255,0.12)"/>
-                            <rect x="5" y="30" width="16" height="3" rx="1.5" fill="rgba(255,255,255,0.12)"/>
-                            <rect x="36" y="20" width="68" height="26" rx="3" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
-                            <rect x="110" y="14" width="6" height="36" rx="2" fill="var(--zen-primary-color, #707ac2)" fill-opacity="0.85" stroke="var(--zen-primary-color, #707ac2)" stroke-width="1"/>
+                          <svg width="142" height="60" viewBox="0 0 142 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="1" y="1" width="140" height="58" rx="6" fill="#131316" stroke="rgba(255,255,255,0.18)" stroke-width="1.2"/>
+                            <line x1="1" y1="13" x2="141" y2="13" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+                            <circle cx="8" cy="7" r="2" fill="rgba(255,255,255,0.3)"/>
+                            <circle cx="15" cy="7" r="2" fill="rgba(255,255,255,0.3)"/>
+                            <circle cx="22" cy="7" r="2" fill="rgba(255,255,255,0.3)"/>
+                            <line x1="36" y1="13" x2="36" y2="59" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+                            <rect x="6" y="19" width="24" height="3" rx="1.5" fill="rgba(255,255,255,0.22)"/>
+                            <rect x="6" y="26" width="18" height="3" rx="1.5" fill="rgba(255,255,255,0.15)"/>
+                            <rect x="6" y="33" width="22" height="3" rx="1.5" fill="rgba(255,255,255,0.15)"/>
+                            <rect x="6" y="40" width="15" height="3" rx="1.5" fill="rgba(255,255,255,0.1)"/>
+                            <rect x="44" y="21" width="82" height="32" rx="4" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+                            <rect x="131" y="16" width="6.5" height="38" rx="2.5" fill="var(--zen-primary-color, #707ac2)" fill-opacity="0.9" stroke="var(--zen-primary-color, #707ac2)" stroke-width="1"/>
                           </svg>
                         </div>
                         <span class="zs-placement-label">Apps Bar</span>
@@ -8454,7 +8532,7 @@
         });
       }
 
-      // Placement Visual Cards selection + Conditional matrix visibility
+      // Placement Visual Cards selection + Conditional matrix smooth slide visibility
       const placementBtns = this.modal.querySelectorAll(".zs-placement-btn");
       const placementInput = this.modal.querySelector("#zs-ag-placement");
       const matrixWrapper = this.modal.querySelector("#zs-matrix-wrapper");
@@ -8465,7 +8543,11 @@
           if (placementInput) placementInput.value = placement;
           placementBtns.forEach(b => b.setAttribute("data-active", b === btn ? "true" : "false"));
           if (matrixWrapper) {
-            matrixWrapper.style.display = (placement === "sidebar") ? "" : "none";
+            if (placement === "sidebar") {
+              matrixWrapper.removeAttribute("data-hidden");
+            } else {
+              matrixWrapper.setAttribute("data-hidden", "true");
+            }
           }
         });
       });
@@ -8587,12 +8669,16 @@
         });
       }
 
-      // Group Indicator toggle -> shows/hides Indicator Type row
+      // Group Indicator toggle -> smoothly slides/shows Indicator Type row
       const chevronToggle = this.modal.querySelector("#zs-tg-chevron");
       const indicatorTypeRow = this.modal.querySelector("#zs-tg-indicator-type-row");
       if (chevronToggle && indicatorTypeRow) {
         chevronToggle.addEventListener("change", () => {
-          indicatorTypeRow.style.display = chevronToggle.checked ? "" : "none";
+          if (chevronToggle.checked) {
+            indicatorTypeRow.removeAttribute("data-hidden");
+          } else {
+            indicatorTypeRow.setAttribute("data-hidden", "true");
+          }
         });
       }
 
@@ -8693,7 +8779,7 @@
         
         if (placementInput) placementInput.value = "sidebar";
         placementBtns.forEach(b => b.setAttribute("data-active", b.dataset.placement === "sidebar" ? "true" : "false"));
-        if (matrixWrapper) matrixWrapper.style.display = "";
+        if (matrixWrapper) matrixWrapper.removeAttribute("data-hidden");
         
         this.updateMatrixUI(7, 3);
         get("zs-anim-type").value = "slide";
@@ -8715,7 +8801,7 @@
         get("zs-tg-collapse").checked = false;
         get("zs-tg-thumbnails").checked = true;
         get("zs-tg-chevron").checked = true;
-        if (indicatorTypeRow) indicatorTypeRow.style.display = "";
+        if (indicatorTypeRow) indicatorTypeRow.removeAttribute("data-hidden");
         if (get("zs-tg-indicator-type")) get("zs-tg-indicator-type").value = "circle";
         get("zs-tg-opacity").value = 85;
         get("zs-tg-opacity-val").textContent = "85%";
