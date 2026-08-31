@@ -61,8 +61,15 @@ export default {
       body += `- **Sidebar Layout:** ${systemInfo.sidebarMode || "Vertical"}\n\n`;
 
       if (logs && logs.trim()) {
-        const lineCount = logs.split("\n").length;
-        body += `<details>\n<summary>📋 Diagnostic Log (${lineCount} lines - click to expand)</summary>\n\n\`\`\`text\n${logs.trim()}\n\`\`\`\n</details>\n`;
+        let processedLogs = logs.trim();
+        // GitHub limits issue bodies to 65,536 characters. Keep under 50,000 characters for safety.
+        if (processedLogs.length > 50000) {
+          const head = processedLogs.slice(0, 12000);
+          const tail = processedLogs.slice(-36000);
+          processedLogs = `${head}\n\n... [Log truncated: Preserved initial system snapshot & most recent events to fit GitHub's 65,536-character limit] ...\n\n${tail}`;
+        }
+        const lineCount = processedLogs.split("\n").length;
+        body += `<details>\n<summary>📋 Diagnostic Log (${lineCount} lines - click to expand)</summary>\n\n\`\`\`text\n${processedLogs}\n\`\`\`\n</details>\n`;
       }
 
       // 4. Send POST request to GitHub API

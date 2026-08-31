@@ -9500,6 +9500,15 @@
             }
           }
 
+          // Safety guard: GitHub limits issue bodies to 65,536 characters.
+          // Truncate logs if necessary, preserving the initial snapshot & most recent trace events.
+          let sendLogContent = logContent;
+          if (sendLogContent && sendLogContent.length > 50000) {
+            const head = sendLogContent.slice(0, 12000);
+            const tail = sendLogContent.slice(-36000);
+            sendLogContent = `${head}\n\n... [Log truncated: Preserved initial system snapshot & most recent events to fit GitHub's 65,536-character limit] ...\n\n${tail}`;
+          }
+
           const systemInfo = {
             zentralVersion: "v0.1.6",
             zenVersion: navigator.userAgent,
@@ -9523,7 +9532,7 @@
                   description: desc,
                   category,
                   systemInfo,
-                  logs: logContent
+                  logs: sendLogContent
                 })
               });
 
@@ -9537,6 +9546,8 @@
                 }
                 titleInput.value = "";
                 descInput.value = "";
+              } else {
+                console.warn("[Zentral-Report] Worker returned error:", resp.status, result);
               }
             } catch (postErr) {
               console.warn("[Zentral-Report] Worker submission failed, falling back to Web:", postErr);
