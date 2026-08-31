@@ -1283,6 +1283,42 @@ panel[id*="tabgroup-editor"] {
   box-sizing: border-box !important;
 }
 
+#zentral-settings-modal .zs-placement-sidebar-container {
+  width: 24px !important;
+  height: 100% !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 3px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  padding: 2px !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+#zentral-settings-modal .zs-placement-appbox-indicator {
+  width: 100% !important;
+  height: 15px !important;
+  border-radius: 2px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-sizing: border-box !important;
+  transition: background 0.15s ease, border-color 0.15s ease !important;
+}
+
+#zentral-settings-modal .zs-placement-btn[data-active="true"] .zs-placement-appbox-indicator {
+  background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 40%, transparent) !important;
+  border-color: var(--zen-primary-color, #6366f1) !important;
+}
+
+#zentral-settings-modal .zs-placement-sidebar-body {
+  width: 100% !important;
+  flex: 1 1 auto !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-radius: 2px !important;
+}
+
 #zentral-settings-modal .zs-placement-btn .zs-placement-bar-indicator {
   background: rgba(255, 255, 255, 0.12) !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;

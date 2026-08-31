@@ -7703,6 +7703,42 @@
           box-sizing: border-box;
         }
 
+        .zs-placement-sidebar-container {
+          width: 24px;
+          height: 100%;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 3px;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+          padding: 2px;
+          box-sizing: border-box;
+          flex-shrink: 0;
+        }
+
+        .zs-placement-appbox-indicator {
+          width: 100%;
+          height: 15px;
+          border-radius: 2px;
+          background: rgba(255, 255, 255, 0.12);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          box-sizing: border-box;
+          transition: background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .zs-placement-btn[data-active="true"] .zs-placement-appbox-indicator {
+          background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 40%, transparent);
+          border-color: var(--zen-primary-color, #6366f1);
+        }
+
+        .zs-placement-sidebar-body {
+          width: 100%;
+          flex: 1 1 auto;
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 2px;
+        }
+
         .zs-placement-btn .zs-placement-bar-indicator {
           background: rgba(255, 255, 255, 0.12);
           border: 1px solid rgba(255, 255, 255, 0.15);
@@ -8462,7 +8498,10 @@
                     <div class="zs-placement-cards">
                       <button type="button" class="zs-placement-btn" id="zs-placement-sidebar" data-placement="sidebar" data-active="true" title="Dock Apps Box inside Zen Sidebar">
                         <div class="zs-placement-svg-box">
-                          <div class="zs-placement-bar-indicator" style="width: 24px; height: 100%;"></div>
+                          <div class="zs-placement-sidebar-container">
+                            <div class="zs-placement-appbox-indicator"></div>
+                            <div class="zs-placement-sidebar-body"></div>
+                          </div>
                           <div class="zs-placement-content-preview"></div>
                         </div>
                         <span class="zs-placement-label">Sidebar</span>
