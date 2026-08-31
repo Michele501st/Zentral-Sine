@@ -173,10 +173,12 @@
       record("info", tag, msg, mod);
     },
     layout(component, details) {
-      if (!isLoggerEnabled() || !isModuleEnabled("layout")) return;
+      if (!isLoggerEnabled()) return;
+      const mod = classifyModuleFromTag(component) || "layout";
+      if (!isModuleEnabled(mod)) return;
       const msg = typeof details === "object" ? JSON.stringify(details) : String(details);
       _log(`[Zentral-Layout:${component}] ${msg}`);
-      record("layout", `Layout:${component}`, msg, "layout");
+      record("layout", `Layout:${component}`, msg, mod);
     },
     inspectLayout() {
       if (!isLoggerEnabled() || !isModuleEnabled("layout")) return "";
@@ -922,14 +924,14 @@
     const tile = t.closest(".zen-app-tile");
     if (tile) {
       const appId = tile.getAttribute("data-app-id");
-      ZentralLogger.log("UserInteraction", `Clicked App Tile [id="${appId}"]`);
+      ZentralLogger.log("UserInteraction:Apps", `Clicked App Tile [id="${appId}"]`);
       return;
     }
 
     // App Panel action buttons
     const btn = t.closest(".zen-app-btn");
     if (btn) {
-      ZentralLogger.log("UserInteraction", `Clicked App Panel Action Button [title="${btn.title || btn.className}"]`);
+      ZentralLogger.log("UserInteraction:Apps", `Clicked App Panel Action Button [title="${btn.title || btn.className}"]`);
       return;
     }
 
@@ -937,14 +939,14 @@
     const group = t.closest("tab-group");
     if (group) {
       const label = group.label || group.getAttribute("label") || "(group)";
-      ZentralLogger.log("UserInteraction", `Clicked Tab Group "${label}" [target=${t.className || t.tagName}]`);
+      ZentralLogger.log("UserInteraction:TabGroup", `Clicked Tab Group "${label}" [target=${t.className || t.tagName}]`);
       return;
     }
 
     // Settings Modal elements
     const modal = t.closest("#zentral-settings-modal");
     if (modal) {
-      ZentralLogger.log("UserInteraction", `Settings Modal interaction on <${t.tagName.toLowerCase()} id="${t.id}" class="${t.className}">`);
+      ZentralLogger.log("UserInteraction:Settings", `Settings Modal interaction on <${t.tagName.toLowerCase()} id="${t.id}" class="${t.className}">`);
       return;
     }
   };
