@@ -86,6 +86,8 @@
       DEFAULT_MAX_APPS: 21,
       DEFAULT_APPS_PER_ROW: 7,
       DEFAULT_MAX_ROWS: 3,
+      /** Fixed number of slots hosted in the Utility section */
+      UTILITY_SLOTS_COUNT: 4,
       /** Sidebar width (px) below which layout is treated as collapsed. */
       COLLAPSED_WIDTH_THRESHOLD: 140
     },
@@ -141,7 +143,7 @@
         [Constants.Apps.PREF_MAX_ROWS]: Constants.Apps.DEFAULT_MAX_ROWS,
         [Constants.Apps.PREF_AUTOHIDE]: false,
         [Constants.Apps.PREF_PLACEMENT]: "sidebar",
-        [Constants.Apps.PREF_UTILITY_ORDER]: '["settings","autohide"]',
+        [Constants.Apps.PREF_UTILITY_ORDER]: '["autohide",null,null,"settings"]',
         [Constants.TabGroups.PREF_COLORS]: "{}",
         [Constants.TabGroups.PREF_STATE]: "{}",
         [Constants.TabGroups.PREF_ENABLED]: true,
@@ -393,7 +395,7 @@
      */
     #state = {
       apps: [],
-      utilitySlots: ["settings", "autohide"],
+      utilitySlots: ["autohide", null, null, "settings"],
       activeAppId: null,
       isPinned: false,
       isExpanded: false,
@@ -526,27 +528,30 @@
      * Loads the preferred display slot positions for the Apps Grid Utility Section buttons.
      */
     loadUtilityOrder() {
+      const slotCount = Constants.Apps.UTILITY_SLOTS_COUNT || 4;
       try {
         const raw = Core.getPref(Constants.Apps.PREF_UTILITY_ORDER);
         const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const cols = parseInt(Core.getPref(Constants.Apps.PREF_APPS_PER_ROW, 7), 10) || 7;
-          if (parsed.every(x => typeof x === "string")) {
-            const slots = new Array(cols).fill(null);
-            parsed.forEach((k, idx) => { if (idx < cols) slots[idx] = k; });
-            this.#state.utilitySlots = slots;
-          } else {
-            this.#state.utilitySlots = parsed;
-          }
+          const slots = new Array(slotCount).fill(null);
+          parsed.forEach((k, idx) => { if (idx < slotCount && k) slots[idx] = k; });
+          const required = ["settings", "autohide"];
+          required.forEach(reqKey => {
+            if (!slots.includes(reqKey)) {
+              const emptyIdx = slots.indexOf(null);
+              if (emptyIdx > -1) slots[emptyIdx] = reqKey;
+              else slots[0] = reqKey;
+            }
+          });
+          this.#state.utilitySlots = slots;
           return;
         }
       } catch (e) {
         console.warn("[ZentralApps] Failed to load utility order pref:", e);
       }
-      const cols = parseInt(Core.getPref(Constants.Apps.PREF_APPS_PER_ROW, 7), 10) || 7;
-      const defaultSlots = new Array(cols).fill(null);
-      defaultSlots[0] = "settings";
-      defaultSlots[1] = "autohide";
+      const defaultSlots = new Array(slotCount).fill(null);
+      defaultSlots[0] = "autohide";
+      defaultSlots[3] = "settings";
       this.#state.utilitySlots = defaultSlots;
     }
 
@@ -993,7 +998,7 @@
 
         .zentral-apps-utility-row {
           display: grid;
-          grid-template-columns: repeat(var(--zentral-grid-cols, 7), minmax(0, 1fr));
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           justify-items: center;
           align-items: center;
           width: 100%;
@@ -2345,8 +2350,8 @@
 
       const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
       const isHorizontal = this.#dom.grid?.classList.contains("zen-apps-horizontal");
-      const cols = parseInt(Core.getPref(Constants.Apps.PREF_APPS_PER_ROW, 7), 10) || 7;
-      row.style.setProperty("--zentral-grid-cols", cols);
+      const slotCount = Constants.Apps.UTILITY_SLOTS_COUNT || 4;
+      row.style.setProperty("--zentral-grid-cols", slotCount);
 
       if (isHorizontal) {
         // Horizontal Toolbar Mode: Single inline flex row with Settings button (autohide excluded)
@@ -2369,24 +2374,16 @@
         return;
       }
 
-      // Vertical Sidebar Mode: Full multi-slot grid supporting free drag & drop
-      if (!Array.isArray(this.#state.utilitySlots)) {
-        this.#state.utilitySlots = new Array(cols).fill(null);
-        this.#state.utilitySlots[0] = "settings";
-        this.#state.utilitySlots[1] = "autohide";
-      }
-
-      while (this.#state.utilitySlots.length < cols) {
-        this.#state.utilitySlots.push(null);
-      }
-      for (let i = cols; i < this.#state.utilitySlots.length; i++) {
-        const overflowKey = this.#state.utilitySlots[i];
-        if (overflowKey) {
-          const emptyIdx = this.#state.utilitySlots.slice(0, cols).indexOf(null);
-          if (emptyIdx > -1) this.#state.utilitySlots[emptyIdx] = overflowKey;
+      // Vertical Sidebar Mode: Always fixed 4-slot grid supporting free drag & drop
+      if (!Array.isArray(this.#state.utilitySlots) || this.#state.utilitySlots.length !== slotCount) {
+        const slots = new Array(slotCount).fill(null);
+        if (Array.isArray(this.#state.utilitySlots)) {
+          this.#state.utilitySlots.forEach((k, idx) => {
+            if (idx < slotCount && k) slots[idx] = k;
+          });
         }
+        this.#state.utilitySlots = slots;
       }
-      this.#state.utilitySlots = this.#state.utilitySlots.slice(0, cols);
 
       const required = ["settings", "autohide"];
       required.forEach(reqKey => {
@@ -2402,7 +2399,7 @@
 
       let draggedKey = null;
 
-      for (let slotIdx = 0; slotIdx < cols; slotIdx++) {
+      for (let slotIdx = 0; slotIdx < slotCount; slotIdx++) {
         const slotEl = document.createElement("div");
         slotEl.className = "zentral-utility-slot";
         slotEl.dataset.slotIndex = slotIdx;

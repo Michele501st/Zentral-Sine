@@ -2634,7 +2634,7 @@ panel[id*="tabgroup-editor"] {
 
 .zentral-apps-utility-row {
   display: grid;
-  grid-template-columns: repeat(var(--zentral-grid-cols, 7), minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   justify-items: center;
   align-items: center;
   width: 100%;
