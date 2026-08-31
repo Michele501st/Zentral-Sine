@@ -8241,8 +8241,11 @@
           text-overflow: ellipsis;
           flex: 1 1 auto;
           text-align: left;
-          font-size: 13px;
+          font-size: 12.5px;
           line-height: 1;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
         }
 
         .zs-custom-select-trigger * {
@@ -8299,13 +8302,16 @@
 
         .zs-custom-select-option {
           padding: 6px 10px;
-          font-size: 13px;
+          font-size: 12.5px;
           font-weight: 500;
           color: #e4e4e7;
           border-radius: 6px;
           cursor: pointer;
           transition: background-color 0.1s ease, color 0.1s ease;
           white-space: nowrap;
+          display: flex;
+          align-items: center;
+          gap: 7px;
         }
 
         .zs-custom-select-option:hover {
@@ -8317,6 +8323,21 @@
           background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 18%, rgba(255, 255, 255, 0.05));
           color: color-mix(in srgb, var(--zen-primary-color, #6366f1) 85%, #ffffff);
           font-weight: 600;
+        }
+
+        .zs-cat-icon {
+          width: 14px !important;
+          height: 14px !important;
+          min-width: 14px !important;
+          min-height: 14px !important;
+          color: rgba(255, 255, 255, 0.7);
+          flex-shrink: 0;
+          display: block;
+        }
+
+        .zs-custom-select-option:hover .zs-cat-icon,
+        .zs-custom-select-option[data-selected="true"] .zs-cat-icon {
+          color: currentColor;
         }
 
         #zs-tg-content {
@@ -8593,7 +8614,7 @@
           const isSelected = opt.dataset.value === val;
           opt.setAttribute("data-selected", isSelected ? "true" : "false");
           if (isSelected && label) {
-            label.textContent = opt.textContent.trim();
+            label.innerHTML = opt.innerHTML;
           }
         });
       };
@@ -9021,18 +9042,33 @@
                     <label class="zs-label" for="zs-report-title" style="font-size: 12.5px;">Issue Title</label>
                     <input type="text" id="zs-report-title" class="zs-text-input" placeholder="Brief summary of the issue..." style="width: 100%;" />
                   </div>
-                  <div style="width: 220px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;">
+                  <div style="width: 260px; min-width: 240px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;">
                     <label class="zs-label" style="font-size: 12.5px;">Category</label>
                     <div class="zs-custom-select" id="zs-report-category-dropdown" data-name="report-category" style="width: 100%;">
                       <button type="button" class="zs-custom-select-trigger" aria-haspopup="listbox" aria-expanded="false" style="width: 100%;">
-                        <span class="zs-custom-select-label">🐛 Bug / Malfunction</span>
+                        <span class="zs-custom-select-label">
+                          <svg class="zs-cat-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>
+                          <span>Bug / Malfunction</span>
+                        </span>
                         <svg class="zs-custom-select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; min-width: 14px; min-height: 14px; flex-shrink: 0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
                       </button>
                       <div class="zs-custom-select-menu" role="listbox">
-                        <div class="zs-custom-select-option" role="option" data-value="bug" data-selected="true">🐛 Bug / Malfunction</div>
-                        <div class="zs-custom-select-option" role="option" data-value="layout">📐 Layout / Visual Alignment</div>
-                        <div class="zs-custom-select-option" role="option" data-value="performance">⚡ Performance / Lag</div>
-                        <div class="zs-custom-select-option" role="option" data-value="enhancement">💡 Feature Request / Feedback</div>
+                        <div class="zs-custom-select-option" role="option" data-value="bug" data-selected="true">
+                          <svg class="zs-cat-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>
+                          <span>Bug / Malfunction</span>
+                        </div>
+                        <div class="zs-custom-select-option" role="option" data-value="layout">
+                          <svg class="zs-cat-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                          <span>Layout / Visual Alignment</span>
+                        </div>
+                        <div class="zs-custom-select-option" role="option" data-value="performance">
+                          <svg class="zs-cat-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                          <span>Performance / Lag</span>
+                        </div>
+                        <div class="zs-custom-select-option" role="option" data-value="enhancement">
+                          <svg class="zs-cat-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                          <span>Feature Request / Feedback</span>
+                        </div>
                       </div>
                     </div>
                     <input type="hidden" id="zs-report-category" value="bug" />
@@ -9329,11 +9365,38 @@
         });
       }
 
+      // Helper to auto-save all diagnostics options immediately on change
+      const saveDiagnosticsPrefsImmediately = () => {
+        if (loggerMasterToggle) {
+          Core.setPref(Constants.Diagnostics.PREF_LOGGER_ENABLED, loggerMasterToggle.checked);
+          Core.setPref(Constants.Diagnostics.PREF_LOGGER_CORE, true);
+        }
+        if (loggerFullToggle) {
+          Core.setPref(Constants.Diagnostics.PREF_LOGGER_FULL, loggerFullToggle.checked);
+        }
+        if (tabsToggle) {
+          Core.setPref(Constants.Diagnostics.PREF_LOGGER_TABS, tabsToggle.checked);
+        }
+        if (appsToggle) {
+          Core.setPref(Constants.Diagnostics.PREF_LOGGER_APPS, appsToggle.checked);
+        }
+        if (menusToggle) {
+          Core.setPref(Constants.Diagnostics.PREF_LOGGER_MENUS, menusToggle.checked);
+        }
+        if (layoutToggle) {
+          Core.setPref(Constants.Diagnostics.PREF_LOGGER_LAYOUT, layoutToggle.checked);
+        }
+        if (pathInput) {
+          Core.setPref(Constants.Diagnostics.PREF_LOGGER_PATH, (pathInput.value || "").trim());
+        }
+      };
+
       // Diagnostic Logging Master Toggle
       const loggerMasterToggle = this.modal.querySelector("#zs-pref-logger-enabled");
       if (loggerMasterToggle) {
         loggerMasterToggle.addEventListener("change", () => {
           this.updateLoggerUIState();
+          saveDiagnosticsPrefsImmediately();
         });
       }
 
@@ -9354,6 +9417,7 @@
             if (layoutToggle) layoutToggle.checked = false;
           }
           this.updateLoggerUIState();
+          saveDiagnosticsPrefsImmediately();
         });
       }
 
@@ -9366,6 +9430,7 @@
             loggerFullToggle.checked = true;
             this.updateLoggerUIState();
           }
+          saveDiagnosticsPrefsImmediately();
         });
       });
 
@@ -9379,6 +9444,7 @@
           if (selectedFolder) {
             pathInput.value = selectedFolder;
             this.updatePathUI(selectedFolder);
+            saveDiagnosticsPrefsImmediately();
           }
         });
       }
@@ -9387,12 +9453,14 @@
         clearPathBtn.addEventListener("click", () => {
           pathInput.value = "";
           this.updatePathUI("");
+          saveDiagnosticsPrefsImmediately();
         });
       }
 
       const captureBtn = this.modal.querySelector("#zs-btn-capture-log");
       if (captureBtn) {
         captureBtn.addEventListener("click", () => {
+          saveDiagnosticsPrefsImmediately();
           const loggerToggle = this.modal.querySelector("#zs-pref-logger-enabled");
           const isEnabled = loggerToggle ? loggerToggle.checked : Core.getPref(Constants.Diagnostics.PREF_LOGGER_ENABLED, false);
 
@@ -9459,6 +9527,7 @@
 
       if (submitReportBtn && titleInput && descInput) {
         submitReportBtn.addEventListener("click", async () => {
+          saveDiagnosticsPrefsImmediately();
           const title = titleInput.value.trim();
           const desc = descInput.value.trim();
           const category = categoryInput ? categoryInput.value : "bug";

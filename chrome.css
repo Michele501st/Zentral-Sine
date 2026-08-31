@@ -1753,8 +1753,11 @@ panel[id*="tabgroup-editor"] {
   text-overflow: ellipsis !important;
   flex: 1 1 auto !important;
   text-align: left !important;
-  font-size: 13px !important;
+  font-size: 12.5px !important;
   line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
 }
 
 #zentral-settings-modal .zs-custom-select-trigger * {
@@ -1811,13 +1814,16 @@ panel[id*="tabgroup-editor"] {
 
 #zentral-settings-modal .zs-custom-select-option {
   padding: 6px 10px !important;
-  font-size: 13px !important;
+  font-size: 12.5px !important;
   font-weight: 500 !important;
   color: #e4e4e7 !important;
   border-radius: 6px !important;
   cursor: pointer !important;
   transition: background-color 0.1s ease, color 0.1s ease !important;
   white-space: nowrap !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
 }
 
 #zentral-settings-modal .zs-custom-select-option:hover {
@@ -1829,6 +1835,21 @@ panel[id*="tabgroup-editor"] {
   background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 18%, rgba(255, 255, 255, 0.05)) !important;
   color: color-mix(in srgb, var(--zen-primary-color, #6366f1) 85%, #ffffff) !important;
   font-weight: 600 !important;
+}
+
+#zentral-settings-modal .zs-cat-icon {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  flex-shrink: 0 !important;
+  display: block !important;
+}
+
+#zentral-settings-modal .zs-custom-select-option:hover .zs-cat-icon,
+#zentral-settings-modal .zs-custom-select-option[data-selected="true"] .zs-cat-icon {
+  color: currentColor !important;
 }
 
 /* Conditional Indicator Type Row with Smooth Zero-Gap Slide */

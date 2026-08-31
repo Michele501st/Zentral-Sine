@@ -51,7 +51,7 @@ export default {
       const labels = labelMap[category] || ["diagnostics"];
 
       // 3. Format GitHub Issue Markdown Body
-      let body = `### 📝 Description\n${description.trim()}\n\n`;
+      let body = `### Description\n${description.trim()}\n\n`;
 
       body += `### 🖥️ Environment\n`;
       body += `- **Zentral Version:** ${systemInfo.zentralVersion || "Unknown"}\n`;
