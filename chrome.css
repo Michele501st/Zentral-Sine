@@ -1037,29 +1037,59 @@ panel[id*="tabgroup-editor"] {
   animation: zsTabFadeIn 0.18s ease-out !important;
 }
 
-/* 2-Column Side-by-Side Open Layout */
+/* 2-Column Side-by-Side Open Layout with Vertical Separator */
 #zentral-settings-modal .zs-columns {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
-  gap: 36px !important;
+  gap: 0 !important;
   align-items: stretch !important;
   width: 100% !important;
   height: 100% !important;
   flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
 }
 
 #zentral-settings-modal .zs-col {
   display: flex !important;
   flex-direction: column !important;
-  gap: 14px !important;
   height: 100% !important;
+  min-height: 0 !important;
   min-width: 0 !important;
+  box-sizing: border-box !important;
 }
 
-#zentral-settings-modal .zs-col[data-disabled="true"] {
-  opacity: 0.35 !important;
-  pointer-events: none !important;
-  filter: grayscale(0.65) !important;
+#zentral-settings-modal #zs-ag-col {
+  padding-right: 24px !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
+}
+
+#zentral-settings-modal #zs-ag-col[data-placement="sidebar"] {
+  overflow-y: auto !important;
+}
+
+#zentral-settings-modal #zs-ag-col::-webkit-scrollbar {
+  width: 5px !important;
+}
+
+#zentral-settings-modal #zs-ag-col::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+#zentral-settings-modal #zs-ag-col::-webkit-scrollbar-thumb {
+  background: #3f3f46 !important;
+  border-radius: 9999px !important;
+}
+
+#zentral-settings-modal #zs-ag-col::-webkit-scrollbar-thumb:hover {
+  background: #52525b !important;
+}
+
+#zentral-settings-modal #zs-tg-col {
+  padding-left: 24px !important;
+  overflow: hidden !important;
 }
 
 /* Section Header with Outside Divider Line */
@@ -1067,18 +1097,23 @@ panel[id*="tabgroup-editor"] {
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
   padding-bottom: 8px !important;
-  margin-bottom: 2px !important;
+  margin-bottom: 4px !important;
   flex-shrink: 0 !important;
+  pointer-events: auto !important;
+  position: sticky !important;
+  top: 0 !important;
+  background: #0d0d12 !important;
+  z-index: 10 !important;
 }
 
 #zentral-settings-modal .zs-section-title {
-  font-size: 11px !important;
+  font-size: 13px !important;
   text-transform: uppercase !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.1em !important;
-  color: #71717a !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  color: #f4f4f5 !important;
   margin: 0 !important;
 }
 
@@ -1086,6 +1121,7 @@ panel[id*="tabgroup-editor"] {
   display: flex !important;
   align-items: center !important;
   gap: 10px !important;
+  pointer-events: auto !important;
 }
 
 #zentral-settings-modal .zs-toggle-status {
@@ -1093,6 +1129,23 @@ panel[id*="tabgroup-editor"] {
   font-weight: 500 !important;
   color: #a1a1aa !important;
   user-select: none !important;
+}
+
+/* Section Content Container */
+#zentral-settings-modal .zs-section-content {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  padding-top: 8px !important;
+  transition: opacity 0.2s ease, filter 0.2s ease !important;
+}
+
+#zentral-settings-modal .zs-section-content[data-disabled="true"] {
+  opacity: 0.35 !important;
+  pointer-events: none !important;
+  filter: grayscale(0.65) !important;
 }
 
 /* Setting Rows */
@@ -1138,9 +1191,11 @@ panel[id*="tabgroup-editor"] {
 }
 
 #zentral-settings-modal .zs-placement-btn {
+  -moz-appearance: none !important;
+  appearance: none !important;
   position: relative !important;
-  background: rgba(24, 24, 27, 0.5) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(24, 24, 27, 0.4) !important;
+  border: 2px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 12px !important;
   padding: 12px 10px 10px 10px !important;
   display: flex !important;
@@ -1148,31 +1203,31 @@ panel[id*="tabgroup-editor"] {
   align-items: center !important;
   gap: 8px !important;
   cursor: pointer !important;
-  transition: all 0.16s ease !important;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
   color: #a1a1aa !important;
   outline: none !important;
   user-select: none !important;
+  box-sizing: border-box !important;
+}
+
+#zentral-settings-modal .zs-placement-btn * {
+  pointer-events: none !important;
 }
 
 #zentral-settings-modal .zs-placement-btn:hover {
-  border-color: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
   background: rgba(39, 39, 42, 0.4) !important;
-  color: #e4e4e7 !important;
+  color: #f4f4f5 !important;
 }
 
 #zentral-settings-modal .zs-placement-btn[data-active="true"] {
   border-color: var(--zen-primary-color, #6366f1) !important;
-  background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 6%, transparent) !important;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--zen-primary-color, #6366f1) 40%, transparent) !important;
+  background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 12%, rgba(24, 24, 27, 0.7)) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--zen-primary-color, #6366f1) 50%, transparent), 0 4px 18px color-mix(in srgb, var(--zen-primary-color, #6366f1) 25%, transparent) !important;
   color: color-mix(in srgb, var(--zen-primary-color, #6366f1) 85%, #ffffff) !important;
 }
 
-#zentral-settings-modal .zs-placement-btn[data-active="true"] .zs-placement-label {
-  color: color-mix(in srgb, var(--zen-primary-color, #6366f1) 85%, #ffffff) !important;
-  font-weight: 600 !important;
-}
-
-#zentral-settings-modal .zs-placement-svg-box {
+#zentral-settings-modal .zs-placement-btn .zs-placement-svg-box {
   width: 128px !important;
   height: 64px !important;
   border-radius: 6px !important;
@@ -1182,16 +1237,39 @@ panel[id*="tabgroup-editor"] {
   align-items: center !important;
   justify-content: center !important;
   overflow: hidden !important;
-  pointer-events: none !important;
+  padding: 5px !important;
+  gap: 5px !important;
+  box-sizing: border-box !important;
 }
 
-#zentral-settings-modal .zs-placement-svg-box * {
-  pointer-events: none !important;
+#zentral-settings-modal .zs-placement-btn .zs-placement-bar-indicator {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 3px !important;
+  transition: background 0.15s ease, border-color 0.15s ease !important;
+}
+
+#zentral-settings-modal .zs-placement-btn[data-active="true"] .zs-placement-bar-indicator {
+  background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 40%, transparent) !important;
+  border-color: var(--zen-primary-color, #6366f1) !important;
+}
+
+#zentral-settings-modal .zs-placement-btn .zs-placement-content-preview {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-radius: 3px !important;
 }
 
 #zentral-settings-modal .zs-placement-label {
   font-size: 13px !important;
   font-weight: 500 !important;
+  transition: color 0.15s ease, font-weight 0.15s ease !important;
+}
+
+#zentral-settings-modal .zs-placement-btn[data-active="true"] .zs-placement-label {
+  color: color-mix(in srgb, var(--zen-primary-color, #6366f1) 85%, #ffffff) !important;
+  font-weight: 700 !important;
 }
 
 /* Horizontal Capsule Stepper (- [value] +) */
@@ -1209,6 +1287,9 @@ panel[id*="tabgroup-editor"] {
 }
 
 #zentral-settings-modal .zs-h-btn {
+  -moz-appearance: none !important;
+  appearance: none !important;
+  outline: none !important;
   width: 28px !important;
   height: 28px !important;
   background: transparent !important;
@@ -1221,7 +1302,7 @@ panel[id*="tabgroup-editor"] {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  transition: all 0.12s ease !important;
+  transition: background 0.12s ease, color 0.12s ease !important;
   user-select: none !important;
   padding: 0 !important;
 }
@@ -1394,7 +1475,7 @@ panel[id*="tabgroup-editor"] {
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 3.5px !important;
   cursor: pointer !important;
-  transition: all 0.12s ease !important;
+  transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease !important;
 }
 
 #zentral-settings-modal .zs-matrix-cell:hover,
@@ -1538,7 +1619,7 @@ panel[id*="tabgroup-editor"] {
   font-weight: 500 !important;
   outline: none !important;
   cursor: pointer !important;
-  transition: all 0.15s ease !important;
+  transition: border-color 0.15s ease, background-color 0.15s ease !important;
   flex-shrink: 0 !important;
 }
 
@@ -1557,13 +1638,15 @@ panel[id*="tabgroup-editor"] {
   color: #e4e4e7 !important;
 }
 
-/* Conditional Indicator Type Row with Smooth Slide */
+/* Conditional Indicator Type Row with Smooth Zero-Gap Slide */
 #zentral-settings-modal #zs-tg-indicator-type-row {
   overflow: hidden !important;
+  min-height: 30px !important;
   max-height: 48px !important;
   opacity: 1 !important;
   transform: translateY(0) !important;
   transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              min-height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
               opacity 0.20s ease,
               margin 0.28s cubic-bezier(0.16, 1, 0.3, 1),
               padding 0.28s cubic-bezier(0.16, 1, 0.3, 1),
@@ -1571,14 +1654,17 @@ panel[id*="tabgroup-editor"] {
 }
 
 #zentral-settings-modal #zs-tg-indicator-type-row[data-hidden="true"] {
+  min-height: 0 !important;
+  height: 0 !important;
   max-height: 0 !important;
   opacity: 0 !important;
-  margin-top: 0 !important;
+  margin-top: -14px !important;
   margin-bottom: 0 !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   transform: translateY(-6px) !important;
   pointer-events: none !important;
+  visibility: hidden !important;
 }
 
 /* Apple/Zen Toggle Switch */
@@ -1588,12 +1674,14 @@ panel[id*="tabgroup-editor"] {
   width: 36px !important;
   height: 20px !important;
   flex-shrink: 0 !important;
+  pointer-events: auto !important;
 }
 
 #zentral-settings-modal .zs-switch input {
   opacity: 0 !important;
   width: 0 !important;
   height: 0 !important;
+  pointer-events: auto !important;
 }
 
 #zentral-settings-modal .zs-slider {
@@ -1628,6 +1716,9 @@ panel[id*="tabgroup-editor"] {
 
 /* Reset and Action Buttons */
 #zentral-settings-modal .zs-reset-btn {
+  -moz-appearance: none !important;
+  appearance: none !important;
+  outline: none !important;
   align-self: flex-start !important;
   background: #18181b !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -1637,7 +1728,7 @@ panel[id*="tabgroup-editor"] {
   font-size: 12.5px !important;
   font-weight: 500 !important;
   cursor: pointer !important;
-  transition: all 0.15s ease !important;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
   margin-top: auto !important;
 }
 
@@ -1663,6 +1754,9 @@ panel[id*="tabgroup-editor"] {
 }
 
 #zentral-settings-modal .zs-btn-cancel {
+  -moz-appearance: none !important;
+  appearance: none !important;
+  outline: none !important;
   background: transparent !important;
   border: none !important;
   color: #a1a1aa !important;
@@ -1671,7 +1765,7 @@ panel[id*="tabgroup-editor"] {
   font-size: 13.5px !important;
   font-weight: 500 !important;
   cursor: pointer !important;
-  transition: all 0.15s ease !important;
+  transition: background 0.15s ease, color 0.15s ease !important;
 }
 
 #zentral-settings-modal .zs-btn-cancel:hover {
@@ -1684,6 +1778,9 @@ panel[id*="tabgroup-editor"] {
 }
 
 #zentral-settings-modal .zs-btn-save {
+  -moz-appearance: none !important;
+  appearance: none !important;
+  outline: none !important;
   background: var(--zen-primary-color, #6366f1) !important;
   border: none !important;
   color: #ffffff !important;
@@ -1693,7 +1790,7 @@ panel[id*="tabgroup-editor"] {
   font-weight: 600 !important;
   cursor: pointer !important;
   box-shadow: 0 4px 14px color-mix(in srgb, var(--zen-primary-color, #6366f1) 40%, transparent) !important;
-  transition: all 0.15s ease !important;
+  transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease !important;
 }
 
 #zentral-settings-modal .zs-btn-save:hover {
