@@ -9,7 +9,17 @@
 "use strict";
 
 (function ZentralLoggerModule() {
-  // Clean up any previously attached listeners if reloading
+  // Store true native console methods once on window singleton to prevent multi-wrapping on reload
+  window._zentralNativeConsole = window._zentralNativeConsole || {
+    log: console.log.bind(console),
+    warn: console.warn.bind(console),
+    error: console.error.bind(console),
+    debug: (console.debug || console.log).bind(console),
+    info: (console.info || console.log).bind(console)
+  };
+  const _native = window._zentralNativeConsole;
+
+  // Clean up any previously attached listeners and restore native console if reloading
   if (window._zentralLoggerCleanup && typeof window._zentralLoggerCleanup === "function") {
     try { window._zentralLoggerCleanup(); } catch (_) {}
   }
@@ -18,11 +28,18 @@
   const MAX_ENTRIES = 8000;
   const ringBuffer = window._zentralLoggerRingBuffer || [];
   window._zentralLoggerRingBuffer = ringBuffer;
+  let lastRecordedEvent = null;
 
-  function ts() {
+  function tsFull() {
     const d = new Date();
     const pad = (n, len = 2) => String(n).padStart(len, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
+  }
+
+  function tsCompact() {
+    const d = new Date();
+    const pad = (n, len = 2) => String(n).padStart(len, "0");
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
   }
 
   function isLoggerEnabled() {
@@ -63,10 +80,10 @@
   function classifyModuleFromTag(tag) {
     if (!tag) return "core";
     const t = String(tag).toLowerCase();
-    if (t.includes("contextmenu") || t.includes("popup") || t.includes("menu")) return "menus";
+    if (t.includes("menu") || t.includes("popup")) return "menus";
     if (t.includes("drag") || t.includes("splitview") || t.includes("tabgroup") || t.includes("tabselect")) return "tabs";
-    if (t.includes("appsgrid") || t.includes("apppanel") || t.includes("zentralapps") || t.includes("apptile") || t.includes("utility")) return "apps";
-    if (t.includes("layout") || t.includes("css") || t.includes("inspector") || t.includes("rootattribute")) return "layout";
+    if (t.includes("app") || t.includes("grid") || t.includes("panel") || t.includes("tile") || t.includes("utility")) return "apps";
+    if (t.includes("layout") || t.includes("css") || t.includes("inspector") || t.includes("root")) return "layout";
     return "core";
   }
 
@@ -85,14 +102,14 @@
     alert("Diagnostic Logging is disabled.\nPlease enable 'Enable Diagnostic Logging' in Zentral Settings to export logs.");
   }
 
-  function record(level, tag, message, explicitModule = null) {
-    if (!isLoggerEnabled()) return; // DO NOT COLLECT DATA IF DISABLED
-    const mod = explicitModule || classifyModuleFromTag(tag);
-    if (!isModuleEnabled(mod)) return;
-
-    const line = `[${ts()}] [${level.toUpperCase()}] [${tag}] [${mod.toUpperCase()}] ${message}`;
-    if (ringBuffer.length >= MAX_ENTRIES) ringBuffer.shift();
-    ringBuffer.push(line);
+  function formatElementSelector(el) {
+    if (!el || !el.tagName) return "(null)";
+    const tag = el.tagName.toLowerCase();
+    const id = el.id ? `#${el.id}` : "";
+    const cls = el.className && typeof el.className === "string" && el.className.trim()
+      ? `.${el.className.trim().split(/\s+/).slice(0, 2).join(".")}`
+      : "";
+    return `<${tag}${id}${cls}>`;
   }
 
   function formatLogArg(a) {
@@ -105,10 +122,13 @@
       return `${name}: ${msg}${stack}`;
     }
     if (typeof a === "object") {
+      if (a instanceof HTMLElement || a instanceof Element) {
+        return formatElementSelector(a);
+      }
       try {
         return JSON.stringify(a, (key, value) => {
           if (value instanceof HTMLElement || value instanceof Element) {
-            return `<${value.tagName.toLowerCase()}${value.id ? '#' + value.id : ''}${value.className ? '.' + value.className : ''}>`;
+            return formatElementSelector(value);
           }
           return value;
         });
@@ -119,11 +139,36 @@
     return String(a);
   }
 
-  const _log   = console.log.bind(console);
-  const _warn  = console.warn.bind(console);
-  const _error = console.error.bind(console);
-  const _debug = (console.debug || console.log).bind(console);
-  const _info  = (console.info || console.log).bind(console);
+  let isLoggingDirectly = false;
+
+  function record(level, tag, rawMessage, explicitModule = null) {
+    if (!isLoggerEnabled()) return; // DO NOT COLLECT DATA IF DISABLED
+    const mod = explicitModule || classifyModuleFromTag(tag);
+    if (!isModuleEnabled(mod)) return;
+
+    let msg = String(rawMessage || "").trim();
+    // Strip redundant leading [tag] or [mod] or [Zentral] from message
+    const cleanPattern = new RegExp(`^\\[(${tag}|${mod}|Zentral-${tag}|Zentral|ZentralCore|ZentralApps|ZentralTabGroups|ZentralSettings)\\]\\s*`, 'i');
+    while (cleanPattern.test(msg)) {
+      msg = msg.replace(cleanPattern, '').trim();
+    }
+
+    const timeStr = tsCompact();
+    const levelTag = (level === "warn" || level === "error" || level === "layout") ? ` [${level.toUpperCase()}]` : "";
+    const header = `[${timeStr}]${levelTag} [${tag}]`;
+    const formattedLine = `${header} ${msg}`;
+
+    // Consecutive duplicate compression (e.g. rapid DOM mutations or repeated button clicks)
+    if (lastRecordedEvent && lastRecordedEvent.tag === tag && lastRecordedEvent.level === level && lastRecordedEvent.msg === msg) {
+      lastRecordedEvent.count++;
+      ringBuffer[ringBuffer.length - 1] = `${header} ${msg} (repeated ${lastRecordedEvent.count}x)`;
+      return;
+    }
+
+    lastRecordedEvent = { tag, level, msg, count: 1, time: timeStr };
+    if (ringBuffer.length >= MAX_ENTRIES) ringBuffer.shift();
+    ringBuffer.push(formattedLine);
+  }
 
   /**
    * Main ZentralLogger API
@@ -132,12 +177,14 @@
     isLoggerEnabled,
     isModuleEnabled,
     classifyModuleFromTag,
+    formatElementSelector,
     log(tag, ...args) {
       if (!isLoggerEnabled()) return;
       const mod = classifyModuleFromTag(tag);
       if (!isModuleEnabled(mod)) return;
       const msg = args.map(formatLogArg).join(" ");
-      _log(`[${tag}] ${msg}`);
+      isLoggingDirectly = true;
+      try { _native.log(`[${tag}] ${msg}`); } finally { isLoggingDirectly = false; }
       record("log", tag, msg, mod);
     },
     warn(tag, ...args) {
@@ -145,7 +192,8 @@
       const mod = classifyModuleFromTag(tag);
       if (!isModuleEnabled(mod)) return;
       const msg = args.map(formatLogArg).join(" ");
-      _warn(`[${tag}] ${msg}`);
+      isLoggingDirectly = true;
+      try { _native.warn(`[${tag}] ${msg}`); } finally { isLoggingDirectly = false; }
       record("warn", tag, msg, mod);
     },
     error(tag, ...args) {
@@ -153,7 +201,8 @@
       const mod = classifyModuleFromTag(tag);
       if (!isModuleEnabled(mod)) return;
       const msg = args.map(formatLogArg).join(" ");
-      _error(`[${tag}] ${msg}`);
+      isLoggingDirectly = true;
+      try { _native.error(`[${tag}] ${msg}`); } finally { isLoggingDirectly = false; }
       record("error", tag, msg, mod);
     },
     debug(tag, ...args) {
@@ -161,7 +210,8 @@
       const mod = classifyModuleFromTag(tag);
       if (!isModuleEnabled(mod)) return;
       const msg = args.map(formatLogArg).join(" ");
-      _debug(`[${tag}] ${msg}`);
+      isLoggingDirectly = true;
+      try { _native.debug(`[${tag}] ${msg}`); } finally { isLoggingDirectly = false; }
       record("debug", tag, msg, mod);
     },
     info(tag, ...args) {
@@ -169,7 +219,8 @@
       const mod = classifyModuleFromTag(tag);
       if (!isModuleEnabled(mod)) return;
       const msg = args.map(formatLogArg).join(" ");
-      _info(`[${tag}] ${msg}`);
+      isLoggingDirectly = true;
+      try { _native.info(`[${tag}] ${msg}`); } finally { isLoggingDirectly = false; }
       record("info", tag, msg, mod);
     },
     layout(component, details) {
@@ -177,21 +228,23 @@
       const mod = classifyModuleFromTag(component) || "layout";
       if (!isModuleEnabled(mod)) return;
       const msg = typeof details === "object" ? JSON.stringify(details) : String(details);
-      _log(`[Zentral-Layout:${component}] ${msg}`);
+      isLoggingDirectly = true;
+      try { _native.log(`[Layout:${component}] ${msg}`); } finally { isLoggingDirectly = false; }
       record("layout", `Layout:${component}`, msg, mod);
     },
     inspectLayout() {
       if (!isLoggerEnabled() || !isModuleEnabled("layout")) return "";
       const snapshot = captureLayoutDiagnosticSnapshot();
-      _log(snapshot);
+      isLoggingDirectly = true;
+      try { _native.log(snapshot); } finally { isLoggingDirectly = false; }
       record("info", "LayoutInspector", snapshot, "layout");
       return snapshot;
     },
     get entries() { return isLoggerEnabled() ? [...ringBuffer] : []; },
-    dump()   { if (isLoggerEnabled()) ringBuffer.forEach(l => _log(l)); },
+    dump()   { if (isLoggerEnabled()) ringBuffer.forEach(l => _native.log(l)); },
     export() { exportLog(); },
     generateLogString() { return generateLogString(); },
-    clear()  { ringBuffer.length = 0; }
+    clear()  { ringBuffer.length = 0; lastRecordedEvent = null; }
   };
 
   window.ZentralLogger = ZentralLogger;
@@ -201,10 +254,10 @@
   // -------------------------------------------------------------------------
   // Intercept standard console outputs
   // -------------------------------------------------------------------------
-  function patchConsoleMethod(originalFn, level) {
+  function patchConsoleMethod(nativeFn, level) {
     return function (...args) {
-      originalFn(...args);
-      if (!isLoggerEnabled()) return; // Fast return: no stringifying, no overhead
+      nativeFn(...args);
+      if (!isLoggerEnabled() || isLoggingDirectly) return; // Ignore if called from inside ZentralLogger
       const text = args.map(formatLogArg).join(" ");
       let tag = "Console";
       const tagMatch = text.match(/^\[(.*?)\]/);
@@ -215,11 +268,19 @@
     };
   }
 
-  console.log   = patchConsoleMethod(_log,   "log");
-  console.warn  = patchConsoleMethod(_warn,  "warn");
-  console.error = patchConsoleMethod(_error, "error");
-  console.debug = patchConsoleMethod(_debug, "debug");
-  console.info  = patchConsoleMethod(_info,  "info");
+  console.log   = patchConsoleMethod(_native.log,   "log");
+  console.warn  = patchConsoleMethod(_native.warn,  "warn");
+  console.error = patchConsoleMethod(_native.error, "error");
+  console.debug = patchConsoleMethod(_native.debug, "debug");
+  console.info  = patchConsoleMethod(_native.info,  "info");
+
+  cleanupObservers.push(() => {
+    console.log   = _native.log;
+    console.warn  = _native.warn;
+    console.error = _native.error;
+    console.debug = _native.debug;
+    console.info  = _native.info;
+  });
 
   // Capture uncaught window errors & rejections
   const onWinError = (e) => {
@@ -291,12 +352,15 @@
   // -------------------------------------------------------------------------
   function captureLayoutDiagnosticSnapshot() {
     const lines = [];
-    lines.push(`=== ZENTRAL LAYOUT DIAGNOSTIC SNAPSHOT (${ts()}) ===`);
-    lines.push(`Window Dimensions: ${window.innerWidth}x${window.innerHeight} (DPR: ${window.devicePixelRatio})`);
+    lines.push(`=== ZENTRAL LAYOUT DIAGNOSTIC SNAPSHOT (${tsFull()}) ===`);
+    lines.push(`Window: ${window.innerWidth}x${window.innerHeight} (DPR: ${window.devicePixelRatio})`);
     
     // Root layout attributes
     const root = document.documentElement;
-    const attrs = Array.from(root.attributes).map(a => `${a.name}="${a.value}"`).join(" | "); 
+    const attrs = Array.from(root.attributes)
+      .filter(a => a.name.startsWith("zen-") || a.name.startsWith("zentral-") || ["id", "sizemode", "data-l10n-sync"].includes(a.name))
+      .map(a => `${a.name}="${a.value}"`)
+      .join(" | "); 
     lines.push(`Root Attributes: ${attrs}`);
     
     // Apps Grid
@@ -304,20 +368,21 @@
     if (grid) {
       const isHoriz = grid.classList.contains("zen-apps-horizontal");
       const rect = grid.getBoundingClientRect();
-      lines.push(`Apps Grid: Present | Mode: ${isHoriz ? "Horizontal (Toolbar)" : "Vertical (Sidebar)"} | Rect: ${Math.round(rect.width)}x${Math.round(rect.height)} at (${Math.round(rect.left)},${Math.round(rect.top)}) | Parent: ${grid.parentNode?.id || grid.parentNode?.tagName}`);
       const tiles = grid.querySelectorAll(".zen-app-tile");
-      lines.push(`Apps Tiles Count: ${tiles.length}`);
+      lines.push(`Apps Grid: Present | Mode: ${isHoriz ? "Horizontal (Toolbar)" : "Vertical (Sidebar)"} | Tiles: ${tiles.length} | Rect: ${Math.round(rect.width)}x${Math.round(rect.height)} at (${Math.round(rect.left)},${Math.round(rect.top)})`);
     } else {
       lines.push(`Apps Grid: Not found in DOM`);
     }
 
     // App Panels
     const panels = document.querySelectorAll(".zs-app-panel");
-    lines.push(`App Panels Count: ${panels.length}`);
-    panels.forEach((p, idx) => {
-      const rect = p.getBoundingClientRect();
-      lines.push(`  Panel #${idx + 1} (${p.id}): open="${p.hasAttribute("open")}" pinned="${p.getAttribute("data-pinned")}" rect=${Math.round(rect.width)}x${Math.round(rect.height)}`);
-    });
+    if (panels.length) {
+      lines.push(`App Panels Count: ${panels.length}`);
+      panels.forEach((p, idx) => {
+        const rect = p.getBoundingClientRect();
+        lines.push(`  Panel #${idx + 1} (${p.id}): open="${p.hasAttribute("open")}" pinned="${p.getAttribute("data-pinned")}" rect=${Math.round(rect.width)}x${Math.round(rect.height)}`);
+      });
+    }
 
     // Tab Groups
     const tabGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])"));
@@ -327,38 +392,37 @@
       const collapsed = g.hasAttribute("collapsed");
       const rect = g.getBoundingClientRect();
       const childTabs = g.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab").length;
-      lines.push(`  Group #${idx + 1} "${label}" [id="${g.id || 'none'}"]: collapsed=${collapsed} childTabs=${childTabs} rect=${Math.round(rect.width)}x${Math.round(rect.height)}`);
+      lines.push(`  Group #${idx + 1} "${label}" [id="${g.id || 'none'}"]: collapsed=${collapsed} tabs=${childTabs} rect=${Math.round(rect.width)}x${Math.round(rect.height)}`);
     });
 
     // Split Views
     const splitViews = Array.from(document.querySelectorAll("tab-group[split-view-group], tab-group[zen-split-view], tab-group[is-zen-split]"));
-    lines.push(`Split Views Count: ${splitViews.length}`);
-    splitViews.forEach((s, idx) => {
-      const rect = s.getBoundingClientRect();
-      const childTabs = s.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab").length;
-      lines.push(`  Split View #${idx + 1} [id="${s.id || 'none'}"]: childTabs=${childTabs} rect=${Math.round(rect.width)}x${Math.round(rect.height)}`);
-    });
+    if (splitViews.length) {
+      lines.push(`Split Views Count: ${splitViews.length}`);
+      splitViews.forEach((s, idx) => {
+        const rect = s.getBoundingClientRect();
+        const childTabs = s.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab").length;
+        lines.push(`  Split View #${idx + 1} [id="${s.id || 'none'}"]: tabs=${childTabs} rect=${Math.round(rect.width)}x${Math.round(rect.height)}`);
+      });
+    }
 
-    // Native Context Menus in DOM
+    // Modal & Context Menus
     const tabCtx = document.getElementById("tabContextMenu");
-    lines.push(`Tab Context Menu (#tabContextMenu): ${tabCtx ? `Present in DOM (children: ${tabCtx.children.length})` : "Not found"}`);
-
-    // Settings Modal
     const modal = document.getElementById("zentral-settings-modal");
-    lines.push(`Settings Modal: ${modal ? "Present in DOM" : "Not open"}`);
+    lines.push(`DOM Components: TabCtxMenu=${tabCtx ? `Present(${tabCtx.children.length})` : 'Missing'} | SettingsModal=${modal ? 'Open' : 'Closed'}`);
 
     // =========================================================================
     // Sidebar & Compact Mode Material / Theme Inspector
     // =========================================================================
     lines.push(`\n=== SIDEBAR & COMPACT MODE MATERIAL / THEME INSPECTOR ===`);
     
-    // 1. All relevant CSS Custom Properties on :root
+    // 1. Relevant CSS Custom Properties on :root (filter to zen & zentral tokens)
     try {
       const rootCS = window.getComputedStyle(document.documentElement);
       const cssVars = [];
       for (let i = 0; i < rootCS.length; i++) {
         const prop = rootCS[i];
-        if (prop.startsWith("--zen-") || prop.startsWith("--toolbox-") || prop.startsWith("--toolbar-") || prop.startsWith("--tab-") || prop.startsWith("--arrowpanel-")) {
+        if (prop.startsWith("--zen-") || prop.startsWith("--zentral-") || prop.startsWith("--tab-group-") || prop.startsWith("--toolbox-") || prop.startsWith("--toolbar-background-color")) {
           const val = rootCS.getPropertyValue(prop)?.trim();
           if (val) cssVars.push(`  ${prop}: ${val}`);
         }
@@ -368,7 +432,7 @@
       lines.push(`CSS Variables on :root: Error reading variables (${e.message})`);
     }
 
-    // 2. Element-by-Element Computed Style Dumps
+    // 2. Element-by-Element Computed Style Dumps (Clean single-line format, omit defaults)
     const inspectIds = [
       "main-window",
       "navigator-toolbox",
@@ -379,7 +443,6 @@
       "tabbrowser-tabbox",
       "tabbrowser-tabs",
       "browser",
-      "appcontent",
       "tabbrowser-tabpanels",
       "TabsToolbar",
       "nav-bar",
@@ -389,7 +452,6 @@
       "zen-sidebar-top-buttons",
       "zen-sidebar-bottom-buttons",
       "zen-current-workspace-indicator",
-      "zentral-apps-vertical-bar",
       "zen-apps-sidebar-grid"
     ];
 
@@ -397,42 +459,31 @@
       try {
         let el = (id === "main-window") ? document.documentElement : document.getElementById(id);
         if (!el) el = document.querySelector("." + id);
-        if (!el) {
-          lines.push(`\n[Element: #${id}] Not found in DOM`);
-          return;
-        }
+        if (!el) return;
 
         const cs = window.getComputedStyle(el);
         const rect = el.getBoundingClientRect();
-        const attrs = Array.from(el.attributes).map(a => `${a.name}="${a.value}"`).join(" ");
+        const activeStyles = [];
 
-        lines.push(`\n[Element: <${el.tagName.toLowerCase()} id="${el.id || id}" class="${el.className}">]`);
-        lines.push(`  Rect: ${Math.round(rect.width)}x${Math.round(rect.height)} at (${Math.round(rect.left)},${Math.round(rect.top)})`);
-        lines.push(`  Attributes: ${attrs || "(none)"}`);
-        lines.push(`  -moz-appearance: ${cs.MozAppearance || cs.appearance}`);
-        lines.push(`  background: ${cs.background}`);
-        lines.push(`  background-color: ${cs.backgroundColor}`);
-        lines.push(`  background-image: ${cs.backgroundImage}`);
-        lines.push(`  background-attachment: ${cs.backgroundAttachment}`);
-        lines.push(`  background-position: ${cs.backgroundPosition}`);
-        lines.push(`  background-size: ${cs.backgroundSize}`);
-        lines.push(`  background-repeat: ${cs.backgroundRepeat}`);
-        lines.push(`  background-clip: ${cs.backgroundClip}`);
-        lines.push(`  backdrop-filter: ${cs.backdropFilter}`);
-        lines.push(`  -webkit-backdrop-filter: ${cs.webkitBackdropFilter}`);
-        lines.push(`  box-shadow: ${cs.boxShadow}`);
-        lines.push(`  border: ${cs.border}`);
-        lines.push(`  border-radius: ${cs.borderRadius}`);
-        lines.push(`  opacity: ${cs.opacity}`);
-        lines.push(`  mix-blend-mode: ${cs.mixBlendMode}`);
-        lines.push(`  filter: ${cs.filter}`);
-        lines.push(`  position: ${cs.position} | z-index: ${cs.zIndex}`);
+        const hasBgColor = cs.backgroundColor && cs.backgroundColor !== "transparent" && cs.backgroundColor !== "rgba(0, 0, 0, 0)";
+        const hasBgImage = cs.backgroundImage && cs.backgroundImage !== "none";
+        if (hasBgColor) activeStyles.push(`bg-color: ${cs.backgroundColor}`);
+        if (hasBgImage) activeStyles.push(`bg-image: ${cs.backgroundImage}`);
+        if (cs.backdropFilter && cs.backdropFilter !== "none") activeStyles.push(`backdrop: ${cs.backdropFilter}`);
+        if (cs.boxShadow && cs.boxShadow !== "none") activeStyles.push(`shadow: ${cs.boxShadow}`);
+        if (cs.border && !cs.border.startsWith("0px")) activeStyles.push(`border: ${cs.border}`);
+        if (cs.borderRadius && cs.borderRadius !== "0px") activeStyles.push(`radius: ${cs.borderRadius}`);
+        if (cs.opacity && cs.opacity !== "1") activeStyles.push(`opacity: ${cs.opacity}`);
+        if (cs.position && cs.position !== "static") activeStyles.push(`pos: ${cs.position} (z-index: ${cs.zIndex})`);
+
+        lines.push(`\n[Element: ${formatElementSelector(el)}] Rect: ${Math.round(rect.width)}x${Math.round(rect.height)} at (${Math.round(rect.left)},${Math.round(rect.top)})`);
+        if (activeStyles.length) lines.push(`  Styles: ${activeStyles.join(" | ")}`);
 
         // Check ::before pseudo-element
         try {
           const csBefore = window.getComputedStyle(el, "::before");
           if (csBefore && csBefore.content && csBefore.content !== "none") {
-            lines.push(`  ::before -> content: ${csBefore.content} | bg: ${csBefore.background} | bg-color: ${csBefore.backgroundColor} | bg-image: ${csBefore.backgroundImage} | backdrop: ${csBefore.backdropFilter} | pos: ${csBefore.position} | inset: ${csBefore.inset}`);
+            lines.push(`  ::before -> content: ${csBefore.content} | bg: ${csBefore.backgroundColor || csBefore.background} | backdrop: ${csBefore.backdropFilter}`);
           }
         } catch (_) {}
 
@@ -440,21 +491,18 @@
         try {
           const csAfter = window.getComputedStyle(el, "::after");
           if (csAfter && csAfter.content && csAfter.content !== "none") {
-            lines.push(`  ::after -> content: ${csAfter.content} | bg: ${csAfter.background} | bg-color: ${csAfter.backgroundColor} | bg-image: ${csAfter.backgroundImage} | backdrop: ${csAfter.backdropFilter} | pos: ${csAfter.position} | inset: ${csAfter.inset}`);
+            lines.push(`  ::after -> content: ${csAfter.content} | bg: ${csAfter.backgroundColor || csAfter.background} | backdrop: ${csAfter.backdropFilter}`);
           }
         } catch (_) {}
-      } catch (elemErr) {
-        lines.push(`\n[Element: #${id}] Error inspecting element: ${elemErr.message}`);
-      }
+      } catch (_) {}
     });
 
-    // 3. Descendants of #navigator-toolbox with backgrounds / filters / pseudo-elements
+    // 3. Descendants of #navigator-toolbox with actual visible backgrounds / filters / shadows
     try {
       const toolbox = document.getElementById("navigator-toolbox");
       if (toolbox) {
-        lines.push(`\n=== NAVIGATOR-TOOLBOX DESCENDANTS INSPECTION ===`);
+        const visualDescendants = [];
         const allDescendants = toolbox.querySelectorAll("*");
-        lines.push(`Total Descendants in #navigator-toolbox: ${allDescendants.length}`);
         allDescendants.forEach(child => {
           try {
             const cs = window.getComputedStyle(child);
@@ -462,69 +510,17 @@
                           (cs.backgroundImage && cs.backgroundImage !== "none") ||
                           (cs.backdropFilter && cs.backdropFilter !== "none") ||
                           (cs.boxShadow && cs.boxShadow !== "none");
-            const csBefore = window.getComputedStyle(child, "::before");
-            const hasBefore = csBefore && csBefore.content && csBefore.content !== "none" && (
-              (csBefore.backgroundColor && csBefore.backgroundColor !== "transparent" && csBefore.backgroundColor !== "rgba(0, 0, 0, 0)") ||
-              (csBefore.backgroundImage && csBefore.backgroundImage !== "none") ||
-              (csBefore.backdropFilter && csBefore.backdropFilter !== "none")
-            );
-            const csAfter = window.getComputedStyle(child, "::after");
-            const hasAfter = csAfter && csAfter.content && csAfter.content !== "none" && (
-              (csAfter.backgroundColor && csAfter.backgroundColor !== "transparent" && csAfter.backgroundColor !== "rgba(0, 0, 0, 0)") ||
-              (csAfter.backgroundImage && csAfter.backgroundImage !== "none") ||
-              (csAfter.backdropFilter && csAfter.backdropFilter !== "none")
-            );
-
-            if (hasBg || hasBefore || hasAfter || child.id === "titlebar" || child.id === "TabsToolbar" || child.id === "nav-bar" || child.id === "vertical-tabs") {
-              lines.push(`  Child <${child.tagName.toLowerCase()} id="${child.id || 'no-id'}" class="${child.className}">`);
-              lines.push(`    bg: ${cs.background} | bg-color: ${cs.backgroundColor} | bg-image: ${cs.backgroundImage} | backdrop: ${cs.backdropFilter} | shadow: ${cs.boxShadow}`);
-              if (hasBefore) {
-                lines.push(`    ::before -> content: ${csBefore.content} | bg: ${csBefore.background} | bg-image: ${csBefore.backgroundImage} | backdrop: ${csBefore.backdropFilter}`);
-              }
-              if (hasAfter) {
-                lines.push(`    ::after -> content: ${csAfter.content} | bg: ${csAfter.background} | bg-image: ${csAfter.backgroundImage} | backdrop: ${csAfter.backdropFilter}`);
-              }
+            if (hasBg || ["titlebar", "TabsToolbar", "nav-bar", "vertical-tabs"].includes(child.id)) {
+              visualDescendants.push(`  ${formatElementSelector(child)} -> bg: ${cs.backgroundColor || cs.background} | shadow: ${cs.boxShadow} | backdrop: ${cs.backdropFilter}`);
             }
           } catch (_) {}
         });
+        if (visualDescendants.length) {
+          lines.push(`\n=== NAVIGATOR-TOOLBOX VISUAL DESCENDANTS (${visualDescendants.length}) ===`);
+          lines.push(visualDescendants.join("\n"));
+        }
       }
-    } catch (e) {
-      lines.push(`Error inspecting descendants: ${e.message}`);
-    }
-
-    // 4. Matching CSS rules from styleSheets
-    try {
-      lines.push(`\n=== MATCHING CSS RULES FOR SIDEBAR & COMPACT MODE ===`);
-      const matchedRules = [];
-      for (const sheet of Array.from(document.styleSheets)) {
-        try {
-          const rules = sheet.cssRules || sheet.rules;
-          if (!rules) continue;
-          for (const rule of Array.from(rules)) {
-            if (rule.selectorText && (
-              rule.selectorText.includes("navigator-toolbox") ||
-              rule.selectorText.includes("zen-compact-mode") ||
-              rule.selectorText.includes("browserSidebarContainer") ||
-              rule.selectorText.includes("tabbrowser-tabbox") ||
-              rule.selectorText.includes("TabsToolbar")
-            )) {
-              if (rule.cssText && (
-                rule.cssText.includes("background") ||
-                rule.cssText.includes("backdrop-filter") ||
-                rule.cssText.includes("box-shadow") ||
-                rule.cssText.includes("border") ||
-                rule.cssText.includes("opacity")
-              )) {
-                matchedRules.push(`  ${rule.cssText}`);
-              }
-            }
-          }
-        } catch (_) {}
-      }
-      lines.push(`Matching CSS Rules (${matchedRules.length}):\n${matchedRules.slice(0, 100).join("\n") || "  (none)"}`);
-    } catch (e) {
-      lines.push(`Error reading stylesheets: ${e.message}`);
-    }
+    } catch (_) {}
 
     return lines.join("\n");
   }
@@ -540,7 +536,7 @@
       for (const m of mutations) {
         if (["zen-right-side", "zen-sidebar-collapsed", "zen-single-toolbar", "zentral-label-opacity-below-85"].includes(m.attributeName)) {
           const val = document.documentElement.getAttribute(m.attributeName);
-          ZentralLogger.layout("RootAttribute", `Attribute "${m.attributeName}" changed to "${val}"`);
+          ZentralLogger.layout("Root", `Attribute "${m.attributeName}" -> "${val}"`);
         }
       }
     });
@@ -555,7 +551,7 @@
         for (const m of mutations) {
           if (m.type === "attributes" && m.attributeName === "class") {
             const isHoriz = grid.classList.contains("zen-apps-horizontal");
-            ZentralLogger.layout("AppsGrid", `Class modified. Horizontal layout: ${isHoriz}`);
+            ZentralLogger.layout("AppsGrid", `Horizontal layout: ${isHoriz}`);
           } else if (m.type === "childList") {
             ZentralLogger.layout("AppsGrid", `Grid tiles updated (+${m.addedNodes.length}, -${m.removedNodes.length})`);
           }
@@ -577,7 +573,7 @@
           const group = m.target;
           const label = group.label || group.getAttribute("label") || "(no title)";
           const collapsed = group.hasAttribute("collapsed");
-          ZentralLogger.layout("TabGroup", `Group "${label}" attribute "${m.attributeName}" -> collapsed: ${collapsed}`);
+          ZentralLogger.layout("TabGroup", `Group "${label}" attr "${m.attributeName}" -> collapsed: ${collapsed}`);
         } else if (m.type === "childList") {
           for (const node of m.addedNodes) {
             if (node.tagName?.toUpperCase() === "TAB-GROUP") {
@@ -587,42 +583,39 @@
         }
       }
     });
-    tabGroupObserver.observe(tabContainer, { childList: true, subtree: true, attributes: true, attributeFilter: ["collapsed", "label", "style", "class"] });
-    cleanupObservers.push(() => tabGroupObserver.disconnect());
+    if (tabContainer) {
+      tabGroupObserver.observe(tabContainer, { childList: true, subtree: true, attributes: true, attributeFilter: ["collapsed", "label", "style", "class"] });
+      cleanupObservers.push(() => tabGroupObserver.disconnect());
+    }
   }
 
   // -------------------------------------------------------------------------
   // Tab Context Menu & Right-Click Diagnostic Tracer
   // -------------------------------------------------------------------------
   function setupTabContextMenuTracer() {
-    function dumpMenuChildren(popup, prefix) {
-      prefix = prefix || "  ";
+    function dumpMenuChildren(popup, prefix = "  ") {
       if (!popup || !popup.children) return ["[Empty Popup]"];
       const lines = [];
       const children = Array.from(popup.children);
       lines.push(`${prefix}Total items: ${children.length}`);
       children.forEach((el, i) => {
-        const tag = el.tagName.toLowerCase();
-        const id = el.id ? `#${el.id}` : "";
-        const cls = el.className ? `.${el.className.trim().replace(/\s+/g, ".")}` : "";
+        const sel = formatElementSelector(el);
         const label = el.getAttribute("label") || el.label || "";
         const text = el.textContent ? el.textContent.trim().replace(/\s+/g, " ") : "";
-        const l10n = el.getAttribute("data-l10n-id") ? `[data-l10n-id="${el.getAttribute("data-l10n-id")}"]` : "";
+        const l10n = el.getAttribute("data-l10n-id") ? `[l10n=${el.getAttribute("data-l10n-id")}]` : "";
         const hidden = el.hidden || el.hasAttribute("hidden") || el.getAttribute("collapsed") === "true";
         const disabled = el.disabled || el.getAttribute("disabled") === "true";
-        const zGroupId = el.getAttribute("zentral-group-id") ? `[zentral-group-id="${el.getAttribute("zentral-group-id")}"]` : "";
-        const colorVar = el.style.getPropertyValue("--tab-group-color") || el.style.getPropertyValue("--menu-icon-color") || "";
+        const zGroupId = el.getAttribute("zentral-group-id") ? `[group=${el.getAttribute("zentral-group-id")}]` : "";
 
-        let details = `${prefix}[${i}] <${tag}${id}${cls}${zGroupId}${l10n}>`;
+        let details = `${prefix}[${i}] ${sel}${zGroupId}${l10n}`;
         if (label) details += ` label="${label}"`;
-        if (text && text !== label) details += ` textContent="${text}"`;
-        if (colorVar) details += ` color="${colorVar}"`;
+        else if (text) details += ` text="${text}"`;
         if (hidden) details += " (HIDDEN)";
         if (disabled) details += " (DISABLED)";
 
         lines.push(details);
 
-        if (tag === "menu") {
+        if (el.tagName.toLowerCase() === "menu") {
           const sub = el.querySelector("menupopup");
           if (sub) {
             lines.push(`${prefix}  -> Submenu <menupopup id="${sub.id || 'no-id'}"> (${sub.children.length} items)`);
@@ -644,9 +637,7 @@
         label: tab.label || tab.getAttribute("label") || "(unnamed tab)",
         selected: tab.selected || tab.hasAttribute("selected"),
         pinned: tab.pinned || tab.hasAttribute("pinned"),
-        group: tab.group?.id || tab.getAttribute("group") || (tab.closest("tab-group")?.getAttribute("label") || "none"),
-        userContextId: tab.getAttribute("usercontextid") || 0,
-        index: tab._tPos !== undefined ? tab._tPos : (tab.parentElement ? Array.from(tab.parentElement.children).indexOf(tab) : -1)
+        group: tab.group?.id || tab.getAttribute("group") || (tab.closest("tab-group")?.getAttribute("label") || "none")
       } : null;
 
       const groupInfo = group ? {
@@ -655,11 +646,9 @@
         collapsed: group.hasAttribute("collapsed")
       } : null;
 
-      ZentralLogger.log("TabContextMenu:RightClick", {
-        targetTag: target.tagName,
-        targetClass: target.className,
-        targetId: target.id,
-        coords: { clientX: e.clientX, clientY: e.clientY, screenX: e.screenX, screenY: e.screenY },
+      ZentralLogger.log("Menu:RightClick", {
+        target: formatElementSelector(target),
+        coords: `(${e.clientX},${e.clientY})`,
         tab: tabInfo,
         group: groupInfo,
         onTabStrip: !!tabStrip
@@ -679,11 +668,11 @@
         if (!isLoggerEnabled()) return;
         for (const m of mutations) {
           if (m.type === "childList") {
-            const added = Array.from(m.addedNodes).filter(n => n.nodeType === 1).map(n => `<${n.tagName.toLowerCase()} id="${n.id || ''}" label="${n.getAttribute('label') || n.label || ''}">`).join(", ");
-            const removed = Array.from(m.removedNodes).filter(n => n.nodeType === 1).map(n => `<${n.tagName.toLowerCase()} id="${n.id || ''}" label="${n.getAttribute('label') || n.label || ''}">`).join(", ");
-            ZentralLogger.log("TabContextMenu:Mutation", `Popup <${popup.tagName.toLowerCase()} id="${popup.id || 'no-id'}"> children changed: +[${added}] -[${removed}]`);
+            const added = Array.from(m.addedNodes).filter(n => n.nodeType === 1).map(n => formatElementSelector(n)).join(", ");
+            const removed = Array.from(m.removedNodes).filter(n => n.nodeType === 1).map(n => formatElementSelector(n)).join(", ");
+            ZentralLogger.log("Menu:Mutation", `Popup <${popup.id || popup.tagName.toLowerCase()}> children changed: +[${added}] -[${removed}]`);
           } else if (m.type === "attributes") {
-            ZentralLogger.log("TabContextMenu:Mutation", `Popup item <${m.target.tagName.toLowerCase()} id="${m.target.id || 'no-id'}"> attr "${m.attributeName}" -> "${m.target.getAttribute(m.attributeName)}"`);
+            ZentralLogger.log("Menu:Mutation", `Popup item ${formatElementSelector(m.target)} attr "${m.attributeName}" -> "${m.target.getAttribute(m.attributeName)}"`);
           }
         }
       });
@@ -699,13 +688,13 @@
       if (tag !== "menupopup" && tag !== "panel") return;
 
       attachPopupObserver(popup);
-      const parentMenu = popup.parentNode ? `<${popup.parentNode.tagName.toLowerCase()} id="${popup.parentNode.id || ''}" label="${popup.parentNode.getAttribute?.('label') || ''}">` : "(none)";
-      const triggerNode = popup.triggerNode ? `<${popup.triggerNode.tagName.toLowerCase()} class="${popup.triggerNode.className || ''}">` : "(none)";
+      const parentMenu = popup.parentNode ? formatElementSelector(popup.parentNode) : "(none)";
+      const triggerNode = popup.triggerNode ? formatElementSelector(popup.triggerNode) : "(none)";
       
-      ZentralLogger.log("TabContextMenu:PopupShowing", `[Showing] <${tag} id="${popup.id || 'no-id'}" class="${popup.className || ''}"> | Parent: ${parentMenu} | TriggerNode: ${triggerNode}`);
+      ZentralLogger.log("Menu:PopupShowing", `[Showing] <${tag} id="${popup.id || 'no-id'}"> | Parent: ${parentMenu} | Trigger: ${triggerNode}`);
       
       const dump = dumpMenuChildren(popup, "  ");
-      ZentralLogger.log("TabContextMenu:Structure", `DOM State for <${popup.id || popup.tagName}> at popupshowing:\n${dump.join("\n")}`);
+      ZentralLogger.log("Menu:Structure", `DOM State for <${popup.id || popup.tagName}>:\n${dump.join("\n")}`);
     };
     window.addEventListener("popupshowing", onPopupShowing, true);
     cleanupObservers.push(() => window.removeEventListener("popupshowing", onPopupShowing, true));
@@ -717,8 +706,7 @@
       const tag = popup.tagName.toLowerCase();
       if (tag !== "menupopup" && tag !== "panel") return;
 
-      const dump = dumpMenuChildren(popup, "  ");
-      ZentralLogger.log("TabContextMenu:PopupShown", `[Shown] <${tag} id="${popup.id || 'no-id'}"> Visible State:\n${dump.join("\n")}`);
+      ZentralLogger.log("Menu:PopupShown", `<${tag} id="${popup.id || 'no-id'}"> (visible)`);
     };
     window.addEventListener("popupshown", onPopupShown, true);
     cleanupObservers.push(() => window.removeEventListener("popupshown", onPopupShown, true));
@@ -729,7 +717,7 @@
       if (!popup || !popup.tagName) return;
       const tag = popup.tagName.toLowerCase();
       if (tag !== "menupopup" && tag !== "panel") return;
-      ZentralLogger.log("TabContextMenu:PopupHiding", `[Hiding] <${tag} id="${popup.id || 'no-id'}">`);
+      ZentralLogger.log("Menu:PopupHiding", `<${tag} id="${popup.id || 'no-id'}">`);
     };
     window.addEventListener("popuphiding", onPopupHiding, true);
     cleanupObservers.push(() => window.removeEventListener("popuphiding", onPopupHiding, true));
@@ -743,7 +731,7 @@
         const label = target.getAttribute("label") || target.label || "(no-label)";
         const parentPopup = target.closest("menupopup")?.id || "(no-popup-id)";
         const zGroupId = target.getAttribute("zentral-group-id") || "";
-        ZentralLogger.log("TabContextMenu:CommandExecuted", `Executed command on <${target.tagName.toLowerCase()} id="${id}" label="${label}"> in popup #${parentPopup} (zentralGroupId="${zGroupId}")`);
+        ZentralLogger.log("Menu:Command", `Executed command on ${formatElementSelector(target)} [label="${label}"] in popup #${parentPopup} (group="${zGroupId}")`);
       }
     };
     window.addEventListener("command", onCommand, true);
@@ -756,20 +744,18 @@
   function setupTabDragAndSplitViewTracer() {
     function getElementSummary(el) {
       if (!el) return "(null)";
-      const tag = el.tagName?.toLowerCase() || "(no-tag)";
-      const id = el.id ? `#${el.id}` : "";
-      const cls = el.className ? `.${String(el.className).trim().replace(/\s+/g, ".")}` : "";
+      const sel = formatElementSelector(el);
       const label = el.getAttribute?.("label") || el.label || el.textLabel?.textContent || "";
       const isSplitTab = el.splitView || el.group?.hasAttribute?.("split-view-group") || false;
       const isPending = el.hasAttribute?.("pending") || false;
       const groupId = el.group?.id || el.getAttribute?.("zen-tab-group-id") || "";
-      return `<${tag}${id}${cls}> label="${label}" isSplitTab=${isSplitTab} isPending=${isPending} groupId="${groupId}"`;
+      return `${sel} "${label}"${isSplitTab ? ' [Split]' : ''}${isPending ? ' [Pending]' : ''}${groupId ? ` [group=${groupId}]` : ''}`;
     }
 
     function getCallerStack() {
       try {
         const stack = new Error().stack || "";
-        const lines = stack.split("\n").slice(2, 6).map(l => l.trim()).filter(Boolean);
+        const lines = stack.split("\n").slice(2, 5).map(l => l.trim()).filter(Boolean);
         return lines.join(" -> ");
       } catch (_) {
         return "";
@@ -785,7 +771,7 @@
       if (!target?.closest?.("tab, tabbrowser-tab, tab-group, .tab-group-label-container")) return;
       const el = target.closest("tab, tabbrowser-tab, tab-group");
       const activeTab = window.gBrowser?.selectedTab;
-      ZentralLogger.log("DragTracer:MouseDown", `MouseDown on ${getElementSummary(el)} | coords=(${e.clientX},${e.clientY}) | activeTab="${activeTab?.label || activeTab?.textLabel?.textContent || ''}"`);
+      ZentralLogger.log("Drag:MouseDown", `${getElementSummary(el)} | coords=(${e.clientX},${e.clientY}) | activeTab="${activeTab?.label || ''}"`);
     };
 
     const onTabStripMouseUp = (e) => {
@@ -794,29 +780,31 @@
       if (!target?.closest?.("tab, tabbrowser-tab, tab-group, .tab-group-label-container")) return;
       const el = target.closest("tab, tabbrowser-tab, tab-group");
       const activeTab = window.gBrowser?.selectedTab;
-      ZentralLogger.log("DragTracer:MouseUp", `MouseUp on ${getElementSummary(el)} | coords=(${e.clientX},${e.clientY}) | activeTab="${activeTab?.label || activeTab?.textLabel?.textContent || ''}"`);
+      ZentralLogger.log("Drag:MouseUp", `${getElementSummary(el)} | coords=(${e.clientX},${e.clientY}) | activeTab="${activeTab?.label || ''}"`);
     };
 
-    tabContainer.addEventListener("mousedown", onTabStripMouseDown, true);
-    tabContainer.addEventListener("mouseup", onTabStripMouseUp, true);
-    cleanupObservers.push(() => {
-      tabContainer.removeEventListener("mousedown", onTabStripMouseDown, true);
-      tabContainer.removeEventListener("mouseup", onTabStripMouseUp, true);
-    });
+    if (tabContainer) {
+      tabContainer.addEventListener("mousedown", onTabStripMouseDown, true);
+      tabContainer.addEventListener("mouseup", onTabStripMouseUp, true);
+      cleanupObservers.push(() => {
+        tabContainer.removeEventListener("mousedown", onTabStripMouseDown, true);
+        tabContainer.removeEventListener("mouseup", onTabStripMouseUp, true);
+      });
+    }
 
     // 2. Trace Native Drag Lifecycle
     const onDragStart = (e) => {
       if (!isLoggerEnabled()) return;
       const target = e.target;
       const activeTab = window.gBrowser?.selectedTab;
-      ZentralLogger.log("DragTracer:DragStart", `DragStart on ${getElementSummary(target)} | activeTab="${activeTab?.label || ''}" | types=[${Array.from(e.dataTransfer?.types || []).join(",")}]`);
+      ZentralLogger.log("Drag:DragStart", `${getElementSummary(target)} | activeTab="${activeTab?.label || ''}" | types=[${Array.from(e.dataTransfer?.types || []).join(",")}]`);
     };
 
     const onDragEnd = (e) => {
       if (!isLoggerEnabled()) return;
       const target = e.target;
       const activeTab = window.gBrowser?.selectedTab;
-      ZentralLogger.log("DragTracer:DragEnd", `DragEnd on ${getElementSummary(target)} | activeTab="${activeTab?.label || ''}" | dropEffect="${e.dataTransfer?.dropEffect}"`);
+      ZentralLogger.log("Drag:DragEnd", `${getElementSummary(target)} | activeTab="${activeTab?.label || ''}" | dropEffect="${e.dataTransfer?.dropEffect}"`);
     };
 
     const onDrop = (e) => {
@@ -831,7 +819,7 @@
           if (item) draggedItemSummary = getElementSummary(item);
         }
       } catch (_) {}
-      ZentralLogger.log("DragTracer:Drop", `Drop on target ${getElementSummary(target)} | draggedItem=${draggedItemSummary} | activeTab="${activeTab?.label || ''}"`);
+      ZentralLogger.log("Drag:Drop", `Target ${getElementSummary(target)} | draggedItem=${draggedItemSummary} | activeTab="${activeTab?.label || ''}"`);
     };
 
     window.addEventListener("dragstart", onDragStart, true);
@@ -848,7 +836,7 @@
       if (!isLoggerEnabled()) return;
       const newTab = e.target;
       const stack = getCallerStack();
-      ZentralLogger.log("DragTracer:TabSelect", `TabSelect fired -> New Active Tab: ${getElementSummary(newTab)} | Caller Stack: ${stack}`);
+      ZentralLogger.log("Drag:TabSelect", `New Active Tab: ${getElementSummary(newTab)} | Stack: ${stack}`);
     };
     window.addEventListener("TabSelect", onTabSelect, true);
     cleanupObservers.push(() => window.removeEventListener("TabSelect", onTabSelect, true));
@@ -862,7 +850,7 @@
           if (isLoggerEnabled()) {
             const stack = getCallerStack();
             const tabList = (tabs || []).map(t => getElementSummary(t)).join("; ");
-            ZentralLogger.log("SplitView:splitTabs", `splitTabs called | gridType="${gridType}" | initialIndex=${initialIndex} | tabs=[${tabList}] | stack: ${stack}`);
+            ZentralLogger.log("SplitView:splitTabs", `gridType="${gridType}" | initialIndex=${initialIndex} | tabs=[${tabList}] | stack: ${stack}`);
           }
           return origSplitTabs.apply(this, arguments);
         };
@@ -876,7 +864,7 @@
             const stack = getCallerStack();
             const groupId = splitData?.groupId || "";
             const tabList = (splitData?.tabs || []).map(t => getElementSummary(t)).join("; ");
-            ZentralLogger.log("SplitView:activateSplitView", `activateSplitView called | groupId="${groupId}" | tabs=[${tabList}] | stack: ${stack}`);
+            ZentralLogger.log("SplitView:activateSplitView", `groupId="${groupId}" | tabs=[${tabList}] | stack: ${stack}`);
           }
           return origActivateSplitView.apply(this, arguments);
         };
@@ -888,7 +876,7 @@
         splitter.deactivateCurrentSplitView = function() {
           if (isLoggerEnabled()) {
             const stack = getCallerStack();
-            ZentralLogger.log("SplitView:deactivateCurrentSplitView", `deactivateCurrentSplitView called | stack: ${stack}`);
+            ZentralLogger.log("SplitView:deactivateCurrentSplitView", `Stack: ${stack}`);
           }
           return origDeactivateCurrentSplitView.apply(this, arguments);
         };
@@ -905,7 +893,7 @@
           const stack = getCallerStack();
           const activeTab = window.gBrowser?.selectedTab;
           const optionsStr = args.map(a => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(", ");
-          ZentralLogger.log("DragTracer:startTabDrag", `startTabDrag invoked for ${getElementSummary(tab)} | activeTab="${activeTab?.label || ''}" | options=(${optionsStr}) | stack: ${stack}`);
+          ZentralLogger.log("Drag:startTabDrag", `Tab: ${getElementSummary(tab)} | activeTab="${activeTab?.label || ''}" | options=(${optionsStr}) | stack: ${stack}`);
         }
         return origStartTabDrag.apply(this, arguments);
       };
@@ -925,14 +913,14 @@
     const tile = t.closest(".zen-app-tile");
     if (tile) {
       const appId = tile.getAttribute("data-app-id");
-      ZentralLogger.log("UserInteraction:Apps", `Clicked App Tile [id="${appId}"]`);
+      ZentralLogger.log("UI:Apps", `Clicked App Tile [id="${appId}"]`);
       return;
     }
 
     // App Panel action buttons
     const btn = t.closest(".zen-app-btn");
     if (btn) {
-      ZentralLogger.log("UserInteraction:Apps", `Clicked App Panel Action Button [title="${btn.title || btn.className}"]`);
+      ZentralLogger.log("UI:Apps", `Clicked Action Button [title="${btn.title || btn.className}"]`);
       return;
     }
 
@@ -940,14 +928,14 @@
     const group = t.closest("tab-group");
     if (group) {
       const label = group.label || group.getAttribute("label") || "(group)";
-      ZentralLogger.log("UserInteraction:TabGroup", `Clicked Tab Group "${label}" [target=${t.className || t.tagName}]`);
+      ZentralLogger.log("UI:TabGroup", `Clicked Tab Group "${label}" [target=${formatElementSelector(t)}]`);
       return;
     }
 
     // Settings Modal elements
     const modal = t.closest("#zentral-settings-modal");
     if (modal) {
-      ZentralLogger.log("UserInteraction:Settings", `Settings Modal interaction on <${t.tagName.toLowerCase()} id="${t.id}" class="${t.className}">`);
+      ZentralLogger.log("UI:Settings", `Interaction on ${formatElementSelector(t)}`);
       return;
     }
   };
@@ -971,20 +959,19 @@
    * @returns {string} Formatted log output
    */
   function generateLogString() {
-    const now = new Date();
     const isFull = Services.prefs.getBoolPref("zen.workspace.zentral.debug.full", true);
     const activeModulesSummary = [
-      `Core: YES (Always Active)`,
-      `Full Log Mode: ${isFull ? "ON" : "OFF"}`,
-      `Tab Groups & Drag: ${isModuleEnabled("tabs") ? "ON" : "OFF"}`,
-      `Apps Grid & Panels: ${isModuleEnabled("apps") ? "ON" : "OFF"}`,
-      `Context Menus: ${isModuleEnabled("menus") ? "ON" : "OFF"}`,
-      `Layout Snapshot: ${isModuleEnabled("layout") ? "ON" : "OFF"}`
+      `Core: YES`,
+      `Full Log: ${isFull ? "ON" : "OFF"}`,
+      `Tabs: ${isModuleEnabled("tabs") ? "ON" : "OFF"}`,
+      `Apps: ${isModuleEnabled("apps") ? "ON" : "OFF"}`,
+      `Menus: ${isModuleEnabled("menus") ? "ON" : "OFF"}`,
+      `Layout: ${isModuleEnabled("layout") ? "ON" : "OFF"}`
     ].join(" | ");
 
     const parts = [
       `================================================================================`,
-      `ZENTRAL-LOGGER DIAGNOSTIC EXPORT — ${now.toISOString()}`,
+      `ZENTRAL-LOGGER DIAGNOSTIC EXPORT — ${tsFull()}`,
       `Active Diagnostic Modules: ${activeModulesSummary}`,
       `================================================================================\n`
     ];
@@ -996,7 +983,7 @@
     }
 
     parts.push(`================================================================================`);
-    parts.push(`EVENT & LAYOUT TRACE LOG (${ringBuffer.length} entries)`);
+    parts.push(`EVENT TRACE LOG (${ringBuffer.length} entries)`);
     parts.push(`================================================================================\n`);
 
     parts.push(ringBuffer.length ? ringBuffer.join("\n") : "[No diagnostic events logged]");
@@ -1051,11 +1038,11 @@
           targetFile.append(name);
         }
       } catch (dirErr) {
-        _warn("[Zentral-Logger] Could not resolve export directory:", dirErr);
+        _native.warn("[Zentral-Logger] Could not resolve export directory:", dirErr);
       }
 
       if (!targetFile) {
-        _error("[Zentral-Logger] Cannot get file handle for export.");
+        _native.error("[Zentral-Logger] Cannot get file handle for export.");
         return;
       }
 
@@ -1072,9 +1059,9 @@
       cos.close();
       fos.close();
 
-      _log(`[Zentral-Logger] Log exported successfully to: ${targetFile.path}`);
+      _native.log(`[Zentral-Logger] Log exported successfully to: ${targetFile.path}`);
     } catch (err) {
-      _error("[Zentral-Logger] Failed to export log:", err);
+      _native.error("[Zentral-Logger] Failed to export log:", err);
     }
   }
 
@@ -1086,12 +1073,6 @@
 
   // Respect Diagnostics Prefs
   const Services = globalThis.Services || Components.classes["@mozilla.org/network/services;1"].getService(Components.interfaces.nsIServiceManager).getServiceByContractID("@mozilla.org/preferences-service;1").QueryInterface(Components.interfaces.nsIPrefBranch);
-  let loggerEnabled = false;
-  try {
-    loggerEnabled = Services.prefs.getBoolPref("zentral.logger.enabled");
-  } catch (e) {
-    loggerEnabled = false;
-  }
 
   // Listen to UI Capture button
   window.addEventListener("ZentralCaptureLog", () => {
@@ -1111,6 +1092,6 @@
     }, { once: true });
   }
 
-  ZentralLogger.log("Zentral-Logger", "Overhauled Zentral-Logger v0.1.6 initialized. Tab Drag & Split View diagnostic tracing active. Press Alt+L to export logs.");
+  ZentralLogger.log("Zentral-Logger", "Zentral-Logger v0.1.6 initialized with clean format & deduplication. Press Alt+L to export logs.");
 
 })();
