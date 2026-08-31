@@ -1868,6 +1868,33 @@ panel[id*="tabgroup-editor"] {
   transform: translateX(16px) !important;
 }
 
+#zentral-settings-modal .zs-switch input:disabled + .zs-slider {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+}
+
+#zentral-settings-modal .zs-modules-subgroup {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  padding: 12px 14px !important;
+  background: rgba(255, 255, 255, 0.025) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-radius: 10px !important;
+  margin-top: -4px !important;
+  margin-bottom: 2px !important;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+
+#zentral-settings-modal .zs-modules-subgroup[data-hidden="true"] {
+  display: none !important;
+}
+
+#zentral-settings-modal .zs-section-disabled {
+  opacity: 0.45 !important;
+  pointer-events: none !important;
+}
+
 /* Reset and Action Buttons */
 #zentral-settings-modal .zs-reset-btn {
   -moz-appearance: none !important;

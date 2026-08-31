@@ -109,7 +109,13 @@
      */
     Diagnostics: {
       PREF_LOGGER_ENABLED: "zen.workspace.zentral.debug",
-      PREF_LOGGER_PATH: "zentral.logger.path"
+      PREF_LOGGER_PATH: "zentral.logger.path",
+      PREF_LOGGER_FULL: "zen.workspace.zentral.debug.full",
+      PREF_LOGGER_CORE: "zen.workspace.zentral.debug.core",
+      PREF_LOGGER_TABS: "zen.workspace.zentral.debug.tabs",
+      PREF_LOGGER_APPS: "zen.workspace.zentral.debug.apps",
+      PREF_LOGGER_MENUS: "zen.workspace.zentral.debug.menus",
+      PREF_LOGGER_LAYOUT: "zen.workspace.zentral.debug.layout"
     },
     /** Debug logging preference — set true in about:config to enable verbose console output */
     DEBUG_PREF: "zen.workspace.zentral.debug"
@@ -154,6 +160,12 @@
         [Constants.TabGroups.PREF_LABEL_OPACITY]: 85,
         [Constants.Diagnostics.PREF_LOGGER_ENABLED]: false,
         [Constants.Diagnostics.PREF_LOGGER_PATH]: "",
+        [Constants.Diagnostics.PREF_LOGGER_FULL]: true,
+        [Constants.Diagnostics.PREF_LOGGER_CORE]: true,
+        [Constants.Diagnostics.PREF_LOGGER_TABS]: false,
+        [Constants.Diagnostics.PREF_LOGGER_APPS]: false,
+        [Constants.Diagnostics.PREF_LOGGER_MENUS]: false,
+        [Constants.Diagnostics.PREF_LOGGER_LAYOUT]: false,
         [Constants.DEBUG_PREF]: false
       };
     }
@@ -7167,10 +7179,56 @@
       if (get("zs-pref-logger-enabled")) {
         get("zs-pref-logger-enabled").checked = Core.getPref(Constants.Diagnostics.PREF_LOGGER_ENABLED, false);
       }
+      if (get("zs-pref-logger-full")) {
+        get("zs-pref-logger-full").checked = Core.getPref(Constants.Diagnostics.PREF_LOGGER_FULL, true);
+      }
+      if (get("zs-pref-logger-core")) {
+        get("zs-pref-logger-core").checked = true; // Always on
+      }
+      if (get("zs-pref-logger-tabs")) {
+        get("zs-pref-logger-tabs").checked = Core.getPref(Constants.Diagnostics.PREF_LOGGER_TABS, false);
+      }
+      if (get("zs-pref-logger-apps")) {
+        get("zs-pref-logger-apps").checked = Core.getPref(Constants.Diagnostics.PREF_LOGGER_APPS, false);
+      }
+      if (get("zs-pref-logger-menus")) {
+        get("zs-pref-logger-menus").checked = Core.getPref(Constants.Diagnostics.PREF_LOGGER_MENUS, false);
+      }
+      if (get("zs-pref-logger-layout")) {
+        get("zs-pref-logger-layout").checked = Core.getPref(Constants.Diagnostics.PREF_LOGGER_LAYOUT, false);
+      }
       if (get("zs-pref-logger-path")) {
         const savedPath = Core.getPref(Constants.Diagnostics.PREF_LOGGER_PATH, "");
         get("zs-pref-logger-path").value = savedPath;
         this.updatePathUI(savedPath);
+      }
+
+      this.updateLoggerUIState();
+    }
+
+    /**
+     * Synchronizes dynamic visibility and interactivity across Diagnostic Logging toggles.
+     */
+    updateLoggerUIState() {
+      if (!this.modal) return;
+      const get = (id) => this.modal.querySelector("#" + id);
+      const masterToggle = get("zs-pref-logger-enabled");
+      const fullToggle = get("zs-pref-logger-full");
+      const optionsSection = get("zs-logger-options-section");
+      const modulesContainer = get("zs-logger-modules-container");
+
+      const isMasterOn = masterToggle ? masterToggle.checked : false;
+      if (optionsSection) {
+        if (isMasterOn) {
+          optionsSection.classList.remove("zs-section-disabled");
+        } else {
+          optionsSection.classList.add("zs-section-disabled");
+        }
+      }
+
+      const isFull = fullToggle ? fullToggle.checked : true;
+      if (modulesContainer) {
+        modulesContainer.setAttribute("data-hidden", isFull ? "true" : "false");
       }
     }
 
@@ -7249,6 +7307,22 @@
 
       if (get("zs-pref-logger-enabled")) {
         Core.setPref(Constants.Diagnostics.PREF_LOGGER_ENABLED, get("zs-pref-logger-enabled").checked);
+      }
+      if (get("zs-pref-logger-full")) {
+        Core.setPref(Constants.Diagnostics.PREF_LOGGER_FULL, get("zs-pref-logger-full").checked);
+      }
+      Core.setPref(Constants.Diagnostics.PREF_LOGGER_CORE, true);
+      if (get("zs-pref-logger-tabs")) {
+        Core.setPref(Constants.Diagnostics.PREF_LOGGER_TABS, get("zs-pref-logger-tabs").checked);
+      }
+      if (get("zs-pref-logger-apps")) {
+        Core.setPref(Constants.Diagnostics.PREF_LOGGER_APPS, get("zs-pref-logger-apps").checked);
+      }
+      if (get("zs-pref-logger-menus")) {
+        Core.setPref(Constants.Diagnostics.PREF_LOGGER_MENUS, get("zs-pref-logger-menus").checked);
+      }
+      if (get("zs-pref-logger-layout")) {
+        Core.setPref(Constants.Diagnostics.PREF_LOGGER_LAYOUT, get("zs-pref-logger-layout").checked);
       }
       if (get("zs-pref-logger-path")) {
         Core.setPref(Constants.Diagnostics.PREF_LOGGER_PATH, get("zs-pref-logger-path").value.trim());
@@ -8278,6 +8352,33 @@
           transform: translateX(16px);
         }
 
+        .zs-switch input:disabled + .zs-slider {
+          opacity: 0.55 !important;
+          cursor: not-allowed !important;
+        }
+
+        .zs-modules-subgroup {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          padding: 12px 14px;
+          background: rgba(255, 255, 255, 0.025);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 10px;
+          margin-top: -4px;
+          margin-bottom: 2px;
+          transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .zs-modules-subgroup[data-hidden="true"] {
+          display: none !important;
+        }
+
+        .zs-section-disabled {
+          opacity: 0.45 !important;
+          pointer-events: none !important;
+        }
+
         .zs-reset-btn {
           -moz-appearance: none;
           appearance: none;
@@ -8707,27 +8808,110 @@
                 </label>
               </div>
 
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Export Log Path</span>
-                  <span class="zs-sublabel" id="zs-pref-logger-path-desc">Directory where diagnostic logs are saved</span>
+              <!-- Options Sub-Section (Controlled by master toggle) -->
+              <div id="zs-logger-options-section" style="display: flex; flex-direction: column; gap: 16px; transition: opacity 0.2s ease;">
+                
+                <!-- Full Log Toggle -->
+                <div class="zs-row">
+                  <div class="zs-label-container">
+                    <span class="zs-label">Capture Full Diagnostic Log</span>
+                    <span class="zs-sublabel">Records all diagnostic modules and events simultaneously</span>
+                  </div>
+                  <label class="zs-switch">
+                    <input type="checkbox" id="zs-pref-logger-full" />
+                    <span class="zs-slider"></span>
+                  </label>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px; max-width: 55%;">
-                  <input type="hidden" id="zs-pref-logger-path" />
-                  <button type="button" id="zs-btn-choose-path" class="zs-reset-btn" style="margin: 0; padding: 6px 12px; font-size: 12px; background: #18181b; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: inherit; max-width: 240px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 6px;" title="Click to choose export directory">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
-                    <span id="zs-btn-choose-path-label">Default Folder</span>
-                  </button>
-                  <button type="button" id="zs-btn-clear-path" title="Reset to default folder (chrome/logs)" style="background: #18181b; border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); cursor: pointer; padding: 6px 10px; display: none; align-items: center; justify-content: center; font-size: 11px; border-radius: 6px;">✕</button>
-                </div>
-              </div>
 
-              <div class="zs-row">
-                <div class="zs-label-container">
-                  <span class="zs-label">Capture Log</span>
-                  <span class="zs-sublabel">Generate and save a diagnostic log file instantly. (Shortcut: <kbd style="background: #27272a; border: 1px solid rgba(255,255,255,0.14); border-radius: 4px; padding: 1px 5px; font-size: 11px;">Alt</kbd>+<kbd style="background: #27272a; border: 1px solid rgba(255,255,255,0.14); border-radius: 4px; padding: 1px 5px; font-size: 11px;">L</kbd>)</span>
+                <!-- Modular Selections Container (Revealed when Full Log is unchecked) -->
+                <div id="zs-logger-modules-container" class="zs-modules-subgroup" data-hidden="true">
+                  <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.45); margin-bottom: 2px;">
+                    Active Log Modules
+                  </div>
+
+                  <!-- 1. Core & Gecko Errors (Always On, Disabled) -->
+                  <div class="zs-row" style="padding: 2px 0;">
+                    <div class="zs-label-container">
+                      <span class="zs-label" style="font-size: 13px;">Core Engine & Gecko Errors</span>
+                      <span class="zs-sublabel" style="font-size: 11.5px;">Uncaught script exceptions and Gecko console errors (Always Active)</span>
+                    </div>
+                    <label class="zs-switch">
+                      <input type="checkbox" id="zs-pref-logger-core" checked disabled />
+                      <span class="zs-slider"></span>
+                    </label>
+                  </div>
+
+                  <!-- 2. Tab Groups & Drag-and-Drop -->
+                  <div class="zs-row" style="padding: 2px 0;">
+                    <div class="zs-label-container">
+                      <span class="zs-label" style="font-size: 13px;">Tab Groups & Drag-and-Drop</span>
+                      <span class="zs-sublabel" style="font-size: 11.5px;">Tab groups lifecycle, split view actions, and drag interactions</span>
+                    </div>
+                    <label class="zs-switch">
+                      <input type="checkbox" id="zs-pref-logger-tabs" />
+                      <span class="zs-slider"></span>
+                    </label>
+                  </div>
+
+                  <!-- 3. Apps Sidebar & Panels -->
+                  <div class="zs-row" style="padding: 2px 0;">
+                    <div class="zs-label-container">
+                      <span class="zs-label" style="font-size: 13px;">Apps Sidebar & Panels</span>
+                      <span class="zs-sublabel" style="font-size: 11.5px;">Apps grid DOM modifications and panel open/pin events</span>
+                    </div>
+                    <label class="zs-switch">
+                      <input type="checkbox" id="zs-pref-logger-apps" />
+                      <span class="zs-slider"></span>
+                    </label>
+                  </div>
+
+                  <!-- 4. Context Menus & Popups -->
+                  <div class="zs-row" style="padding: 2px 0;">
+                    <div class="zs-label-container">
+                      <span class="zs-label" style="font-size: 13px;">Context Menus & Popups</span>
+                      <span class="zs-sublabel" style="font-size: 11.5px;">Right-click coordinates, popup showing/shown events, and menu item commands</span>
+                    </div>
+                    <label class="zs-switch">
+                      <input type="checkbox" id="zs-pref-logger-menus" />
+                      <span class="zs-slider"></span>
+                    </label>
+                  </div>
+
+                  <!-- 5. Layout Inspector Snapshot -->
+                  <div class="zs-row" style="padding: 2px 0;">
+                    <div class="zs-label-container">
+                      <span class="zs-label" style="font-size: 13px;">Layout Inspector & CSS Snapshot</span>
+                      <span class="zs-sublabel" style="font-size: 11.5px;">Computed styles, CSS variables, and element bounding boxes dump</span>
+                    </div>
+                    <label class="zs-switch">
+                      <input type="checkbox" id="zs-pref-logger-layout" />
+                      <span class="zs-slider"></span>
+                    </label>
+                  </div>
                 </div>
-                <button id="zs-btn-capture-log" class="zs-btn-save" style="margin: 0; padding: 6px 18px; font-size: 12.5px;">Export</button>
+
+                <div class="zs-row">
+                  <div class="zs-label-container">
+                    <span class="zs-label">Export Log Path</span>
+                    <span class="zs-sublabel" id="zs-pref-logger-path-desc">Directory where diagnostic logs are saved</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px; max-width: 55%;">
+                    <input type="hidden" id="zs-pref-logger-path" />
+                    <button type="button" id="zs-btn-choose-path" class="zs-reset-btn" style="margin: 0; padding: 6px 12px; font-size: 12px; background: #18181b; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: inherit; max-width: 240px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 6px;" title="Click to choose export directory">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+                      <span id="zs-btn-choose-path-label">Default Folder</span>
+                    </button>
+                    <button type="button" id="zs-btn-clear-path" title="Reset to default folder (chrome/logs)" style="background: #18181b; border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); cursor: pointer; padding: 6px 10px; display: none; align-items: center; justify-content: center; font-size: 11px; border-radius: 6px;">✕</button>
+                  </div>
+                </div>
+
+                <div class="zs-row">
+                  <div class="zs-label-container">
+                    <span class="zs-label">Capture Log</span>
+                    <span class="zs-sublabel">Generate and save a diagnostic log file instantly. (Shortcut: <kbd style="background: #27272a; border: 1px solid rgba(255,255,255,0.14); border-radius: 4px; padding: 1px 5px; font-size: 11px;">Alt</kbd>+<kbd style="background: #27272a; border: 1px solid rgba(255,255,255,0.14); border-radius: 4px; padding: 1px 5px; font-size: 11px;">L</kbd>)</span>
+                  </div>
+                  <button id="zs-btn-capture-log" class="zs-btn-save" style="margin: 0; padding: 6px 18px; font-size: 12.5px;">Export</button>
+                </div>
               </div>
             </div>
           </div>
@@ -8989,6 +9173,46 @@
           document.documentElement.setAttribute("zentral-label-opacity-below-85", val < 85 ? "true" : "false");
         });
       }
+
+      // Diagnostic Logging Master Toggle
+      const loggerMasterToggle = this.modal.querySelector("#zs-pref-logger-enabled");
+      if (loggerMasterToggle) {
+        loggerMasterToggle.addEventListener("change", () => {
+          this.updateLoggerUIState();
+        });
+      }
+
+      // Diagnostic Logging Full Log Toggle & Modular Sub-Selections
+      const loggerFullToggle = this.modal.querySelector("#zs-pref-logger-full");
+      const tabsToggle = this.modal.querySelector("#zs-pref-logger-tabs");
+      const appsToggle = this.modal.querySelector("#zs-pref-logger-apps");
+      const menusToggle = this.modal.querySelector("#zs-pref-logger-menus");
+      const layoutToggle = this.modal.querySelector("#zs-pref-logger-layout");
+
+      if (loggerFullToggle) {
+        loggerFullToggle.addEventListener("change", () => {
+          if (!loggerFullToggle.checked) {
+            // When unchecking Full Log, reveal modules with optional ones unchecked by default
+            if (tabsToggle) tabsToggle.checked = false;
+            if (appsToggle) appsToggle.checked = false;
+            if (menusToggle) menusToggle.checked = false;
+            if (layoutToggle) layoutToggle.checked = false;
+          }
+          this.updateLoggerUIState();
+        });
+      }
+
+      const optionalModuleToggles = [tabsToggle, appsToggle, menusToggle, layoutToggle].filter(Boolean);
+      optionalModuleToggles.forEach(toggle => {
+        toggle.addEventListener("change", () => {
+          const allChecked = optionalModuleToggles.every(t => t.checked);
+          if (allChecked && loggerFullToggle) {
+            // If all optional modules get individually checked, switch back to Full Log mode
+            loggerFullToggle.checked = true;
+            this.updateLoggerUIState();
+          }
+        });
+      });
 
       const choosePathBtn = this.modal.querySelector("#zs-btn-choose-path");
       const clearPathBtn = this.modal.querySelector("#zs-btn-clear-path");

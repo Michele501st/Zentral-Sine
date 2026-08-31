@@ -43,6 +43,33 @@
     }
   }
 
+  function isModuleEnabled(moduleName) {
+    if (!isLoggerEnabled()) return false;
+    if (moduleName === "core") return true;
+
+    try {
+      // If "Full Log" is active, all modules are enabled
+      const isFull = Services.prefs.getBoolPref("zen.workspace.zentral.debug.full", true);
+      if (isFull) return true;
+
+      // Otherwise check the individual modular preference
+      const prefKey = `zen.workspace.zentral.debug.${moduleName}`;
+      return Services.prefs.getBoolPref(prefKey, false);
+    } catch (_) {
+      return true; // Safe fallback
+    }
+  }
+
+  function classifyModuleFromTag(tag) {
+    if (!tag) return "core";
+    const t = String(tag).toLowerCase();
+    if (t.includes("contextmenu") || t.includes("popup") || t.includes("menu")) return "menus";
+    if (t.includes("drag") || t.includes("splitview") || t.includes("tabgroup") || t.includes("tabselect")) return "tabs";
+    if (t.includes("appsgrid") || t.includes("apppanel") || t.includes("zentralapps") || t.includes("apptile") || t.includes("utility")) return "apps";
+    if (t.includes("layout") || t.includes("css") || t.includes("inspector") || t.includes("rootattribute")) return "layout";
+    return "core";
+  }
+
   function showLoggingDisabledWarning() {
     try {
       const promptService = Services.prompt || Cc["@mozilla.org/embedcomp/prompt-service;1"]?.getService(Ci.nsIPromptService);
@@ -58,9 +85,12 @@
     alert("Diagnostic Logging is disabled.\nPlease enable 'Enable Diagnostic Logging' in Zentral Settings to export logs.");
   }
 
-  function record(level, tag, message) {
+  function record(level, tag, message, explicitModule = null) {
     if (!isLoggerEnabled()) return; // DO NOT COLLECT DATA IF DISABLED
-    const line = `[${ts()}] [${level.toUpperCase()}] [${tag}] ${message}`;
+    const mod = explicitModule || classifyModuleFromTag(tag);
+    if (!isModuleEnabled(mod)) return;
+
+    const line = `[${ts()}] [${level.toUpperCase()}] [${tag}] [${mod.toUpperCase()}] ${message}`;
     if (ringBuffer.length >= MAX_ENTRIES) ringBuffer.shift();
     ringBuffer.push(line);
   }
@@ -99,47 +129,60 @@
    * Main ZentralLogger API
    */
   const ZentralLogger = {
+    isLoggerEnabled,
+    isModuleEnabled,
+    classifyModuleFromTag,
     log(tag, ...args) {
       if (!isLoggerEnabled()) return;
+      const mod = classifyModuleFromTag(tag);
+      if (!isModuleEnabled(mod)) return;
       const msg = args.map(formatLogArg).join(" ");
       _log(`[${tag}] ${msg}`);
-      record("log", tag, msg);
+      record("log", tag, msg, mod);
     },
     warn(tag, ...args) {
       if (!isLoggerEnabled()) return;
+      const mod = classifyModuleFromTag(tag);
+      if (!isModuleEnabled(mod)) return;
       const msg = args.map(formatLogArg).join(" ");
       _warn(`[${tag}] ${msg}`);
-      record("warn", tag, msg);
+      record("warn", tag, msg, mod);
     },
     error(tag, ...args) {
       if (!isLoggerEnabled()) return;
+      const mod = classifyModuleFromTag(tag);
+      if (!isModuleEnabled(mod)) return;
       const msg = args.map(formatLogArg).join(" ");
       _error(`[${tag}] ${msg}`);
-      record("error", tag, msg);
+      record("error", tag, msg, mod);
     },
     debug(tag, ...args) {
       if (!isLoggerEnabled()) return;
+      const mod = classifyModuleFromTag(tag);
+      if (!isModuleEnabled(mod)) return;
       const msg = args.map(formatLogArg).join(" ");
       _debug(`[${tag}] ${msg}`);
-      record("debug", tag, msg);
+      record("debug", tag, msg, mod);
     },
     info(tag, ...args) {
       if (!isLoggerEnabled()) return;
+      const mod = classifyModuleFromTag(tag);
+      if (!isModuleEnabled(mod)) return;
       const msg = args.map(formatLogArg).join(" ");
       _info(`[${tag}] ${msg}`);
-      record("info", tag, msg);
+      record("info", tag, msg, mod);
     },
     layout(component, details) {
-      if (!isLoggerEnabled()) return;
+      if (!isLoggerEnabled() || !isModuleEnabled("layout")) return;
       const msg = typeof details === "object" ? JSON.stringify(details) : String(details);
       _log(`[Zentral-Layout:${component}] ${msg}`);
-      record("layout", `Layout:${component}`, msg);
+      record("layout", `Layout:${component}`, msg, "layout");
     },
     inspectLayout() {
-      if (!isLoggerEnabled()) return "";
+      if (!isLoggerEnabled() || !isModuleEnabled("layout")) return "";
       const snapshot = captureLayoutDiagnosticSnapshot();
       _log(snapshot);
-      record("info", "LayoutInspector", snapshot);
+      record("info", "LayoutInspector", snapshot, "layout");
       return snapshot;
     },
     get entries() { return isLoggerEnabled() ? [...ringBuffer] : []; },
@@ -981,9 +1024,23 @@
 
       cos.writeString(`================================================================================\n`);
       cos.writeString(`ZENTRAL-LOGGER DIAGNOSTIC EXPORT — ${now.toISOString()}\n`);
+      const isFull = Services.prefs.getBoolPref("zen.workspace.zentral.debug.full", true);
+      const activeModulesSummary = [
+        `Core: YES (Always Active)`,
+        `Full Log Mode: ${isFull ? "ON" : "OFF"}`,
+        `Tab Groups & Drag: ${isModuleEnabled("tabs") ? "ON" : "OFF"}`,
+        `Apps Grid & Panels: ${isModuleEnabled("apps") ? "ON" : "OFF"}`,
+        `Context Menus: ${isModuleEnabled("menus") ? "ON" : "OFF"}`,
+        `Layout Snapshot: ${isModuleEnabled("layout") ? "ON" : "OFF"}`
+      ].join(" | ");
+      cos.writeString(`Active Diagnostic Modules: ${activeModulesSummary}\n`);
       cos.writeString(`================================================================================\n\n`);
 
-      cos.writeString(captureLayoutDiagnosticSnapshot() + "\n\n");
+      if (isModuleEnabled("layout")) {
+        cos.writeString(captureLayoutDiagnosticSnapshot() + "\n\n");
+      } else {
+        cos.writeString(`=== ZENTRAL LAYOUT DIAGNOSTIC SNAPSHOT ===\n[Layout Inspector & CSS Snapshot module is disabled — snapshot omitted]\n\n`);
+      }
 
       cos.writeString(`================================================================================\n`);
       cos.writeString(`EVENT & LAYOUT TRACE LOG (${ringBuffer.length} entries)\n`);
