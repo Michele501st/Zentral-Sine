@@ -205,7 +205,7 @@
      * @returns {any} The stored or fallback preference value.
      */
     getPref(key, fallback) {
-      const defaultVal = fallback !== undefined ? fallback : this.defaultPrefs[key];
+      const defaultVal = this.defaultPrefs[key] !== undefined ? this.defaultPrefs[key] : fallback;
       try {
         if (!Services.prefs.prefHasUserValue(key)) {
           // If key is zen.workspace.zentral.debug, check legacy fallback
@@ -9510,7 +9510,7 @@
           };
 
           // 2. Attempt background submission to Cloudflare Worker endpoint if configured
-          let endpoint = Core.getPref(Constants.Diagnostics.PREF_REPORT_ENDPOINT, "")?.trim();
+          let endpoint = Core.getPref(Constants.Diagnostics.PREF_REPORT_ENDPOINT)?.trim();
           let submitted = false;
 
           if (endpoint) {
