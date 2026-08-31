@@ -7113,7 +7113,13 @@
       const animSpeed = Core.getPref(Constants.Apps.PREF_ANIMATION_SPEED, 450) || 450;
       const maxApps = Core.getPref(Constants.Apps.PREF_MAX_APPS, 21) || 21;
 
-      get("zs-anim-type").value = animType;
+      const animDropdown = this.modal.querySelector("#zs-anim-type-dropdown");
+      if (animDropdown && animDropdown.syncValue) {
+        animDropdown.syncValue(animType);
+      } else if (get("zs-anim-type")) {
+        get("zs-anim-type").value = animType;
+      }
+
       get("zs-anim-speed").value = animSpeed;
       if (get("zs-anim-speed-slider")) get("zs-anim-speed-slider").value = animSpeed;
       if (get("zs-anim-speed-badge")) get("zs-anim-speed-badge").textContent = `${animSpeed} ms`;
@@ -7146,8 +7152,13 @@
           indicatorTypeRow.setAttribute("data-hidden", "true");
         }
       }
-      if (get("zs-tg-indicator-type")) {
-        get("zs-tg-indicator-type").value = Core.getPref(Constants.TabGroups.PREF_INDICATOR_TYPE, "circle") || "circle";
+      
+      const indicatorType = Core.getPref(Constants.TabGroups.PREF_INDICATOR_TYPE, "circle") || "circle";
+      const tgDropdown = this.modal.querySelector("#zs-tg-indicator-type-dropdown");
+      if (tgDropdown && tgDropdown.syncValue) {
+        tgDropdown.syncValue(indicatorType);
+      } else if (get("zs-tg-indicator-type")) {
+        get("zs-tg-indicator-type").value = indicatorType;
       }
       
       const opacity = Core.getPref(Constants.TabGroups.PREF_LABEL_OPACITY, 85) || 85;
@@ -7513,6 +7524,7 @@
 
         #zs-tg-col {
           padding-left: 24px;
+          overflow: visible;
         }
 
         .zs-section-header {
@@ -7840,16 +7852,17 @@
         .zs-matrix-wrapper {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
           background: rgba(24, 24, 27, 0.6);
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 12px;
-          padding: 10px 12px;
+          padding: 12px 14px 14px 14px;
           overflow: hidden;
           flex-shrink: 0;
-          max-height: 240px;
+          max-height: 420px;
           opacity: 1;
           transform: translateY(0);
+          box-sizing: border-box;
           transition: max-height 0.32s cubic-bezier(0.16, 1, 0.3, 1),
                       opacity 0.22s ease,
                       padding 0.32s cubic-bezier(0.16, 1, 0.3, 1),
@@ -7874,29 +7887,32 @@
           display: flex;
           justify-content: space-between;
           align-items: center;
+          gap: 12px;
         }
 
         .zs-matrix-title {
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 600;
           color: #ffffff;
         }
 
         .zs-matrix-readout {
-          font-size: 11px;
+          font-size: 12px;
           font-weight: 500;
           color: var(--zen-primary-color, #6366f1);
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
+          flex-shrink: 0;
         }
 
         .zs-matrix-badge {
-          background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 18%, transparent);
-          border: 1px solid color-mix(in srgb, var(--zen-primary-color, #6366f1) 35%, transparent);
-          padding: 1px 6px;
-          border-radius: 4px;
-          font-size: 10px;
+          background: #18181b;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: color-mix(in srgb, var(--zen-primary-color, #6366f1) 85%, #ffffff);
+          padding: 3px 8px;
+          border-radius: 5px;
+          font-size: 11px;
           font-weight: 600;
           font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         }
@@ -7905,24 +7921,28 @@
           display: grid;
           grid-template-columns: repeat(10, 1fr);
           grid-template-rows: repeat(6, 1fr);
-          gap: 3px;
-          max-width: 320px;
+          gap: 6px;
+          width: 100%;
+          max-width: 100%;
           user-select: none;
           touch-action: none;
-          padding: 2px 0;
+          box-sizing: border-box;
+          padding: 4px 0 2px 0;
         }
 
         .zs-matrix-cell {
           aspect-ratio: 1 / 1;
           width: 100%;
-          min-height: 12px;
-          max-height: 24px;
-          background: rgba(255, 255, 255, 0.06);
+          height: auto;
+          min-height: 0;
+          max-height: none;
+          background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 3.5px;
+          border-radius: 6px;
           cursor: pointer;
           transition: background 0.12s ease, border-color 0.12s ease;
           box-shadow: none;
+          box-sizing: border-box;
         }
 
         .zs-matrix-cell:hover,
@@ -7944,8 +7964,7 @@
           border-color: #ffffff;
           box-shadow: none;
           filter: none;
-          transform: scale(1.08);
-          z-index: 2;
+          transform: none;
         }
 
         .zs-anim-preview-group {
@@ -8051,38 +8070,108 @@
           opacity: 0;
         }
 
-        .zs-select {
-          color-scheme: dark !important;
-          min-width: 140px;
-          background: #18181b url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>') no-repeat right 10px center;
+        .zs-custom-select {
+          position: relative;
+          min-width: 144px;
+          flex-shrink: 0;
+          user-select: none;
+        }
+
+        .zs-custom-select-trigger {
           -moz-appearance: none;
           appearance: none;
+          outline: none;
+          width: 100%;
+          background: #18181b;
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 8px;
           color: #ffffff;
-          padding: 6px 28px 6px 12px;
+          padding: 6px 12px;
           font-size: 13px;
           font-weight: 500;
-          outline: none;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
           cursor: pointer;
+          transition: background-color 0.15s ease, border-color 0.15s ease;
+          box-sizing: border-box;
           box-shadow: none;
-          transition: border-color 0.15s ease, background-color 0.15s ease;
+        }
+
+        .zs-custom-select-trigger * {
+          pointer-events: none;
+        }
+
+        .zs-custom-select-trigger:hover {
+          background-color: #27272a;
+          border-color: rgba(255, 255, 255, 0.22);
+        }
+
+        .zs-custom-select[data-open="true"] .zs-custom-select-trigger {
+          border-color: var(--zen-primary-color, #6366f1);
+        }
+
+        .zs-custom-select-arrow {
+          color: rgba(255, 255, 255, 0.65);
+          transition: transform 0.18s ease;
           flex-shrink: 0;
         }
 
-        .zs-select:hover {
-          border-color: rgba(255, 255, 255, 0.25);
-          background-color: #27272a;
+        .zs-custom-select[data-open="true"] .zs-custom-select-arrow {
+          transform: rotate(180deg);
         }
 
-        .zs-select:focus {
-          border-color: var(--zen-primary-color, #6366f1);
-          outline: none;
-          box-shadow: none;
+        .zs-custom-select-menu {
+          position: absolute;
+          top: calc(100% + 4px);
+          right: 0;
+          min-width: 100%;
+          width: max-content;
+          background: #18181b;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 8px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.65);
+          padding: 4px;
+          z-index: 1000;
+          display: none;
+          flex-direction: column;
+          gap: 2px;
+          animation: zsTabFadeIn 0.12s ease-out;
+        }
+
+        .zs-custom-select[data-open="true"] .zs-custom-select-menu {
+          display: flex;
+        }
+
+        .zs-custom-select-option {
+          padding: 6px 10px;
+          font-size: 13px;
+          font-weight: 500;
+          color: #e4e4e7;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: background-color 0.1s ease, color 0.1s ease;
+          white-space: nowrap;
+        }
+
+        .zs-custom-select-option:hover {
+          background: #27272a;
+          color: #ffffff;
+        }
+
+        .zs-custom-select-option[data-selected="true"] {
+          background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 18%, rgba(255, 255, 255, 0.05));
+          color: color-mix(in srgb, var(--zen-primary-color, #6366f1) 85%, #ffffff);
+          font-weight: 600;
+        }
+
+        #zs-tg-content {
+          overflow: visible;
         }
 
         #zs-tg-indicator-type-row {
-          overflow: hidden;
+          overflow: visible;
           min-height: 30px;
           max-height: 48px;
           opacity: 1;
@@ -8100,6 +8189,7 @@
           height: 0 !important;
           max-height: 0 !important;
           opacity: 0 !important;
+          overflow: hidden !important;
           margin-top: -14px !important;
           margin-bottom: 0 !important;
           padding-top: 0 !important;
@@ -8252,6 +8342,65 @@
       }
     }
 
+    /**
+     * Configures a custom dropdown select component with glitch-free option selection.
+     * @param {string} dropdownId - Element ID of .zs-custom-select
+     * @param {string} hiddenInputId - Element ID of associated hidden input
+     * @param {Function} [onSelectCallback] - Optional callback when value changes
+     */
+    setupCustomSelect(dropdownId, hiddenInputId, onSelectCallback) {
+      if (!this.modal) return;
+      const dropdown = this.modal.querySelector("#" + dropdownId);
+      const hiddenInput = this.modal.querySelector("#" + hiddenInputId);
+      if (!dropdown || !hiddenInput) return;
+
+      const trigger = dropdown.querySelector(".zs-custom-select-trigger");
+      const label = dropdown.querySelector(".zs-custom-select-label");
+      const options = dropdown.querySelectorAll(".zs-custom-select-option");
+
+      const syncUI = (val) => {
+        hiddenInput.value = val;
+        options.forEach(opt => {
+          const isSelected = opt.dataset.value === val;
+          opt.setAttribute("data-selected", isSelected ? "true" : "false");
+          if (isSelected && label) {
+            label.textContent = opt.textContent.trim();
+          }
+        });
+      };
+
+      if (trigger) {
+        trigger.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const isOpen = dropdown.getAttribute("data-open") === "true";
+          this.modal.querySelectorAll(".zs-custom-select").forEach(d => {
+            if (d !== dropdown) d.removeAttribute("data-open");
+          });
+          if (isOpen) {
+            dropdown.removeAttribute("data-open");
+          } else {
+            dropdown.setAttribute("data-open", "true");
+          }
+        });
+      }
+
+      options.forEach(opt => {
+        opt.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const val = opt.dataset.value;
+          syncUI(val);
+          dropdown.removeAttribute("data-open");
+          if (typeof onSelectCallback === "function") {
+            onSelectCallback(val);
+          }
+        });
+      });
+
+      dropdown.syncValue = syncUI;
+    }
+
     createModal() {
       this.injectStyles();
       this.modal = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
@@ -8361,20 +8510,27 @@
                     </div>
                   </div>
 
-                  <!-- Panel Animation -->
+                  <!-- Panel Animation (Glitch-Free Custom Dropdown) -->
                   <div class="zs-row">
                     <div class="zs-label-container">
                       <span class="zs-label">Panel Animation</span>
                       <span class="zs-sublabel">Opening/closing apps panel easing</span>
                     </div>
-                    <select id="zs-anim-type" class="zs-select">
-                      <option value="slide">Smooth Slide</option>
-                      <option value="spring-snappy">Snappy Spring</option>
-                      <option value="spring-gentle">Gentle Spring</option>
-                      <option value="spring-bouncy">Bouncy Spring</option>
-                      <option value="elastic">Elastic</option>
-                      <option value="none">Instant</option>
-                    </select>
+                    <div class="zs-custom-select" id="zs-anim-type-dropdown" data-value="slide">
+                      <button type="button" class="zs-custom-select-trigger" id="zs-anim-type-trigger">
+                        <span class="zs-custom-select-label">Smooth Slide</span>
+                        <svg class="zs-custom-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                      </button>
+                      <div class="zs-custom-select-menu" id="zs-anim-type-menu">
+                        <div class="zs-custom-select-option" data-value="slide">Smooth Slide</div>
+                        <div class="zs-custom-select-option" data-value="spring-snappy">Snappy Spring</div>
+                        <div class="zs-custom-select-option" data-value="spring-gentle">Gentle Spring</div>
+                        <div class="zs-custom-select-option" data-value="spring-bouncy">Bouncy Spring</div>
+                        <div class="zs-custom-select-option" data-value="elastic">Elastic</div>
+                        <div class="zs-custom-select-option" data-value="none">Instant</div>
+                      </div>
+                      <input type="hidden" id="zs-anim-type" value="slide" />
+                    </div>
                   </div>
 
                   <!-- Animation Speed -->
@@ -8468,10 +8624,17 @@
                       <span class="zs-label">Indicator Type</span>
                       <span class="zs-sublabel">Choose the style of the indicator</span>
                     </div>
-                    <select id="zs-tg-indicator-type" class="zs-select">
-                      <option value="circle">Circle</option>
-                      <option value="chevron">Chevron</option>
-                    </select>
+                    <div class="zs-custom-select" id="zs-tg-indicator-type-dropdown" data-value="circle">
+                      <button type="button" class="zs-custom-select-trigger" id="zs-tg-indicator-type-trigger">
+                        <span class="zs-custom-select-label">Circle</span>
+                        <svg class="zs-custom-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                      </button>
+                      <div class="zs-custom-select-menu" id="zs-tg-indicator-type-menu">
+                        <div class="zs-custom-select-option" data-value="circle">Circle</div>
+                        <div class="zs-custom-select-option" data-value="chevron">Chevron</div>
+                      </div>
+                      <input type="hidden" id="zs-tg-indicator-type" value="circle" />
+                    </div>
                   </div>
 
                   <div class="zs-stacked-slider">
@@ -8564,6 +8727,13 @@
       this.modal.querySelector("#zs-close").addEventListener("click", () => this.close());
       this.modal.querySelector("#zs-cancel").addEventListener("click", () => this.close());
       this.modal.querySelector("#zs-save").addEventListener("click", () => this.save());
+
+      // Close open custom selects when clicking anywhere else
+      this.modal.addEventListener("click", (e) => {
+        if (!e.target.closest(".zs-custom-select")) {
+          this.modal.querySelectorAll(".zs-custom-select").forEach(d => d.removeAttribute("data-open"));
+        }
+      });
 
       // Header Enable/Disable toggle sync (only disables section content, never lock out the toggle itself)
       const agToggle = this.modal.querySelector("#zs-ag-enabled");
@@ -8679,11 +8849,11 @@
       });
 
       // Animation Type and Speed Sync + Preview Demo
-      const animTypeSelect = this.modal.querySelector("#zs-anim-type");
       const animSpeedSlider = this.modal.querySelector("#zs-anim-speed-slider");
       const animSpeedInput = this.modal.querySelector("#zs-anim-speed");
       const animSpeedBadge = this.modal.querySelector("#zs-anim-speed-badge");
       const animPreviewBox = this.modal.querySelector("#zs-anim-preview-box");
+      const animTypeDropdown = this.modal.querySelector("#zs-anim-type-dropdown");
 
       let previewPulseTimeout = null;
       if (animPreviewBox) {
@@ -8697,41 +8867,46 @@
         });
       }
 
-      const onAnimChange = () => {
-        const type = animTypeSelect ? animTypeSelect.value : "slide";
+      const onAnimChange = (typeVal) => {
+        const hiddenInput = this.modal.querySelector("#zs-anim-type");
+        const type = typeVal || (hiddenInput ? hiddenInput.value : "slide");
         let speed = parseInt(animSpeedInput ? animSpeedInput.value : "450", 10);
         if (isNaN(speed)) speed = 0;
 
         if (speed <= 0 && type !== "none") {
-          if (animTypeSelect) animTypeSelect.value = "none";
+          if (animTypeDropdown && animTypeDropdown.syncValue) animTypeDropdown.syncValue("none");
         }
         if (animSpeedBadge) animSpeedBadge.textContent = `${speed} ms`;
-        this.updatePreviewDemo(animTypeSelect ? animTypeSelect.value : type, speed);
+        this.updatePreviewDemo(type, speed);
       };
 
-      if (animTypeSelect) {
-        animTypeSelect.addEventListener("change", () => {
-          const type = animTypeSelect.value;
-          if (type === "none") {
-            if (animSpeedInput) animSpeedInput.value = 0;
-            if (animSpeedSlider) animSpeedSlider.value = 0;
-          } else {
-            const currentSpeed = parseInt(animSpeedInput ? animSpeedInput.value : "0", 10);
-            if (currentSpeed === 0) {
-              if (animSpeedInput) animSpeedInput.value = 450;
-              if (animSpeedSlider) animSpeedSlider.value = 450;
-            }
+      this.setupCustomSelect("zs-anim-type-dropdown", "zs-anim-type", (selectedType) => {
+        if (selectedType === "none") {
+          if (animSpeedInput) animSpeedInput.value = 0;
+          if (animSpeedSlider) animSpeedSlider.value = 0;
+        } else {
+          const currentSpeed = parseInt(animSpeedInput ? animSpeedInput.value : "0", 10);
+          if (currentSpeed === 0) {
+            if (animSpeedInput) animSpeedInput.value = 450;
+            if (animSpeedSlider) animSpeedSlider.value = 450;
           }
-          onAnimChange();
-        });
-      }
+        }
+        onAnimChange(selectedType);
+      });
+
+      this.setupCustomSelect("zs-tg-indicator-type-dropdown", "zs-tg-indicator-type");
 
       if (animSpeedSlider) {
         animSpeedSlider.addEventListener("input", (e) => {
           const val = parseInt(e.target.value, 10) || 0;
           if (animSpeedInput) animSpeedInput.value = val;
-          if (val === 0 && animTypeSelect) animTypeSelect.value = "none";
-          else if (val > 0 && animTypeSelect && animTypeSelect.value === "none") animTypeSelect.value = "slide";
+          const currentTypeInput = this.modal.querySelector("#zs-anim-type");
+          const currentType = currentTypeInput ? currentTypeInput.value : "slide";
+          if (val === 0 && animTypeDropdown && animTypeDropdown.syncValue) {
+            animTypeDropdown.syncValue("none");
+          } else if (val > 0 && currentType === "none" && animTypeDropdown && animTypeDropdown.syncValue) {
+            animTypeDropdown.syncValue("slide");
+          }
           onAnimChange();
         });
       }
@@ -8743,8 +8918,13 @@
           if (val < 0) val = 0;
           if (val > 2000) val = 2000;
           if (animSpeedSlider) animSpeedSlider.value = val;
-          if (val === 0 && animTypeSelect) animTypeSelect.value = "none";
-          else if (val > 0 && animTypeSelect && animTypeSelect.value === "none") animTypeSelect.value = "slide";
+          const currentTypeInput = this.modal.querySelector("#zs-anim-type");
+          const currentType = currentTypeInput ? currentTypeInput.value : "slide";
+          if (val === 0 && animTypeDropdown && animTypeDropdown.syncValue) {
+            animTypeDropdown.syncValue("none");
+          } else if (val > 0 && currentType === "none" && animTypeDropdown && animTypeDropdown.syncValue) {
+            animTypeDropdown.syncValue("slide");
+          }
           onAnimChange();
         });
       }
@@ -8875,7 +9055,10 @@
         if (matrixWrapper) matrixWrapper.removeAttribute("data-hidden");
         
         this.updateMatrixUI(7, 3);
-        get("zs-anim-type").value = "slide";
+        const animDropdown = this.modal.querySelector("#zs-anim-type-dropdown");
+        if (animDropdown && animDropdown.syncValue) animDropdown.syncValue("slide");
+        else if (get("zs-anim-type")) get("zs-anim-type").value = "slide";
+
         get("zs-anim-speed").value = 450;
         if (get("zs-anim-speed-slider")) get("zs-anim-speed-slider").value = 450;
         if (get("zs-anim-speed-badge")) get("zs-anim-speed-badge").textContent = "450 ms";
@@ -8896,7 +9079,11 @@
         get("zs-tg-thumbnails").checked = true;
         get("zs-tg-chevron").checked = true;
         if (indicatorTypeRow) indicatorTypeRow.removeAttribute("data-hidden");
-        if (get("zs-tg-indicator-type")) get("zs-tg-indicator-type").value = "circle";
+        
+        const tgDropdown = this.modal.querySelector("#zs-tg-indicator-type-dropdown");
+        if (tgDropdown && tgDropdown.syncValue) tgDropdown.syncValue("circle");
+        else if (get("zs-tg-indicator-type")) get("zs-tg-indicator-type").value = "circle";
+
         get("zs-tg-opacity").value = 85;
         if (get("zs-tg-opacity-badge")) get("zs-tg-opacity-badge").textContent = "85%";
         document.documentElement.style.setProperty("--zentral-tabgroup-label-opacity", "0.85");
