@@ -8179,10 +8179,33 @@
           opacity: 0;
         }
 
+        #zs-panel-diagnostics {
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+          padding-right: 6px !important;
+          scrollbar-width: thin !important;
+          scrollbar-color: #3f3f46 transparent !important;
+        }
+
+        #zs-panel-diagnostics::-webkit-scrollbar {
+          width: 5px;
+        }
+
+        #zs-panel-diagnostics::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        #zs-panel-diagnostics::-webkit-scrollbar-thumb {
+          background: #3f3f46;
+          border-radius: 9999px;
+        }
+
+        #zs-panel-diagnostics::-webkit-scrollbar-thumb:hover {
+          background: #52525b;
+        }
+
         .zs-custom-select {
           position: relative;
-          min-width: 144px;
-          flex-shrink: 0;
           user-select: none;
         }
 
@@ -8191,11 +8214,14 @@
           appearance: none;
           outline: none;
           width: 100%;
+          height: 36px;
+          min-height: 36px;
+          max-height: 36px;
           background: #18181b;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 8px;
           color: #ffffff;
-          padding: 6px 12px;
+          padding: 0 12px;
           font-size: 13px;
           font-weight: 500;
           display: flex;
@@ -8206,6 +8232,17 @@
           transition: background-color 0.15s ease, border-color 0.15s ease;
           box-sizing: border-box;
           box-shadow: none;
+          white-space: nowrap;
+        }
+
+        .zs-custom-select-label {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          flex: 1 1 auto;
+          text-align: left;
+          font-size: 13px;
+          line-height: 1;
         }
 
         .zs-custom-select-trigger * {
@@ -8222,9 +8259,16 @@
         }
 
         .zs-custom-select-arrow {
+          width: 14px !important;
+          height: 14px !important;
+          min-width: 14px !important;
+          min-height: 14px !important;
+          max-width: 14px !important;
+          max-height: 14px !important;
           color: rgba(255, 255, 255, 0.65);
           transition: transform 0.18s ease;
           flex-shrink: 0;
+          display: block;
         }
 
         .zs-custom-select[data-open="true"] .zs-custom-select-arrow {
@@ -8381,11 +8425,30 @@
           pointer-events: none !important;
         }
 
-        .zs-text-input,
+        .zs-text-input {
+          -moz-appearance: none;
+          appearance: none;
+          outline: none;
+          width: 100%;
+          height: 36px;
+          min-height: 36px;
+          max-height: 36px;
+          background: #141417;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 8px;
+          color: #f4f4f5;
+          font-family: inherit;
+          font-size: 13px;
+          padding: 0 12px;
+          box-sizing: border-box;
+          transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
         .zs-textarea-input {
           -moz-appearance: none;
           appearance: none;
           outline: none;
+          width: 100%;
           background: #141417;
           border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 8px;
@@ -8395,6 +8458,8 @@
           padding: 8px 12px;
           box-sizing: border-box;
           transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+          resize: vertical;
+          min-height: 76px;
         }
 
         .zs-text-input:focus,
@@ -8961,7 +9026,7 @@
                     <div class="zs-custom-select" id="zs-report-category-dropdown" data-name="report-category" style="width: 100%;">
                       <button type="button" class="zs-custom-select-trigger" aria-haspopup="listbox" aria-expanded="false" style="width: 100%;">
                         <span class="zs-custom-select-label">🐛 Bug / Malfunction</span>
-                        <svg class="zs-custom-select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        <svg class="zs-custom-select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; min-width: 14px; min-height: 14px; flex-shrink: 0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
                       </button>
                       <div class="zs-custom-select-menu" role="listbox">
                         <div class="zs-custom-select-option" role="option" data-value="bug" data-selected="true">🐛 Bug / Malfunction</div>

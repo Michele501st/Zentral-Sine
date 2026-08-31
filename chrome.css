@@ -1690,11 +1690,34 @@ panel[id*="tabgroup-editor"] {
   opacity: 0 !important;
 }
 
+#zentral-settings-modal #zs-panel-diagnostics {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-right: 8px !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #3f3f46 transparent !important;
+}
+
+#zentral-settings-modal #zs-panel-diagnostics::-webkit-scrollbar {
+  width: 5px !important;
+}
+
+#zentral-settings-modal #zs-panel-diagnostics::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+#zentral-settings-modal #zs-panel-diagnostics::-webkit-scrollbar-thumb {
+  background: #3f3f46 !important;
+  border-radius: 9999px !important;
+}
+
+#zentral-settings-modal #zs-panel-diagnostics::-webkit-scrollbar-thumb:hover {
+  background: #52525b !important;
+}
+
 /* Custom Sleek Dropdown (Completely Glitch-Free) */
 #zentral-settings-modal .zs-custom-select {
   position: relative !important;
-  min-width: 144px !important;
-  flex-shrink: 0 !important;
   user-select: none !important;
 }
 
@@ -1703,11 +1726,14 @@ panel[id*="tabgroup-editor"] {
   appearance: none !important;
   outline: none !important;
   width: 100% !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
   background: #18181b !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 8px !important;
   color: #ffffff !important;
-  padding: 6px 12px !important;
+  padding: 0 12px !important;
   font-size: 13px !important;
   font-weight: 500 !important;
   display: flex !important;
@@ -1718,6 +1744,17 @@ panel[id*="tabgroup-editor"] {
   transition: background-color 0.15s ease, border-color 0.15s ease !important;
   box-sizing: border-box !important;
   box-shadow: none !important;
+  white-space: nowrap !important;
+}
+
+#zentral-settings-modal .zs-custom-select-label {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  flex: 1 1 auto !important;
+  text-align: left !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
 }
 
 #zentral-settings-modal .zs-custom-select-trigger * {
@@ -1734,9 +1771,16 @@ panel[id*="tabgroup-editor"] {
 }
 
 #zentral-settings-modal .zs-custom-select-arrow {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
   color: rgba(255, 255, 255, 0.65) !important;
   transition: transform 0.18s ease !important;
   flex-shrink: 0 !important;
+  display: block !important;
 }
 
 #zentral-settings-modal .zs-custom-select[data-open="true"] .zs-custom-select-arrow {
@@ -1895,11 +1939,30 @@ panel[id*="tabgroup-editor"] {
   pointer-events: none !important;
 }
 
-#zentral-settings-modal .zs-text-input,
+#zentral-settings-modal .zs-text-input {
+  -moz-appearance: none !important;
+  appearance: none !important;
+  outline: none !important;
+  width: 100% !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  background: #141417 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 8px !important;
+  color: #f4f4f5 !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  padding: 0 12px !important;
+  box-sizing: border-box !important;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease !important;
+}
+
 #zentral-settings-modal .zs-textarea-input {
   -moz-appearance: none !important;
   appearance: none !important;
   outline: none !important;
+  width: 100% !important;
   background: #141417 !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 8px !important;
@@ -1909,6 +1972,8 @@ panel[id*="tabgroup-editor"] {
   padding: 8px 12px !important;
   box-sizing: border-box !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease !important;
+  resize: vertical !important;
+  min-height: 76px !important;
 }
 
 #zentral-settings-modal .zs-text-input:focus,
