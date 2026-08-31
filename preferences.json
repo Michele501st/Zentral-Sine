@@ -89,6 +89,12 @@
     "defaultValue": false
   },
   {
+    "property": "zen.workspace.zentral.report_endpoint",
+    "label": "Serverless Issue Report Endpoint URL",
+    "type": "string",
+    "defaultValue": "https://zentral-issue-reporter.michele-pierini.workers.dev/"
+  },
+  {
     "property": "zen.workspace.tabgroups.enabled",
     "label": "Enable Enhanced Tab Groups & Color Picker",
     "type": "checkbox",

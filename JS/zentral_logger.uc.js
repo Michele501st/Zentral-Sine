@@ -190,6 +190,7 @@
     get entries() { return isLoggerEnabled() ? [...ringBuffer] : []; },
     dump()   { if (isLoggerEnabled()) ringBuffer.forEach(l => _log(l)); },
     export() { exportLog(); },
+    generateLogString() { return generateLogString(); },
     clear()  { ringBuffer.length = 0; }
   };
 
@@ -966,6 +967,46 @@
   cleanupObservers.push(() => document.removeEventListener("keydown", onKeyDown, true));
 
   /**
+   * Generates formatted diagnostic log string in-memory without file operations
+   * @returns {string} Formatted log output
+   */
+  function generateLogString() {
+    const now = new Date();
+    const isFull = Services.prefs.getBoolPref("zen.workspace.zentral.debug.full", true);
+    const activeModulesSummary = [
+      `Core: YES (Always Active)`,
+      `Full Log Mode: ${isFull ? "ON" : "OFF"}`,
+      `Tab Groups & Drag: ${isModuleEnabled("tabs") ? "ON" : "OFF"}`,
+      `Apps Grid & Panels: ${isModuleEnabled("apps") ? "ON" : "OFF"}`,
+      `Context Menus: ${isModuleEnabled("menus") ? "ON" : "OFF"}`,
+      `Layout Snapshot: ${isModuleEnabled("layout") ? "ON" : "OFF"}`
+    ].join(" | ");
+
+    const parts = [
+      `================================================================================`,
+      `ZENTRAL-LOGGER DIAGNOSTIC EXPORT — ${now.toISOString()}`,
+      `Active Diagnostic Modules: ${activeModulesSummary}`,
+      `================================================================================\n`
+    ];
+
+    if (isModuleEnabled("layout")) {
+      parts.push(captureLayoutDiagnosticSnapshot() + "\n");
+    } else {
+      parts.push(`=== ZENTRAL LAYOUT DIAGNOSTIC SNAPSHOT ===\n[Layout Inspector & CSS Snapshot module is disabled — snapshot omitted]\n`);
+    }
+
+    parts.push(`================================================================================`);
+    parts.push(`EVENT & LAYOUT TRACE LOG (${ringBuffer.length} entries)`);
+    parts.push(`================================================================================\n`);
+
+    parts.push(ringBuffer.length ? ringBuffer.join("\n") : "[No diagnostic events logged]");
+    parts.push(`\n================================================================================`);
+    parts.push(`End of export.`);
+
+    return parts.join("\n");
+  }
+
+  /**
    * Export diagnostic logs to file in workspace logs folder
    */
   function exportLog() {
@@ -1024,34 +1065,9 @@
       const cos = Cc["@mozilla.org/intl/converter-output-stream;1"].createInstance(Ci.nsIConverterOutputStream);
       cos.init(fos, "UTF-8");
 
-      cos.writeString(`================================================================================\n`);
-      cos.writeString(`ZENTRAL-LOGGER DIAGNOSTIC EXPORT — ${now.toISOString()}\n`);
-      const isFull = Services.prefs.getBoolPref("zen.workspace.zentral.debug.full", true);
-      const activeModulesSummary = [
-        `Core: YES (Always Active)`,
-        `Full Log Mode: ${isFull ? "ON" : "OFF"}`,
-        `Tab Groups & Drag: ${isModuleEnabled("tabs") ? "ON" : "OFF"}`,
-        `Apps Grid & Panels: ${isModuleEnabled("apps") ? "ON" : "OFF"}`,
-        `Context Menus: ${isModuleEnabled("menus") ? "ON" : "OFF"}`,
-        `Layout Snapshot: ${isModuleEnabled("layout") ? "ON" : "OFF"}`
-      ].join(" | ");
-      cos.writeString(`Active Diagnostic Modules: ${activeModulesSummary}\n`);
-      cos.writeString(`================================================================================\n\n`);
-
-      if (isModuleEnabled("layout")) {
-        cos.writeString(captureLayoutDiagnosticSnapshot() + "\n\n");
-      } else {
-        cos.writeString(`=== ZENTRAL LAYOUT DIAGNOSTIC SNAPSHOT ===\n[Layout Inspector & CSS Snapshot module is disabled — snapshot omitted]\n\n`);
-      }
-
-      cos.writeString(`================================================================================\n`);
-      cos.writeString(`EVENT & LAYOUT TRACE LOG (${ringBuffer.length} entries)\n`);
-      cos.writeString(`================================================================================\n\n`);
-
-      const content = ringBuffer.length ? ringBuffer.join("\n") : "[No diagnostic events logged]";
-      cos.writeString(content);
-      cos.writeString(`\n\n================================================================================\n`);
-      cos.writeString(`End of export. Log file path: ${targetFile.path}\n`);
+      const logText = generateLogString();
+      cos.writeString(logText);
+      cos.writeString(`\nLog file path: ${targetFile.path}\n`);
 
       cos.close();
       fos.close();

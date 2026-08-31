@@ -115,7 +115,8 @@
       PREF_LOGGER_TABS: "zen.workspace.zentral.debug.tabs",
       PREF_LOGGER_APPS: "zen.workspace.zentral.debug.apps",
       PREF_LOGGER_MENUS: "zen.workspace.zentral.debug.menus",
-      PREF_LOGGER_LAYOUT: "zen.workspace.zentral.debug.layout"
+      PREF_LOGGER_LAYOUT: "zen.workspace.zentral.debug.layout",
+      PREF_REPORT_ENDPOINT: "zen.workspace.zentral.report_endpoint"
     },
     /** Debug logging preference — set true in about:config to enable verbose console output */
     DEBUG_PREF: "zen.workspace.zentral.debug"
@@ -166,6 +167,7 @@
         [Constants.Diagnostics.PREF_LOGGER_APPS]: false,
         [Constants.Diagnostics.PREF_LOGGER_MENUS]: false,
         [Constants.Diagnostics.PREF_LOGGER_LAYOUT]: false,
+        [Constants.Diagnostics.PREF_REPORT_ENDPOINT]: "https://zentral-issue-reporter.michele-pierini.workers.dev/",
         [Constants.DEBUG_PREF]: false
       };
     }
@@ -8379,6 +8381,34 @@
           pointer-events: none !important;
         }
 
+        .zs-text-input,
+        .zs-textarea-input {
+          -moz-appearance: none;
+          appearance: none;
+          outline: none;
+          background: #141417;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 8px;
+          color: #f4f4f5;
+          font-family: inherit;
+          font-size: 13px;
+          padding: 8px 12px;
+          box-sizing: border-box;
+          transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .zs-text-input:focus,
+        .zs-textarea-input:focus {
+          background: #18181b;
+          border-color: var(--zen-primary-color, #6366f1);
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--zen-primary-color, #6366f1) 25%, transparent);
+        }
+
+        .zs-text-input::placeholder,
+        .zs-textarea-input::placeholder {
+          color: rgba(255, 255, 255, 0.35);
+        }
+
         .zs-reset-btn {
           -moz-appearance: none;
           appearance: none;
@@ -8913,6 +8943,66 @@
                   <button id="zs-btn-capture-log" class="zs-btn-save" style="margin: 0; padding: 6px 18px; font-size: 12.5px;">Export</button>
                 </div>
               </div>
+
+              <!-- Report an Issue Section -->
+              <div class="zs-section-header" style="margin-top: 20px;">
+                <h3 class="zs-section-title">Report an Issue</h3>
+              </div>
+              <div id="zs-issue-report-card" class="zs-card" style="display: flex; flex-direction: column; gap: 14px; margin-top: 4px; padding: 16px; background: rgba(255, 255, 255, 0.025); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px;">
+                
+                <!-- Title & Category Row -->
+                <div style="display: flex; gap: 12px; align-items: flex-start;">
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                    <label class="zs-label" for="zs-report-title" style="font-size: 12.5px;">Issue Title</label>
+                    <input type="text" id="zs-report-title" class="zs-text-input" placeholder="Brief summary of the issue..." style="width: 100%;" />
+                  </div>
+                  <div style="width: 220px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;">
+                    <label class="zs-label" style="font-size: 12.5px;">Category</label>
+                    <div class="zs-custom-select" id="zs-report-category-dropdown" data-name="report-category" style="width: 100%;">
+                      <button type="button" class="zs-custom-select-trigger" aria-haspopup="listbox" aria-expanded="false" style="width: 100%;">
+                        <span class="zs-custom-select-label">🐛 Bug / Malfunction</span>
+                        <svg class="zs-custom-select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                      </button>
+                      <div class="zs-custom-select-menu" role="listbox">
+                        <div class="zs-custom-select-option" role="option" data-value="bug" data-selected="true">🐛 Bug / Malfunction</div>
+                        <div class="zs-custom-select-option" role="option" data-value="layout">📐 Layout / Visual Alignment</div>
+                        <div class="zs-custom-select-option" role="option" data-value="performance">⚡ Performance / Lag</div>
+                        <div class="zs-custom-select-option" role="option" data-value="enhancement">💡 Feature Request / Feedback</div>
+                      </div>
+                    </div>
+                    <input type="hidden" id="zs-report-category" value="bug" />
+                  </div>
+                </div>
+
+                <!-- Description Field -->
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <label class="zs-label" for="zs-report-description" style="font-size: 12.5px;">Description & Steps to Reproduce</label>
+                  <textarea id="zs-report-description" class="zs-textarea-input" rows="4" placeholder="Describe what happened, expected behavior, and steps to reproduce..." style="width: 100%; resize: vertical; min-height: 80px;"></textarea>
+                </div>
+
+                <!-- Attach Log Toggle Row & Submit Action -->
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 4px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <label class="zs-switch">
+                      <input type="checkbox" id="zs-report-attach-log" checked />
+                      <span class="zs-slider"></span>
+                    </label>
+                    <div style="display: flex; flex-direction: column;">
+                      <span class="zs-label" style="font-size: 12.5px;">Attach Diagnostic Log</span>
+                      <span class="zs-sublabel" style="font-size: 11px;">Includes active modules & layout snapshot</span>
+                    </div>
+                  </div>
+
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="zs-report-status" style="font-size: 12px; font-weight: 500; display: none;"></span>
+                    <button type="button" id="zs-btn-submit-report" class="zs-btn-save" style="margin: 0; padding: 7px 20px; font-size: 12.5px; display: flex; align-items: center; gap: 6px;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                      <span>Submit Report</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
         </div>
@@ -9287,6 +9377,149 @@
               captureBtn.style.pointerEvents = "auto";
             }
           }, 2200);
+        });
+      }
+
+      // -----------------------------------------------------------------------
+      // Issue Report Submission Engine
+      // -----------------------------------------------------------------------
+      this.setupCustomSelect("zs-report-category-dropdown", "zs-report-category");
+
+      const submitReportBtn = this.modal.querySelector("#zs-btn-submit-report");
+      const titleInput = this.modal.querySelector("#zs-report-title");
+      const categoryInput = this.modal.querySelector("#zs-report-category");
+      const descInput = this.modal.querySelector("#zs-report-description");
+      const attachLogCheckbox = this.modal.querySelector("#zs-report-attach-log");
+      const statusEl = this.modal.querySelector("#zs-report-status");
+
+      if (submitReportBtn && titleInput && descInput) {
+        submitReportBtn.addEventListener("click", async () => {
+          const title = titleInput.value.trim();
+          const desc = descInput.value.trim();
+          const category = categoryInput ? categoryInput.value : "bug";
+          const attachLogs = attachLogCheckbox ? attachLogCheckbox.checked : true;
+
+          if (!title) {
+            titleInput.focus();
+            titleInput.style.borderColor = "#ef4444";
+            setTimeout(() => { if (titleInput) titleInput.style.borderColor = ""; }, 2000);
+            return;
+          }
+          if (!desc) {
+            descInput.focus();
+            descInput.style.borderColor = "#ef4444";
+            setTimeout(() => { if (descInput) descInput.style.borderColor = ""; }, 2000);
+            return;
+          }
+
+          // Visual loading state
+          submitReportBtn.disabled = true;
+          submitReportBtn.style.opacity = "0.7";
+          submitReportBtn.style.pointerEvents = "none";
+          const origBtnHTML = submitReportBtn.innerHTML;
+          submitReportBtn.innerHTML = `<span>Submitting...</span>`;
+
+          if (statusEl) {
+            statusEl.style.display = "inline";
+            statusEl.style.color = "rgba(255, 255, 255, 0.6)";
+            statusEl.textContent = "Connecting to GitHub...";
+          }
+
+          // 1. Gather diagnostic logs & system metadata
+          let logContent = "";
+          if (attachLogs) {
+            if (window.ZentralLogger?.generateLogString) {
+              logContent = window.ZentralLogger.generateLogString();
+            } else if (window.ZentralLogger?.entries) {
+              logContent = window.ZentralLogger.entries.join("\n");
+            }
+          }
+
+          const systemInfo = {
+            zentralVersion: "v0.1.6",
+            zenVersion: navigator.userAgent,
+            platform: navigator.platform || "Desktop",
+            windowSize: `${window.innerWidth}x${window.innerHeight}`,
+            dpr: window.devicePixelRatio || 1,
+            sidebarMode: document.documentElement.getAttribute("zen-sidebar-expanded") === "true" ? "Expanded" : "Compact"
+          };
+
+          // 2. Attempt background submission to Cloudflare Worker endpoint if configured
+          let endpoint = Core.getPref(Constants.Diagnostics.PREF_REPORT_ENDPOINT, "")?.trim();
+          let submitted = false;
+
+          if (endpoint) {
+            try {
+              const resp = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  title,
+                  description: desc,
+                  category,
+                  systemInfo,
+                  logs: logContent
+                })
+              });
+
+              const result = await resp.json();
+              if (resp.ok && result.success) {
+                submitted = true;
+                if (statusEl) {
+                  statusEl.style.display = "inline";
+                  statusEl.style.color = "#10b981";
+                  statusEl.innerHTML = `<a href="${result.issueUrl}" target="_blank" style="color: #10b981; text-decoration: underline;">✓ Issue #${result.issueNumber} created!</a>`;
+                }
+                titleInput.value = "";
+                descInput.value = "";
+              }
+            } catch (postErr) {
+              console.warn("[Zentral-Report] Worker submission failed, falling back to Web:", postErr);
+            }
+          }
+
+          // 3. Fallback: If not submitted via worker, open pre-filled GitHub issue in new tab & copy logs to clipboard
+          if (!submitted) {
+            if (logContent) {
+              try {
+                const clipboardHelper = Cc["@mozilla.org/widget/clipboardhelper;1"]?.getService(Ci.nsIClipboardHelper);
+                if (clipboardHelper) {
+                  clipboardHelper.copyString(logContent);
+                } else if (navigator.clipboard?.writeText) {
+                  navigator.clipboard.writeText(logContent);
+                }
+              } catch (_) {}
+            }
+
+            let ghBody = `### 📝 Description\n${desc}\n\n`;
+            ghBody += `### 🖥️ Environment\n`;
+            ghBody += `- **Zentral Version:** ${systemInfo.zentralVersion}\n`;
+            ghBody += `- **Zen Build:** ${systemInfo.zenVersion}\n`;
+            ghBody += `- **OS / Platform:** ${systemInfo.platform}\n`;
+            ghBody += `- **Window / DPR:** ${systemInfo.windowSize} (DPR: ${systemInfo.dpr})\n\n`;
+            if (logContent) {
+              ghBody += `*(Diagnostic log copied to your clipboard — paste below if relevant)*\n\n`;
+            }
+
+            const ghUrl = `https://github.com/Michele501st/Zentral-Sine/issues/new?title=${encodeURIComponent(`[${category.toUpperCase()}] ${title}`)}&body=${encodeURIComponent(ghBody)}&labels=${encodeURIComponent(category)}`;
+            
+            if (window.gBrowser?.addTab) {
+              window.gBrowser.addTab(ghUrl, { triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal() });
+            } else {
+              window.open(ghUrl, "_blank");
+            }
+
+            if (statusEl) {
+              statusEl.style.display = "inline";
+              statusEl.style.color = "#60a5fa";
+              statusEl.textContent = logContent ? "✓ Opened in GitHub (Log copied to clipboard!)" : "✓ Opened in GitHub!";
+            }
+          }
+
+          submitReportBtn.disabled = false;
+          submitReportBtn.style.opacity = "1";
+          submitReportBtn.style.pointerEvents = "auto";
+          submitReportBtn.innerHTML = origBtnHTML;
         });
       }
 
