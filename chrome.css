@@ -113,19 +113,19 @@ tab-group.zentral-standard > .tab-group-label-container::before {
   pointer-events: none !important;
 }
 
-/* Title Card (Left Sidebar default: 100% full-width, left-aligned indicator & text) */
+/* Title Card (Left Sidebar default: 100% full-width, right-aligned content facing webpage) */
 tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapper {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
-  justify-content: flex-start !important;
+  justify-content: flex-end !important;
   width: 100% !important;
   min-width: 100% !important;
   max-width: 100% !important;
   height: 26px !important;
   min-height: 26px !important;
   max-height: 26px !important;
-  padding: 0 10px 0 8px !important;
+  padding: 0 8px 0 10px !important;
   border-radius: 8px !important;
   background-color: color-mix(in srgb, var(--zentral-custom-color, var(--tab-group-color, #777777)) calc(var(--zentral-tabgroup-label-opacity, 0.85) * 100%), transparent) !important;
   backdrop-filter: blur(16px) saturate(140%) !important;
@@ -137,10 +137,10 @@ tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapp
   transition: background-color 0.2s ease, border-radius 0.2s ease !important;
 }
 
-/* Nested Groups on Left Sidebar: 8px compact stepped indentation from the LEFT */
+/* Nested Groups on Left Sidebar: 8px compact stepped indentation on the RIGHT (facing webpage content) */
 :is(tab-group.zentral-standard tab-group.zentral-standard, tab-group.zentral-standard[depth], tab-group.zentral-standard[nesting-level]) > .tab-group-label-container .zentral-tab-title-wrapper {
-  margin-left: 8px !important;
-  margin-right: 0 !important;
+  margin-right: 8px !important;
+  margin-left: 0 !important;
   width: calc(100% - 8px) !important;
   min-width: calc(100% - 8px) !important;
 }
@@ -188,24 +188,24 @@ panel#zentral-group-color-picker,
   overflow: visible !important;
 }
 
-/* Right Sidebar Mode (Sidebar on Right side of screen -> Outer edge is on RIGHT) */
+/* Right Sidebar Mode (Sidebar on Right side of screen -> Outer edge is on RIGHT, content on LEFT) */
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard > .tab-group-label-container {
-  justify-content: flex-end !important;
+  justify-content: flex-start !important;
 }
 
 html[zen-sidebar-right="true"] tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapper,
 html[zen-right-side="true"] tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapper {
-  justify-content: flex-end !important;
-  padding: 0 8px 0 10px !important;
-  margin-left: auto !important;
-  margin-right: 0 !important;
+  justify-content: flex-start !important;
+  padding: 0 10px 0 8px !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
   width: 100% !important;
   min-width: 100% !important;
 }
 
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) :is(tab-group.zentral-standard tab-group.zentral-standard, tab-group.zentral-standard[depth], tab-group.zentral-standard[nesting-level]) > .tab-group-label-container .zentral-tab-title-wrapper {
-  margin-right: 8px !important;
-  margin-left: 0 !important;
+  margin-left: 8px !important;
+  margin-right: 0 !important;
   width: calc(100% - 8px) !important;
   min-width: calc(100% - 8px) !important;
 }
@@ -236,14 +236,14 @@ html[zentral-label-opacity-below-85="true"]:is([zen-sidebar-right="true"], [zen-
 }
 
 /* Label text - Dynamically Auto-Contrast (Black or White) based on Label Color */
-/* Left Sidebar: Indicator is order 1, Text is order 2 */
+/* Left Sidebar: Text is order 1, Indicator is order 2 (closest to right / webpage content) */
 tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
   justify-content: flex-start !important;
   flex: 0 1 auto !important;
-  text-align: start !important;
+  text-align: end !important;
   background-color: transparent !important;
   opacity: 1 !important;
   color: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
@@ -251,25 +251,25 @@ tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
   font-size: 12px !important;
   font-weight: 600 !important;
   padding: 0 !important;
-  margin: 0 !important;
+  margin: 0 6px 0 0 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   width: auto !important;
   max-width: 100% !important;
-  order: 2 !important;
+  order: 1 !important;
   transition: color 0.15s ease !important;
 }
 
-/* Right Sidebar: Text is order 1, Indicator is order 2 */
+/* Right Sidebar: Indicator is order 1 (closest to left / webpage content), Text is order 2 */
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) #tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label {
-  text-align: end !important;
-  order: 1 !important;
-  margin: 0 6px 0 0 !important;
+  text-align: start !important;
+  order: 2 !important;
+  margin: 0 0 0 6px !important;
 }
 
 /* Icon container within title wrapper */
-/* Left Sidebar: Order 1 (at left edge) */
+/* Left Sidebar: Order 2 (closer to right / webpage content) */
 .tab-group-icon-container,
 #tabbrowser-tabs tab-group .tab-group-icon-container,
 #tabbrowser-tabs tab-group[collapsed] .tab-group-icon-container {
@@ -283,18 +283,17 @@ tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
   min-height: 16px !important;
   max-width: 16px !important;
   max-height: 16px !important;
-  margin: 0 6px 0 0 !important;
+  margin: 0 !important;
   padding: 0 !important;
   flex-shrink: 0 !important;
-  order: 1 !important;
+  order: 2 !important;
   overflow: visible !important;
 }
 
-/* Right Sidebar: Order 2 (at right edge) */
+/* Right Sidebar: Order 1 (closer to left / webpage content) */
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) #tabbrowser-tabs tab-group .tab-group-icon-container,
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) #tabbrowser-tabs tab-group[collapsed] .tab-group-icon-container {
-  order: 2 !important;
-  margin: 0 0 0 6px !important;
+  order: 1 !important;
 }
 
 /* Circular Group State Indicator - Dynamically Auto-Contrast (Black or White) based on Label Color */
@@ -481,8 +480,8 @@ tab-group[collapsed] .tab-group-icon::after {
 
 /* Hierarchy & Nested Groups Indentation (Mirrored for Left vs Right Sidebar) */
 tab-group.zentral-standard tab-group.zentral-standard {
-  margin-left: 8px !important;
-  margin-right: 0 !important;
+  margin-right: 8px !important;
+  margin-left: 0 !important;
   position: relative !important;
   width: calc(100% - 8px) !important;
 }
@@ -509,14 +508,14 @@ tab-group.zentral-standard > .tab-group-container::after {
   content: none !important;
 }
 
-/* Nested Tab Group Container: 8px indented to align with nested label */
+/* Nested Tab Group Container: 8px indented on the RIGHT (facing webpage content) */
 tab-group.zentral-standard tab-group.zentral-standard .tab-group-container {
   max-height: 100% !important;
   position: relative !important;
-  margin-left: 8px !important;
-  margin-right: 0 !important;
-  margin-inline-start: 8px !important;
-  margin-inline-end: 0 !important;
+  margin-right: 8px !important;
+  margin-left: 0 !important;
+  margin-inline-start: 0 !important;
+  margin-inline-end: 8px !important;
 }
 
 /* Vertical Guide Line: Only connects the nested label with its own tabs, using the nested label's color */
@@ -524,8 +523,8 @@ tab-group.zentral-standard tab-group.zentral-standard .tab-group-container::afte
   content: "" !important;
   display: block !important;
   position: absolute !important;
-  left: 0px !important;
-  right: auto !important;
+  right: 0px !important;
+  left: auto !important;
   top: 0 !important;
   bottom: 0 !important;
   background-color: var(--zentral-custom-color, var(--tab-group-color, #777777)) !important;
@@ -537,22 +536,22 @@ tab-group.zentral-standard tab-group.zentral-standard .tab-group-container::afte
   opacity: 0.9 !important;
 }
 
-/* Right Sidebar Mode Overrides (Outer edge is on the RIGHT) */
+/* Right Sidebar Mode Overrides (Outer edge is on the RIGHT, webpage content on LEFT) */
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard tab-group.zentral-standard {
-  margin-right: 8px !important;
-  margin-left: 0 !important;
+  margin-left: 8px !important;
+  margin-right: 0 !important;
 }
 
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard tab-group.zentral-standard .tab-group-container {
-  margin-right: 8px !important;
-  margin-left: 0 !important;
-  margin-inline-start: 0 !important;
-  margin-inline-end: 8px !important;
+  margin-left: 8px !important;
+  margin-right: 0 !important;
+  margin-inline-start: 8px !important;
+  margin-inline-end: 0 !important;
 }
 
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard tab-group.zentral-standard .tab-group-container::after {
-  right: 0px !important;
-  left: auto !important;
+  left: 0px !important;
+  right: auto !important;
 }
 
 tab-group.zentral-standard[collapsed] .tab-group-container::after {
