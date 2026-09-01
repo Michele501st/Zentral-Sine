@@ -80,14 +80,14 @@ tab-group.zentral-standard > .tab-group-label-container {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
-  justify-content: flex-end !important;
+  justify-content: flex-start !important;
   pointer-events: auto !important;
   width: 100% !important;
   min-width: 100% !important;
   max-width: 100% !important;
-  height: 24px !important;
-  min-height: 24px !important;
-  max-height: 24px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
   aspect-ratio: auto !important;
   margin: 2px 0 !important;
   padding: 0 !important;
@@ -113,18 +113,18 @@ tab-group.zentral-standard > .tab-group-label-container::before {
   pointer-events: none !important;
 }
 
-/* Title Card (Left Sidebar default: 100% full-width, right-aligned content closer to page side) */
+/* Title Card (Left Sidebar default: 100% full-width, left-aligned content with outer edge flush) */
 tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapper {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
-  justify-content: flex-end !important;
+  justify-content: flex-start !important;
   width: 100% !important;
   min-width: 100% !important;
   max-width: 100% !important;
-  height: 24px !important;
-  min-height: 24px !important;
-  max-height: 24px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
   padding: 0 10px 0 8px !important;
   border-radius: 8px !important;
   background-color: color-mix(in srgb, var(--zentral-custom-color, var(--tab-group-color, #777777)) calc(var(--zentral-tabgroup-label-opacity, 0.85) * 100%), transparent) !important;
@@ -137,10 +137,10 @@ tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapp
   transition: background-color 0.2s ease, border-radius 0.2s ease !important;
 }
 
-/* Nested Groups on Left Sidebar: 12px stepped indentation from the LEFT outer edge */
+/* Nested Groups on Left Sidebar: 12px stepped indentation on the RIGHT (facing webpage content) */
 :is(tab-group.zentral-standard tab-group.zentral-standard, tab-group.zentral-standard[depth], tab-group.zentral-standard[nesting-level]) > .tab-group-label-container .zentral-tab-title-wrapper {
-  margin-left: 12px !important;
-  margin-right: 0 !important;
+  margin-right: 12px !important;
+  margin-left: 0 !important;
   width: calc(100% - 12px) !important;
   min-width: calc(100% - 12px) !important;
 }
@@ -188,24 +188,24 @@ panel#zentral-group-color-picker,
   overflow: visible !important;
 }
 
-/* Right Sidebar Mode (Sidebar on Right side of screen -> Content aligns to LEFT inner edge closer to page) */
+/* Right Sidebar Mode (Sidebar on Right side of screen -> Outer edge is on RIGHT, content on LEFT) */
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard > .tab-group-label-container {
-  justify-content: flex-start !important;
+  justify-content: flex-end !important;
 }
 
 html[zen-sidebar-right="true"] tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapper,
 html[zen-right-side="true"] tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapper {
-  justify-content: flex-start !important;
+  justify-content: flex-end !important;
   padding: 0 8px 0 10px !important;
-  margin-left: 0 !important;
-  margin-right: auto !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
   width: 100% !important;
   min-width: 100% !important;
 }
 
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) :is(tab-group.zentral-standard tab-group.zentral-standard, tab-group.zentral-standard[depth], tab-group.zentral-standard[nesting-level]) > .tab-group-label-container .zentral-tab-title-wrapper {
-  margin-right: 12px !important;
-  margin-left: 0 !important;
+  margin-left: 12px !important;
+  margin-right: 0 !important;
   width: calc(100% - 12px) !important;
   min-width: calc(100% - 12px) !important;
 }
@@ -242,7 +242,7 @@ tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
   align-items: center !important;
   justify-content: flex-start !important;
   flex: 0 1 auto !important;
-  text-align: end !important;
+  text-align: start !important;
   background-color: transparent !important;
   opacity: 1 !important;
   color: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
@@ -262,7 +262,7 @@ tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
 
 html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label,
 html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label {
-  text-align: start !important;
+  text-align: end !important;
 }
 
 /* Icon container within title wrapper */
@@ -472,8 +472,8 @@ tab-group[collapsed] .tab-group-icon::after {
 /* Hierarchy & Nested Groups (Outer-edge alignment) */
 /* Hierarchy & Nested Groups Indentation (Mirrored for Left vs Right Sidebar) */
 tab-group.zentral-standard tab-group.zentral-standard {
-  margin-left: 12px !important;
-  margin-right: 0 !important;
+  margin-right: 12px !important;
+  margin-left: 0 !important;
   position: relative !important;
   width: calc(100% - 12px) !important;
 }
@@ -481,8 +481,8 @@ tab-group.zentral-standard tab-group.zentral-standard {
 tab-group.zentral-standard tab-group.zentral-standard::before {
   content: "" !important;
   position: absolute !important;
-  left: -6px !important;
-  right: auto !important;
+  right: -6px !important;
+  left: auto !important;
   top: 0 !important;
   bottom: 0 !important;
   width: 1.5px !important;
@@ -498,17 +498,17 @@ tab-group.zentral-standard tab-group.zentral-standard::before {
 tab-group.zentral-standard .tab-group-container {
   max-height: 100% !important;
   position: relative !important;
-  margin-left: 12px !important;
-  margin-right: 0 !important;
-  margin-inline-start: 12px !important;
-  margin-inline-end: 0 !important;
+  margin-right: 12px !important;
+  margin-left: 0 !important;
+  margin-inline-start: 0 !important;
+  margin-inline-end: 12px !important;
 }
 
 tab-group.zentral-standard .tab-group-container::after {
   content: "" !important;
   position: absolute !important;
-  left: -6px !important;
-  right: auto !important;
+  right: -6px !important;
+  left: auto !important;
   top: 0 !important;
   background: var(--zen-colors-border, rgba(255, 255, 255, 0.15)) !important;
   height: 100% !important;
@@ -516,27 +516,27 @@ tab-group.zentral-standard .tab-group-container::after {
   pointer-events: none !important;
 }
 
-/* Right Sidebar Mode Overrides (Outer edge is on the RIGHT) */
+/* Right Sidebar Mode Overrides (Outer edge is on the RIGHT, webpage content on LEFT) */
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard tab-group.zentral-standard {
-  margin-right: 12px !important;
-  margin-left: 0 !important;
+  margin-left: 12px !important;
+  margin-right: 0 !important;
 }
 
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard tab-group.zentral-standard::before {
-  right: -6px !important;
-  left: auto !important;
+  left: -6px !important;
+  right: auto !important;
 }
 
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard .tab-group-container {
-  margin-right: 12px !important;
-  margin-left: 0 !important;
-  margin-inline-start: 0 !important;
-  margin-inline-end: 12px !important;
+  margin-left: 12px !important;
+  margin-right: 0 !important;
+  margin-inline-start: 12px !important;
+  margin-inline-end: 0 !important;
 }
 
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard .tab-group-container::after {
-  right: -6px !important;
-  left: auto !important;
+  left: -6px !important;
+  right: auto !important;
 }
 
 tab-group.zentral-standard .tab-group-container tab {
