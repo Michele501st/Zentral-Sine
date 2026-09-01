@@ -5400,20 +5400,20 @@
          * whenever Zen's own JS rewrites the element's style attribute.
          */
         const enforceRestingStyles = () => {
-          labelContainer.style.setProperty("border-radius", "14px", "important");
+          labelContainer.style.setProperty("border-radius", "8px", "important");
           labelContainer.style.setProperty("aspect-ratio", "auto", "important");
           labelContainer.style.setProperty("align-self", "stretch", "important");
           labelContainer.style.setProperty("width", "100%", "important");
           labelContainer.style.setProperty("min-width", "100%", "important");
           labelContainer.style.setProperty("max-width", "100%", "important");
-          labelContainer.style.setProperty("height", "28px", "important");
-          labelContainer.style.setProperty("min-height", "28px", "important");
+          labelContainer.style.setProperty("height", "26px", "important");
+          labelContainer.style.setProperty("min-height", "26px", "important");
+          labelContainer.style.setProperty("max-height", "26px", "important");
           labelContainer.style.setProperty("box-sizing", "border-box", "important");
           labelContainer.style.setProperty("display", "flex", "important");
           labelContainer.style.setProperty("flex-direction", "row", "important");
           labelContainer.style.setProperty("align-items", "center", "important");
-          labelContainer.style.setProperty("justify-content", "center", "important");
-          labelContainer.style.setProperty("padding", "0 10px", "important");
+          labelContainer.style.setProperty("padding", "0", "important");
           // Sync chevron icon visibility with the pref to prevent CSS vs inline-style conflict (H-05)
           const iconEl = labelContainer.querySelector(".tab-group-icon");
           if (iconEl) {

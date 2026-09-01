@@ -614,7 +614,9 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   padding: 0 !important;
   width: 100% !important;
   min-width: 100% !important;
-  min-height: 28px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
   box-sizing: border-box !important;
 }
 
