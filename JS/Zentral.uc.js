@@ -167,8 +167,7 @@
         [Constants.Diagnostics.PREF_LOGGER_APPS]: false,
         [Constants.Diagnostics.PREF_LOGGER_MENUS]: false,
         [Constants.Diagnostics.PREF_LOGGER_LAYOUT]: false,
-        [Constants.Diagnostics.PREF_REPORT_ENDPOINT]: "https://zentral-issue-reporter.michele-pierini.workers.dev/",
-        [Constants.DEBUG_PREF]: false
+        [Constants.Diagnostics.PREF_REPORT_ENDPOINT]: "https://zentral-issue-reporter.michele-pierini.workers.dev/"
       };
     }
 
@@ -207,13 +206,7 @@
     getPref(key, fallback) {
       const defaultVal = this.defaultPrefs[key] !== undefined ? this.defaultPrefs[key] : fallback;
       try {
-        if (!Services.prefs.prefHasUserValue(key)) {
-          // If key is zen.workspace.zentral.debug, check legacy fallback
-          if (key === Constants.DEBUG_PREF && Services.prefs.prefHasUserValue("zentral.logger.enabled")) {
-            return Services.prefs.getBoolPref("zentral.logger.enabled");
-          }
-          return defaultVal;
-        }
+        if (!Services.prefs.prefHasUserValue(key)) return defaultVal;
         const prefType = Services.prefs.getPrefType(key);
         if (prefType === Services.prefs.PREF_BOOL) return Services.prefs.getBoolPref(key);
         if (prefType === Services.prefs.PREF_INT) return Services.prefs.getIntPref(key);
@@ -237,27 +230,12 @@
         }
         else if (typeof value === "string") Services.prefs.setStringPref(key, value);
         else if (typeof value === "boolean") Services.prefs.setBoolPref(key, value);
-        
-        // Keep legacy pref in sync if writing debug pref
-        if (key === Constants.DEBUG_PREF) {
-          try { Services.prefs.setBoolPref("zentral.logger.enabled", value); } catch (_) {}
-        }
-        
         this.emit(`config:${key}`, value);
       } catch (e) {
         console.warn("[ZentralCore] Config failed to save pref", key, e);
       }
     }
 
-    /**
-     * Safely retrieves a native browser preference without throwing errors on missing prefs.
-     * @param {string} key - Native Firefox/Zen preference key.
-     * @param {any} fallback - Fallback value if preference key does not exist or fails to read.
-     * @returns {any} The preference value or fallback.
-     */
-    setNativePref(key, value) {
-      this.setPref(key, value);
-    }
 
     getNativePref(key, fallback) {
       try {
@@ -9747,21 +9725,19 @@
     TabGroups,
     Settings,
     Init: () => {
-      console.log("[Zentral] Booting Master Script (v0.1.6)...");
+      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[Zentral] Booting Master Script (v0.1.6)...");
       Apps.init();
       TabGroups.init();
       Settings.init();
       window.ZentralSettingsInstance = Settings;
     },
     Destroy: () => {
-      console.log("[Zentral] Unloading and destroying Zentral mod...");
+      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[Zentral] Unloading and destroying Zentral mod...");
       if (Apps.destroy) Apps.destroy();
       if (TabGroups.destroy) TabGroups.destroy();
       if (Settings.destroy) Settings.destroy();
       window.ZentralInitialized = false;
       delete window.Zentral;
-      delete window.ZenzeiLogger;
-      delete window.ZenTabPeekLogger;
     }
   };
 
@@ -9814,7 +9790,6 @@
       
       window.addEventListener("DOMContentLoaded", safeBoot, { once: true });
       window.addEventListener("load", safeBoot, { once: true });
-      setTimeout(safeBoot, 1000);
     }
   } catch (e) {
     console.error("[Zentral] Startup observer error, forcing immediate Init():", e);

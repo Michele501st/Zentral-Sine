@@ -121,5 +121,11 @@
       { "label": "Circle Dot", "value": "circle" },
       { "label": "Chevron Arrow", "value": "chevron" }
     ]
+  },
+  {
+    "property": "zen.workspace.tabgroups.thumbnails",
+    "label": "Show Tab Thumbnails on Hover",
+    "type": "checkbox",
+    "defaultValue": true
   }
 ]

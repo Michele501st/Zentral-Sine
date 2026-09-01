@@ -1,5 +1,5 @@
 /* ============================================================================ */
-/*               ZENTRAL TAB GROUPS & UI STYLESHEET (v0.1.5a)                  */
+/*               ZENTRAL TAB GROUPS & UI STYLESHEET (v0.1.6)                  */
 /* ============================================================================ */
 /*  Part of the Zentral userChrome.js suite for Zen Browser.                   */
 /*  License: CC BY-NC-SA 4.0                                                   */
@@ -129,7 +129,6 @@ tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapp
   border-radius: 8px !important;
   background-color: color-mix(in srgb, var(--zentral-custom-color, var(--tab-group-color, #777777)) calc(var(--zentral-tabgroup-label-opacity, 0.85) * 100%), transparent) !important;
   backdrop-filter: blur(16px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
   z-index: 3 !important;
   position: relative !important;
   box-sizing: border-box !important;
@@ -158,7 +157,6 @@ panel#zentral-group-color-picker,
   --arrowpanel-background: transparent !important;
   --arrowpanel-border-color: transparent !important;
   --arrowpanel-border-radius: 0px !important;
-  --arrowpanel-borderRadius: 0px !important;
   --arrowpanel-box-shadow: none !important;
   --arrowpanel-padding: 0 !important;
   --arrowpanel-margin: 0 !important;
@@ -170,7 +168,6 @@ panel#zentral-group-color-picker,
   padding: 0 !important;
   margin: 0 !important;
   appearance: none !important;
-  -webkit-appearance: none !important;
 }
 
 .ztg-cp-box {
@@ -655,18 +652,23 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
 }
 
 /* ===========================================================================
- * Zentral - Compact Sidebar Mode: Apps & Utility Button Styling & Animations
- * (Applies the same sleek elevation, subtle fill, and hover pop as Autohide VB)
- * =========================================================================== */
-:root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile,
-:root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-add-btn,
-:root[zen-compact-mode="true"] #zentral-apps-utility-section .zentral-utility-btn,
-:root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile,
-:root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-add-btn,
-:root[zen-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn,
-:root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile,
-:root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-add-btn,
-:root[zentral-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn {
+   Zentral - Compact / Collapsed Sidebar: Apps & Utility Button Styling
+   =========================================================================== */
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid .zen-app-tile,
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid .zen-app-add-btn,
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zentral-apps-utility-section .zentral-utility-btn {
   border-radius: var(--toolbarbutton-border-radius, 8px) !important;
   background-color: color-mix(in srgb, currentColor 8%, transparent) !important;
   border: none !important;
@@ -674,71 +676,99 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease !important;
 }
 
-:root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile img,
-:root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile svg,
-:root[zen-compact-mode="true"] #zentral-apps-utility-section .zentral-utility-btn svg,
-:root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile img,
-:root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile svg,
-:root[zen-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn svg,
-:root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile img,
-:root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile svg,
-:root[zentral-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn svg {
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid .zen-app-tile img,
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid .zen-app-tile svg,
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zentral-apps-utility-section .zentral-utility-btn svg {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
   transition: transform 0.15s ease, filter 0.15s ease !important;
 }
 
-:root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile:hover,
-:root[zen-compact-mode="true"] #zentral-apps-utility-section .zentral-utility-btn:hover,
-:root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:hover,
-:root[zen-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn:hover,
-:root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:hover,
-:root[zentral-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn:hover {
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid .zen-app-tile:hover,
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zentral-apps-utility-section .zentral-utility-btn:hover {
   background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, currentColor 14%, transparent)) !important;
   transform: translateY(-1px) scale(1.04) !important;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
-:root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile:hover img,
-:root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile:hover svg,
-:root[zen-compact-mode="true"] #zentral-apps-utility-section .zentral-utility-btn:hover svg,
-:root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:hover img,
-:root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:hover svg,
-:root[zen-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn:hover svg,
-:root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:hover img,
-:root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:hover svg,
-:root[zentral-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn:hover svg {
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid .zen-app-tile:hover img,
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid .zen-app-tile:hover svg,
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zentral-apps-utility-section .zentral-utility-btn:hover svg {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
 }
 
-:root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile:active,
-:root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-add-btn:active,
-:root[zen-compact-mode="true"] #zentral-apps-utility-section .zentral-utility-btn:active,
-:root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:active,
-:root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-add-btn:active,
-:root[zen-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn:active,
-:root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:active,
-:root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-add-btn:active,
-:root[zentral-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn:active {
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid .zen-app-tile:active,
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid .zen-app-add-btn:active,
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zentral-apps-utility-section .zentral-utility-btn:active {
   transform: scale(0.96) !important;
 }
 
-:root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile[data-active="true"],
-:root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile[data-active="true"],
-:root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile[data-active="true"] {
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid .zen-app-tile[data-active="true"] {
   background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 32%, var(--zen-colors-base, #131313)) !important;
   box-shadow: 0 0 0 1px var(--zen-primary-color, #707ac2), 0 2px 8px rgba(0, 0, 0, 0.25) !important;
 }
 
-:root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-add-btn,
-:root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-add-btn,
-:root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-add-btn {
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid .zen-app-add-btn {
   border: 1.5px dashed color-mix(in srgb, currentColor 25%, transparent) !important;
   opacity: 0.85 !important;
 }
 
-:root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-add-btn:hover,
-:root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-add-btn:hover,
-:root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-add-btn:hover {
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid .zen-app-add-btn:hover {
   opacity: 1 !important;
   border-style: solid !important;
   border-color: var(--zen-primary-color, currentColor) !important;
@@ -776,8 +806,6 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
 :root[zen-sidebar-collapsed="true"] #sidebar-container {
   min-width: 0 !important;
 }
-
-
 
 
 /* --------------------------------------------------------------------------
@@ -857,7 +885,6 @@ panel[id*="tabgroup-editor"] {
   height: 100vh !important;
   background: rgba(0, 0, 0, 0.75) !important;
   backdrop-filter: blur(20px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
   z-index: 2147483647 !important;
   display: none !important;
   align-items: center !important;
@@ -1951,7 +1978,7 @@ panel[id*="tabgroup-editor"] {
   border-radius: 10px !important;
   margin-top: -4px !important;
   margin-bottom: 2px !important;
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  transition: opacity 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), max-height 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
 }
 
 #zentral-settings-modal .zs-modules-subgroup[data-hidden="true"] {
@@ -2146,7 +2173,6 @@ panel[id*="tabgroup-editor"] {
   background-color: transparent !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
   border: none !important;
   transform: none !important;
   opacity: 1 !important;
@@ -2191,7 +2217,7 @@ panel[id*="tabgroup-editor"] {
   box-shadow: var(--zen-big-shadow, rgba(0, 0, 0, 0.24) 0px 3px 8px 0px) !important;
   border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
   transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.12s ease, visibility 0.24s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
-  will-change: transform, opacity, top;
+  will-change: transform, opacity;
   overflow: visible !important;
 }
 

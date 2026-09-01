@@ -44,19 +44,9 @@
 
   function isLoggerEnabled() {
     try {
-      if (Services.prefs.prefHasUserValue("zen.workspace.zentral.debug")) {
-        return Services.prefs.getBoolPref("zen.workspace.zentral.debug");
-      }
-      if (Services.prefs.prefHasUserValue("zentral.logger.enabled")) {
-        return Services.prefs.getBoolPref("zentral.logger.enabled");
-      }
       return Services.prefs.getBoolPref("zen.workspace.zentral.debug", false);
     } catch (_) {
-      try {
-        return Services.prefs.getBoolPref("zentral.logger.enabled", false);
-      } catch (_) {
-        return false;
-      }
+      return false;
     }
   }
 
