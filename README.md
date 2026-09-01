@@ -7,7 +7,6 @@
 <p align="center">
   <b>Unified Web Apps Grid, Floating Side Panels & Enhanced Tab Groups for Zen Browser</b>
   <br>
-  <i>Tailored specifically for the Sine Mod Engine</i>
 </p>
 
 <p align="center">
@@ -30,10 +29,10 @@ Designed natively for the **Sine Mod Engine**, Zentral features hot-reloading su
 ## ✨ Key Features & Deep Dive
 
 <details open>
-<summary><b>🗂️ 1. Enhanced Tab Groups & Organization</b></summary>
+<summary><b>🗂️ 1. Tab Groups & Organization</b></summary>
 <br>
 
-Zentral significantly expands Zen Browser's native tab group capabilities with advanced styling, smooth interactions, and rich color customization:
+Zentral significantly expands Zen Browser's native tab group capabilities with styling, smooth interactions, and rich color customization:
 
 - **🎨 Multi-Mode Color Picker Panel**:
   - **Quick Swatches**: 25 curated vibrant color presets.
@@ -163,8 +162,8 @@ Zentral includes an enterprise-grade telemetry and diagnostics subsystem:
 | Shortcut | Action | Scope |
 |---|---|---|
 | <kbd>Alt</kbd> + <kbd>L</kbd> | Export Zentral Diagnostic Log & Snapshot | Global Browser Window |
-| <kbd>Click</kbd> on Group Pill | Toggle Expand / Collapse Group | Tab Strip / Sidebar |
-| <kbd>Right Click</kbd> on Group Pill | Open Zentral Custom Context Menu (Rename, Color Picker, Ungroup) | Tab Strip / Sidebar |
+| <kbd>Click</kbd> on Group Label | Toggle Expand / Collapse Group | Tab Strip / Sidebar |
+| <kbd>Right Click</kbd> on Group Label | Open Zentral Custom Context Menu (Rename, Color Picker, Ungroup) | Tab Strip / Sidebar |
 | <kbd>Right Click</kbd> on App Tile | Configure App Settings, Icon, Mobile Mode & Workspace Visibility | Apps Grid / Vertical Bar |
 | <kbd>Right Click</kbd> on Bookmark Folder | Convert Folder to Tab Group | Zen Sidebar |
 
@@ -185,18 +184,6 @@ Zentral-Sine/
 │   └── Zentral Logo.svg  # Vector branding asset
 └── serverless/           # Issue reporter worker endpoint definition
 ```
-
----
-
-## 🤝 Contributing
-
-Contributions, feedback, and feature suggestions are welcome!
-
-1. Fork the Project.
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`).
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`).
-4. Push to the Branch (`git push origin feature/AmazingFeature`).
-5. Open a Pull Request.
 
 ---
 

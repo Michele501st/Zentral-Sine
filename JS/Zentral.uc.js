@@ -1676,7 +1676,7 @@
           position: fixed;
           top: 0;
           bottom: 0;
-          width: 16px;
+          width: 6px !important;
           z-index: 2147483550;
           pointer-events: auto;
           background: transparent;
@@ -2199,20 +2199,31 @@
           if (this.#state.activeAppId) return; // Keep revealed while panel is open
 
           const isRight = this.isVerticalBarOnRight();
-          const triggerDist = 16;
-          const barWidth = 48 + 8 + 24; // 8px outer margin + 48px bar + 24px inner zone = 80px
+          const triggerDist = 6; // Requires moving cursor directly to the screen edge (<= 6px)
+          const barWidth = 48 + 8 + 16; // 8px outer margin + 48px bar + 16px inner buffer = 72px
 
           const isNearEdge = isRight ? (e.clientX >= window.innerWidth - triggerDist) : (e.clientX <= triggerDist);
           const isInsideBar = isRight ? (e.clientX >= window.innerWidth - barWidth) : (e.clientX <= barWidth);
 
-          if (isNearEdge || isInsideBar) {
-            if (!vbHovered || !this.#state.isAutohideHovered) {
+          const isCurrentlyRevealed = vbHovered || this.#dom.verticalBar?.hasAttribute("data-revealed");
+
+          if (!isCurrentlyRevealed) {
+            // When hidden: ONLY reveal if cursor touches the very edge
+            if (isNearEdge) {
               vbHovered = true;
               this.setAutohideHovered(true);
             }
-          } else if (!isInsideBar && vbHovered) {
-            vbHovered = false;
-            this.scheduleAutohideCollapse(140);
+          } else {
+            // When already revealed: keep open while cursor is inside the bar or near edge
+            if (isInsideBar || isNearEdge) {
+              if (this.#state.autohideCollapseTimer) {
+                clearTimeout(this.#state.autohideCollapseTimer);
+                this.#state.autohideCollapseTimer = null;
+              }
+            } else {
+              vbHovered = false;
+              this.scheduleAutohideCollapse(140);
+            }
           }
         }, { passive: true });
       }
