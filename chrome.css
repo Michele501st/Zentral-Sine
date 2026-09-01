@@ -113,12 +113,12 @@ tab-group.zentral-standard > .tab-group-label-container::before {
   pointer-events: none !important;
 }
 
-/* Title Card (Left Sidebar default: 100% full-width, left-aligned content with outer edge flush) */
+/* Title Card (Left Sidebar default: 100% full-width, right-aligned content facing webpage) */
 tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapper {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
-  justify-content: flex-start !important;
+  justify-content: flex-end !important;
   width: 100% !important;
   min-width: 100% !important;
   max-width: 100% !important;
@@ -190,15 +190,15 @@ panel#zentral-group-color-picker,
 
 /* Right Sidebar Mode (Sidebar on Right side of screen -> Outer edge is on RIGHT, content on LEFT) */
 :is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard > .tab-group-label-container {
-  justify-content: flex-end !important;
+  justify-content: flex-start !important;
 }
 
 html[zen-sidebar-right="true"] tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapper,
 html[zen-right-side="true"] tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapper {
-  justify-content: flex-end !important;
+  justify-content: flex-start !important;
   padding: 0 8px 0 10px !important;
-  margin-left: auto !important;
-  margin-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
   width: 100% !important;
   min-width: 100% !important;
 }
@@ -236,13 +236,14 @@ html[zentral-label-opacity-below-85="true"]:is([zen-sidebar-right="true"], [zen-
 }
 
 /* Label text - Dynamically Auto-Contrast (Black or White) based on Label Color */
+/* Left Sidebar: Text is order 1, Indicator is order 2 (closest to right / webpage content) */
 tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
   justify-content: flex-start !important;
   flex: 0 1 auto !important;
-  text-align: start !important;
+  text-align: end !important;
   background-color: transparent !important;
   opacity: 1 !important;
   color: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
@@ -250,22 +251,25 @@ tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
   font-size: 12px !important;
   font-weight: 600 !important;
   padding: 0 !important;
-  margin: 0 !important;
+  margin: 0 6px 0 0 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   width: auto !important;
   max-width: 100% !important;
-  order: 2 !important;
+  order: 1 !important;
   transition: color 0.15s ease !important;
 }
 
-html[zen-sidebar-right="true"] #tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label,
-html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label {
-  text-align: end !important;
+/* Right Sidebar: Indicator is order 1 (closest to left / webpage content), Text is order 2 */
+:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) #tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label {
+  text-align: start !important;
+  order: 2 !important;
+  margin: 0 0 0 6px !important;
 }
 
 /* Icon container within title wrapper */
+/* Left Sidebar: Order 2 (closer to right / webpage content) */
 .tab-group-icon-container,
 #tabbrowser-tabs tab-group .tab-group-icon-container,
 #tabbrowser-tabs tab-group[collapsed] .tab-group-icon-container {
@@ -279,12 +283,17 @@ html[zen-right-side="true"] #tabbrowser-tabs tab-group > .tab-group-label-contai
   min-height: 16px !important;
   max-width: 16px !important;
   max-height: 16px !important;
-  margin-right: 6px !important;
-  margin-left: 0 !important;
+  margin: 0 !important;
   padding: 0 !important;
   flex-shrink: 0 !important;
-  order: 1 !important;
+  order: 2 !important;
   overflow: visible !important;
+}
+
+/* Right Sidebar: Order 1 (closer to left / webpage content) */
+:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) #tabbrowser-tabs tab-group .tab-group-icon-container,
+:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) #tabbrowser-tabs tab-group[collapsed] .tab-group-icon-container {
+  order: 1 !important;
 }
 
 /* Circular Group State Indicator - Dynamically Auto-Contrast (Black or White) based on Label Color */
