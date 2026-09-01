@@ -1354,6 +1354,7 @@
           position: absolute !important;
           inset: 0 !important;
           z-index: -2 !important;
+          border-radius: inherit !important;
           background-image: var(--zen-theme-gradient-override, var(--zen-theme-gradient, var(--zen-main-browser-background, none))) !important;
           background-size: 100vw 100vh !important;
           background-repeat: no-repeat !important;
@@ -1378,6 +1379,7 @@
           position: absolute !important;
           inset: 0 !important;
           z-index: -1 !important;
+          border-radius: inherit !important;
           background-image: url("chrome://browser/content/zen-images/grain-bg.png") !important;
           background-repeat: repeat !important;
           opacity: 0.7 !important;
