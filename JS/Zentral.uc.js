@@ -4433,7 +4433,7 @@
         else labelContainer.appendChild(initialsEl);
       }
 
-      const cleanTitle = (title || "").trim();
+      const cleanTitle = (title || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
       initialsEl.setAttribute("data-title", cleanTitle);
       
       const charCount = cleanTitle.length;

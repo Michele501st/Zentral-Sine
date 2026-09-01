@@ -636,18 +636,18 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   display: none !important;
 }
 
-/* Title Wrapper in Collapsed Sidebar Mode: Center content & constrain within rounded pill */
+/* Title Wrapper in Collapsed Sidebar Mode: Left-align content & constrain within rounded pill */
 :is(html[zentral-sidebar-collapsed="true"], html[zen-sidebar-collapsed="true"], #tabbrowser-tabs[zentral-sidebar-collapsed="true"]) tab-group > .tab-group-label-container .zentral-tab-title-wrapper {
-  justify-content: center !important;
-  padding: 0 4px !important;
+  justify-content: flex-start !important;
+  padding: 0 4px 0 6px !important;
   overflow: hidden !important;
 }
 
-/* Collapsed Label Text & Marquee Shell: Centered & Cleanly Clipped */
+/* Collapsed Label Text & Marquee Shell: Starts from the very first letter (never cut off) */
 :is(html[zentral-sidebar-collapsed="true"], html[zen-sidebar-collapsed="true"], #tabbrowser-tabs[zentral-sidebar-collapsed="true"]) tab-group > .tab-group-label-container .zentral-group-initials {
   display: flex !important;
   align-items: center !important;
-  justify-content: center !important;
+  justify-content: flex-start !important;
   width: 100% !important;
   height: 100% !important;
   max-width: 100% !important;
@@ -656,7 +656,7 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   letter-spacing: 0.02em !important;
   color: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35) !important;
-  text-align: center !important;
+  text-align: start !important;
   padding: 0 !important;
   margin: 0 !important;
   line-height: 1 !important;
@@ -664,15 +664,15 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   position: relative !important;
   user-select: none !important;
   pointer-events: none !important;
-  mask-image: linear-gradient(to right, transparent 0px, black 3px, black calc(100% - 3px), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 6px), transparent 100%);
 }
 
-/* Marquee Track (Resting: Centered & Truncated) */
+/* Marquee Track (Resting: Starts at x=0 showing first letters cleanly) */
 .zentral-group-initials .zentral-marquee-track {
   display: inline-flex !important;
   flex-direction: row !important;
   align-items: center !important;
-  justify-content: center !important;
+  justify-content: flex-start !important;
   white-space: nowrap !important;
   will-change: transform !important;
   transform: translateX(0);
