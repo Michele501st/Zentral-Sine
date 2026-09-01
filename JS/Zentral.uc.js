@@ -1284,27 +1284,26 @@
         /* Mode A: Autohide DISABLED (Pinned / Docked into Frame) */
         :root[zentral-apps-placement="vertical-bar"]:not([zentral-apps-autohide="true"]) #zentral-apps-vertical-bar {
           position: relative !important;
-          width: 36px !important;
-          min-width: 36px !important;
-          max-width: 36px !important;
+          width: 44px !important;
+          min-width: 44px !important;
+          max-width: 44px !important;
           height: 100% !important;
           max-height: 100% !important;
           min-height: 0 !important;
-          flex: 0 0 36px !important;
+          flex: 0 0 44px !important;
           flex-shrink: 0 !important;
           z-index: 10 !important;
           background: transparent !important;
           background-color: transparent !important;
           box-shadow: none !important;
           backdrop-filter: none !important;
-          -webkit-backdrop-filter: none !important;
           border: none !important;
           transform: none !important;
           opacity: 1 !important;
           visibility: visible !important;
           box-sizing: border-box !important;
-          overflow: hidden !important;
-          padding: 8px 0 !important;
+          overflow: visible !important;
+          padding: 8px 4px !important;
           margin-top: 0 !important;
           transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease !important;
         }
@@ -1337,12 +1336,14 @@
           box-shadow: var(--zen-big-shadow, rgba(0, 0, 0, 0.24) 0px 3px 8px 0px) !important;
           border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
           transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.12s ease, visibility 0.24s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
-          will-change: transform, opacity, top;
+          will-change: transform, opacity;
           overflow: visible !important;
+          padding: 8px 5px !important;
+          box-sizing: border-box !important;
         }
 
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar #zen-apps-sidebar-grid {
-          padding: 0 6px !important;
+          padding: 0 !important;
         }
 
         /* Zen Theme Wallpaper / Gradient Layer */
@@ -1421,6 +1422,9 @@
           visibility: visible !important;
         }
 
+        #zen-app-panel-root { position: fixed; display: none; pointer-events: none; overflow: visible; z-index: 2147483600 !important; }
+        #zen-app-panel-root[open] { display: block; }
+
         #zentral-apps-vertical-bar #zen-apps-sidebar-grid {
           display: flex !important;
           flex-direction: column !important;
@@ -1429,7 +1433,7 @@
           width: 100% !important;
           height: 0 !important;
           flex: 1 1 0px !important;
-          padding: 0 4px !important;
+          padding: 0 !important;
           max-height: 100% !important;
           min-height: 0 !important;
           gap: 6px !important;
@@ -1458,6 +1462,8 @@
           pointer-events: auto !important;
           visibility: visible !important;
           box-sizing: border-box !important;
+          padding: 0 !important;
+          margin: 0 !important;
         }
 
         #zentral-apps-vertical-bar-footer {
@@ -1472,6 +1478,21 @@
           box-sizing: border-box !important;
           margin-top: auto !important;
           z-index: 10 !important;
+        }
+
+        #zentral-apps-vertical-bar .zen-app-tile,
+        #zentral-apps-vertical-bar .zen-app-add-btn,
+        #zentral-apps-vertical-bar .zen-app-vb-footer-btn {
+          width: 36px !important;
+          height: 36px !important;
+          min-width: 36px !important;
+          min-height: 36px !important;
+          max-width: 36px !important;
+          max-height: 36px !important;
+          box-sizing: border-box !important;
+          margin: 0 auto !important;
+          flex-shrink: 0 !important;
+          overflow: visible !important;
         }
 
         #zentral-apps-vertical-bar .zen-app-vb-footer-btn svg {
