@@ -628,27 +628,109 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   margin: 0 !important;
   padding: 0 !important;
   opacity: 0 !important;
+  pointer-events: none !important;
 }
 
-/* Hide Label Title text in Collapsed Sidebar Mode */
+/* Hide Expanded Mode Label Title text in Collapsed Sidebar Mode */
 :is(html[zentral-sidebar-collapsed="true"], html[zen-sidebar-collapsed="true"], #tabbrowser-tabs[zentral-sidebar-collapsed="true"]) tab-group > .tab-group-label-container .tab-group-label {
   display: none !important;
 }
 
-/* Show Initials centered & highly legible in Collapsed Sidebar Mode with Priority Contrast */
+/* Title Wrapper in Collapsed Sidebar Mode: Center content & constrain within rounded pill */
+:is(html[zentral-sidebar-collapsed="true"], html[zen-sidebar-collapsed="true"], #tabbrowser-tabs[zentral-sidebar-collapsed="true"]) tab-group > .tab-group-label-container .zentral-tab-title-wrapper {
+  justify-content: center !important;
+  padding: 0 4px !important;
+  overflow: hidden !important;
+}
+
+/* Collapsed Label Text & Marquee Shell: Centered & Cleanly Clipped */
 :is(html[zentral-sidebar-collapsed="true"], html[zen-sidebar-collapsed="true"], #tabbrowser-tabs[zentral-sidebar-collapsed="true"]) tab-group > .tab-group-label-container .zentral-group-initials {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
   font-size: 11.5px !important;
   font-weight: 700 !important;
-  letter-spacing: 0.04em !important;
+  letter-spacing: 0.02em !important;
   color: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35) !important;
   text-align: center !important;
   padding: 0 !important;
   margin: 0 !important;
   line-height: 1 !important;
+  overflow: hidden !important;
+  position: relative !important;
+  user-select: none !important;
+  pointer-events: none !important;
+  mask-image: linear-gradient(to right, transparent 0px, black 3px, black calc(100% - 3px), transparent 100%);
+}
+
+/* Marquee Track (Resting: Centered & Truncated) */
+.zentral-group-initials .zentral-marquee-track {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+  will-change: transform !important;
+  transform: translateX(0);
+}
+
+.zentral-group-initials .zentral-marquee-item {
+  display: inline-flex !important;
+  align-items: center !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.zentral-group-initials .zentral-marquee-text {
+  white-space: nowrap !important;
+  display: inline-block !important;
+}
+
+.zentral-group-initials .zentral-marquee-spacer {
+  display: none !important;
+  padding: 0 4px !important;
+  opacity: 0.6 !important;
+  font-size: 9px !important;
+}
+
+.zentral-group-initials .zentral-marquee-item:nth-child(2) {
+  display: none !important;
+}
+
+/* On Hover: Trigger Continuous Marquee Carousel if overflowing */
+:is(html[zentral-sidebar-collapsed="true"], html[zen-sidebar-collapsed="true"], #tabbrowser-tabs[zentral-sidebar-collapsed="true"]) 
+  tab-group:hover > .tab-group-label-container .zentral-group-initials[data-overflows="true"] .zentral-marquee-track,
+:is(html[zentral-sidebar-collapsed="true"], html[zen-sidebar-collapsed="true"], #tabbrowser-tabs[zentral-sidebar-collapsed="true"]) 
+  tab-group > .tab-group-label-container:hover .zentral-group-initials[data-overflows="true"] .zentral-marquee-track {
+  animation: zentral-collapsed-marquee var(--zentral-marquee-duration, 3.5s) linear infinite !important;
+  animation-delay: 400ms !important;
+}
+
+:is(html[zentral-sidebar-collapsed="true"], html[zen-sidebar-collapsed="true"], #tabbrowser-tabs[zentral-sidebar-collapsed="true"]) 
+  tab-group:hover > .tab-group-label-container .zentral-group-initials[data-overflows="true"] .zentral-marquee-spacer,
+:is(html[zentral-sidebar-collapsed="true"], html[zen-sidebar-collapsed="true"], #tabbrowser-tabs[zentral-sidebar-collapsed="true"]) 
+  tab-group > .tab-group-label-container:hover .zentral-group-initials[data-overflows="true"] .zentral-marquee-spacer {
+  display: inline-block !important;
+}
+
+:is(html[zentral-sidebar-collapsed="true"], html[zen-sidebar-collapsed="true"], #tabbrowser-tabs[zentral-sidebar-collapsed="true"]) 
+  tab-group:hover > .tab-group-label-container .zentral-group-initials[data-overflows="true"] .zentral-marquee-item:nth-child(2),
+:is(html[zentral-sidebar-collapsed="true"], html[zen-sidebar-collapsed="true"], #tabbrowser-tabs[zentral-sidebar-collapsed="true"]) 
+  tab-group > .tab-group-label-container:hover .zentral-group-initials[data-overflows="true"] .zentral-marquee-item:nth-child(2) {
+  display: inline-flex !important;
+}
+
+@keyframes zentral-collapsed-marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 /* ===========================================================================

@@ -4418,15 +4418,69 @@
      */
 
     /**
-     * Extracts 2-letter uppercase initials from a tab group name string for collapsed sidebar display.
-     * @param {string} name - Tab group title string.
-     * @returns {string} Two letter uppercase initials.
+     * Updates the collapsed sidebar marquee label with clean text, clone, and overflow duration.
+     * @param {Element} labelContainer - Group label container element.
+     * @param {string} title - Group title text.
      */
-    getGroupInitials(name) {
-      if (!name) return "";
-      const words = name.trim().split(/\s+/);
-      if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
-      return (words[0][0] + (words[1] ? words[1][0] : '')).toUpperCase();
+    updateCollapsedLabel(labelContainer, title) {
+      if (!labelContainer) return;
+      let initialsEl = labelContainer.querySelector(".zentral-group-initials");
+      if (!initialsEl) {
+        initialsEl = document.createElement("div");
+        initialsEl.className = "zentral-group-initials";
+        const wrapper = labelContainer.querySelector(".zentral-tab-title-wrapper");
+        if (wrapper) wrapper.appendChild(initialsEl);
+        else labelContainer.appendChild(initialsEl);
+      }
+
+      const cleanTitle = (title || "").trim();
+      initialsEl.setAttribute("data-title", cleanTitle);
+      
+      const charCount = cleanTitle.length;
+      const isOverflowing = charCount > 3;
+      if (isOverflowing) {
+        initialsEl.setAttribute("data-overflows", "true");
+        // Calculate adaptive scroll duration (~30px/s)
+        const durationSec = Math.max(2.5, Math.min(8.0, (charCount * 8 + 24) / 30)).toFixed(1);
+        initialsEl.style.setProperty("--zentral-marquee-duration", `${durationSec}s`);
+      } else {
+        initialsEl.removeAttribute("data-overflows");
+        initialsEl.style.removeProperty("--zentral-marquee-duration");
+      }
+
+      initialsEl.replaceChildren();
+
+      const track = document.createElement("span");
+      track.className = "zentral-marquee-track";
+
+      const item1 = document.createElement("span");
+      item1.className = "zentral-marquee-item";
+      const text1 = document.createElement("span");
+      text1.className = "zentral-marquee-text";
+      text1.textContent = cleanTitle;
+      const spacer1 = document.createElement("span");
+      spacer1.className = "zentral-marquee-spacer";
+      spacer1.textContent = " • ";
+      item1.appendChild(text1);
+      item1.appendChild(spacer1);
+      track.appendChild(item1);
+
+      if (isOverflowing) {
+        const item2 = document.createElement("span");
+        item2.className = "zentral-marquee-item";
+        item2.setAttribute("aria-hidden", "true");
+        const text2 = document.createElement("span");
+        text2.className = "zentral-marquee-text";
+        text2.textContent = cleanTitle;
+        const spacer2 = document.createElement("span");
+        spacer2.className = "zentral-marquee-spacer";
+        spacer2.textContent = " • ";
+        item2.appendChild(text2);
+        item2.appendChild(spacer2);
+        track.appendChild(item2);
+      }
+
+      initialsEl.appendChild(track);
     }
 
     /**
@@ -4941,6 +4995,13 @@
               const isSplit = g.hasAttribute?.("split-view-group") || g.hasAttribute?.("zen-split-view") || g.hasAttribute?.("is-zen-split");
               if (g.tagName?.toUpperCase() === "TAB-GROUP" && !isSplit) needsSave = true;
             }
+            if (attr === "label") {
+              const g = mutation.target;
+              if (g && g.tagName?.toUpperCase() === "TAB-GROUP") {
+                const lc = g.querySelector(":scope > .tab-group-label-container");
+                if (lc) this.updateCollapsedLabel(lc, g.label || g.getAttribute("label"));
+              }
+            }
             continue;
           }
           
@@ -5010,7 +5071,7 @@
         if (needsSave) this.scheduleStateSave();
       });
       const tabContainer = document.getElementById("tabbrowser-tabs") || document.body;
-      observer.observe(tabContainer, { childList: true, subtree: true, attributes: true, attributeFilter: ["collapsed", "split-view-group", "zen-split-view", "is-zen-split"] });
+      observer.observe(tabContainer, { childList: true, subtree: true, attributes: true, attributeFilter: ["collapsed", "split-view-group", "zen-split-view", "is-zen-split", "label"] });
       this.#tabStripObserver = observer;
 
       if (!this.#groupRightClickBlocker) {
@@ -5188,8 +5249,7 @@
           label.textContent = newName;
           const labelContainer = group.querySelector('.tab-group-label-container');
           if (labelContainer) {
-            const initialsEl = labelContainer.querySelector('.zentral-group-initials');
-            if (initialsEl) initialsEl.textContent = this.getGroupInitials(newName);
+            this.updateCollapsedLabel(labelContainer, newName);
           }
           this.scheduleStateSave();
         }
@@ -5519,13 +5579,7 @@
         });
 
         const labelValue = group.label || (innerLabel ? innerLabel.textContent : '');
-        let initialsEl = labelContainer.querySelector(".zentral-group-initials");
-        if (!initialsEl) {
-          initialsEl = document.createElement("label");
-          initialsEl.className = "zentral-group-initials";
-          labelContainer.appendChild(initialsEl);
-        }
-        initialsEl.textContent = this.getGroupInitials(labelValue);
+        this.updateCollapsedLabel(labelContainer, labelValue);
       }
       if (!labelContainer || labelContainer.querySelector(".tab-close-button")) return;
       // Safe DOM injection
