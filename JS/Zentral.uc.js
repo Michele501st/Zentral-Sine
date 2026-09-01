@@ -6118,7 +6118,9 @@
 
         if (!group.label || group.label === '' || ("defaultGroupName" in group && group.label === group.defaultGroupName)) {
           if (!this.#state.groupEdited) this.renameGroupStart(group, false);
-          if (typeof group._useFaviconColor === 'function') setTimeout(() => group._useFaviconColor(), 300);
+          if (typeof group._useFaviconColor === 'function' && !group.style.getPropertyValue("--tab-group-color")) {
+            setTimeout(() => group._useFaviconColor(), 300);
+          }
         }
       } catch (e) {
         console.error('[ZentralTabGroups] Error handling TabGroupCreate:', e);
@@ -9846,8 +9848,6 @@
   try {
     if (typeof gBrowserInit !== "undefined" && gBrowserInit.delayedStartupFinished) {
       window.Zentral.Init();
-    } else if (document.readyState === "complete") {
-      window.Zentral.Init();
     } else {
       let booted = false;
       const safeBoot = () => {
@@ -9866,9 +9866,6 @@
           }
         }, "browser-delayed-startup-finished", false);
       }
-      
-      window.addEventListener("DOMContentLoaded", safeBoot, { once: true });
-      window.addEventListener("load", safeBoot, { once: true });
     }
   } catch (e) {
     console.error("[Zentral] Startup observer error, forcing immediate Init():", e);
