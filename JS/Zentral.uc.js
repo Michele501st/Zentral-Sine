@@ -1287,8 +1287,8 @@
           width: 44px !important;
           min-width: 44px !important;
           max-width: 44px !important;
-          height: 100% !important;
-          max-height: 100% !important;
+          height: calc(100% - var(--zen-element-separation, 8px) * 2) !important;
+          max-height: calc(100% - var(--zen-element-separation, 8px) * 2) !important;
           min-height: 0 !important;
           flex: 0 0 44px !important;
           flex-shrink: 0 !important;
@@ -1298,13 +1298,15 @@
           box-shadow: none !important;
           backdrop-filter: none !important;
           border: none !important;
+          border-radius: var(--zen-border-radius, 8px) !important;
           transform: none !important;
           opacity: 1 !important;
           visibility: visible !important;
           box-sizing: border-box !important;
           overflow: visible !important;
           padding: 8px 4px !important;
-          margin-top: 0 !important;
+          margin-top: var(--zen-element-separation, 8px) !important;
+          margin-bottom: var(--zen-element-separation, 8px) !important;
           transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease !important;
         }
 
@@ -1332,7 +1334,7 @@
           max-width: 48px !important;
           z-index: 2147483500 !important;
           background-color: var(--zen-colors-base, rgb(19, 19, 19)) !important;
-          border-radius: var(--zen-native-inner-radius, 10px) !important;
+          border-radius: var(--zen-border-radius, 8px) !important;
           box-shadow: var(--zen-big-shadow, rgba(0, 0, 0, 0.24) 0px 3px 8px 0px) !important;
           border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
           transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.12s ease, visibility 0.24s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
@@ -1522,7 +1524,7 @@
           min-height: 36px !important;
           max-width: 36px !important;
           max-height: 36px !important;
-          border-radius: var(--toolbarbutton-border-radius, 8px) !important;
+          border-radius: var(--zen-border-radius, 8px) !important;
           background-color: color-mix(in srgb, currentColor 8%, transparent) !important;
           border: none !important;
           box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
@@ -1573,7 +1575,7 @@
           min-height: 36px !important;
           max-width: 36px !important;
           max-height: 36px !important;
-          border-radius: var(--toolbarbutton-border-radius, 8px) !important;
+          border-radius: var(--zen-border-radius, 8px) !important;
           background-color: color-mix(in srgb, currentColor 8%, transparent) !important;
           border: 1.5px dashed color-mix(in srgb, currentColor 25%, transparent) !important;
           opacity: 0.85 !important;
@@ -1607,7 +1609,7 @@
           min-height: 36px !important;
           max-width: 36px !important;
           max-height: 36px !important;
-          border-radius: var(--toolbarbutton-border-radius, 8px) !important;
+          border-radius: var(--zen-border-radius, 8px) !important;
           background-color: transparent !important;
           border: none !important;
           box-shadow: none !important;
@@ -1635,7 +1637,7 @@
           min-height: 36px !important;
           max-width: 36px !important;
           max-height: 36px !important;
-          border-radius: var(--toolbarbutton-border-radius, 8px) !important;
+          border-radius: var(--zen-border-radius, 8px) !important;
           background-color: transparent !important;
           border: 1px dashed color-mix(in srgb, currentColor 30%, transparent) !important;
           opacity: 0.7 !important;
