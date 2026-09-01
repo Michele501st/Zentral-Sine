@@ -113,12 +113,12 @@ tab-group.zentral-standard > .tab-group-label-container::before {
   pointer-events: none !important;
 }
 
-/* Title Card (Left Sidebar default: 100% full-width, left-aligned indicator & text) */
+/* Title Card (Left Sidebar default: 100% full-width, right-aligned content facing webpage) */
 tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapper {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
-  justify-content: flex-start !important;
+  justify-content: flex-end !important;
   width: 100% !important;
   min-width: 100% !important;
   max-width: 100% !important;
@@ -137,12 +137,12 @@ tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapp
   transition: background-color 0.2s ease, border-radius 0.2s ease !important;
 }
 
-/* Nested Groups on Left Sidebar: 16px stepped indentation to align flush with parent indicator center (8px padding + 8px half-width) */
+/* Nested Groups on Left Sidebar: 12px stepped indentation on the RIGHT (facing webpage content) */
 :is(tab-group.zentral-standard tab-group.zentral-standard, tab-group.zentral-standard[depth], tab-group.zentral-standard[nesting-level]) > .tab-group-label-container .zentral-tab-title-wrapper {
-  margin-left: 16px !important;
-  margin-right: 0 !important;
-  width: calc(100% - 16px) !important;
-  min-width: calc(100% - 16px) !important;
+  margin-right: 12px !important;
+  margin-left: 0 !important;
+  width: calc(100% - 12px) !important;
+  min-width: calc(100% - 12px) !important;
 }
 
 #zentral-group-color-picker,
@@ -188,9 +188,41 @@ panel#zentral-group-color-picker,
   overflow: visible !important;
 }
 
+/* Right Sidebar Mode (Sidebar on Right side of screen -> Outer edge is on RIGHT, content on LEFT) */
+:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard > .tab-group-label-container {
+  justify-content: flex-start !important;
+}
+
+html[zen-sidebar-right="true"] tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapper,
+html[zen-right-side="true"] tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapper {
+  justify-content: flex-start !important;
+  padding: 0 8px 0 10px !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) :is(tab-group.zentral-standard tab-group.zentral-standard, tab-group.zentral-standard[depth], tab-group.zentral-standard[nesting-level]) > .tab-group-label-container .zentral-tab-title-wrapper {
+  margin-left: 12px !important;
+  margin-right: 0 !important;
+  width: calc(100% - 12px) !important;
+  min-width: calc(100% - 12px) !important;
+}
+
+html[zen-sidebar-right="true"] tab-group.zentral-standard > .tab-group-label-container::before,
+html[zen-right-side="true"] tab-group.zentral-standard > .tab-group-label-container::before {
+  display: none !important;
+  content: none !important;
+}
+
 /* Hover State Highlights for Full-Width Group Card */
 tab-group.zentral-standard > .tab-group-label-container:is(:hover, :has(tab:hover)) .zentral-tab-title-wrapper {
   background-color: color-mix(in srgb, var(--zentral-custom-color, var(--tab-group-color, #777777)) 85%, #ffffff 15%) !important;
+  border-radius: 8px !important;
+}
+
+:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard > .tab-group-label-container:is(:hover, :has(tab:hover)) .zentral-tab-title-wrapper {
   border-radius: 8px !important;
 }
 
@@ -199,14 +231,19 @@ html[zentral-label-opacity-below-85="true"] tab-group.zentral-standard > .tab-gr
   border-radius: 8px !important;
 }
 
+html[zentral-label-opacity-below-85="true"]:is([zen-sidebar-right="true"], [zen-right-side="true"]) tab-group.zentral-standard > .tab-group-label-container:is(:hover, :has(tab:hover)) .zentral-tab-title-wrapper {
+  border-radius: 8px !important;
+}
+
 /* Label text - Dynamically Auto-Contrast (Black or White) based on Label Color */
+/* Left Sidebar: Text is order 1, Indicator is order 2 (closest to right / webpage content) */
 tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
   justify-content: flex-start !important;
   flex: 0 1 auto !important;
-  text-align: start !important;
+  text-align: end !important;
   background-color: transparent !important;
   opacity: 1 !important;
   color: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
@@ -214,17 +251,25 @@ tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
   font-size: 12px !important;
   font-weight: 600 !important;
   padding: 0 !important;
-  margin: 0 !important;
+  margin: 0 6px 0 0 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   width: auto !important;
   max-width: 100% !important;
-  order: 2 !important;
+  order: 1 !important;
   transition: color 0.15s ease !important;
 }
 
-/* Icon container within title wrapper (Indicator at left edge) */
+/* Right Sidebar: Indicator is order 1 (closest to left / webpage content), Text is order 2 */
+:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) #tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label {
+  text-align: start !important;
+  order: 2 !important;
+  margin: 0 0 0 6px !important;
+}
+
+/* Icon container within title wrapper */
+/* Left Sidebar: Order 2 (closer to right / webpage content) */
 .tab-group-icon-container,
 #tabbrowser-tabs tab-group .tab-group-icon-container,
 #tabbrowser-tabs tab-group[collapsed] .tab-group-icon-container {
@@ -238,11 +283,17 @@ tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
   min-height: 16px !important;
   max-width: 16px !important;
   max-height: 16px !important;
-  margin: 0 6px 0 0 !important;
+  margin: 0 !important;
   padding: 0 !important;
   flex-shrink: 0 !important;
-  order: 1 !important;
+  order: 2 !important;
   overflow: visible !important;
+}
+
+/* Right Sidebar: Order 1 (closer to left / webpage content) */
+:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) #tabbrowser-tabs tab-group .tab-group-icon-container,
+:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) #tabbrowser-tabs tab-group[collapsed] .tab-group-icon-container {
+  order: 1 !important;
 }
 
 /* Circular Group State Indicator - Dynamically Auto-Contrast (Black or White) based on Label Color */
@@ -430,48 +481,71 @@ tab-group[collapsed] .tab-group-icon::after {
 /* Hierarchy & Nested Groups (Outer-edge alignment) */
 /* Hierarchy & Nested Groups Indentation (Mirrored for Left vs Right Sidebar) */
 tab-group.zentral-standard tab-group.zentral-standard {
-  margin-left: 16px !important;
-  margin-right: 0 !important;
+  margin-right: 12px !important;
+  margin-left: 0 !important;
   position: relative !important;
-  width: calc(100% - 16px) !important;
+  width: calc(100% - 12px) !important;
 }
 
 tab-group.zentral-standard tab-group.zentral-standard::before {
-  display: none !important;
-  content: none !important;
+  content: "" !important;
+  position: absolute !important;
+  right: -6px !important;
+  left: auto !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 1.5px !important;
+  background-color: var(--zen-colors-border, rgba(255, 255, 255, 0.15)) !important;
+  z-index: 1 !important;
 }
 
 .zentral-group-initials {
   display: none !important;
 }
 
-/* Tab Group Container & Group-Colored 2px Vertical Guide Line */
+/* Tab Group Container & Collapsed Tab Hiding Rules (Mirrored for Left vs Right Sidebar) */
 tab-group.zentral-standard .tab-group-container {
   max-height: 100% !important;
   position: relative !important;
-  margin-left: 16px !important;
-  margin-right: 0 !important;
-  margin-inline-start: 16px !important;
-  margin-inline-end: 0 !important;
+  margin-right: 12px !important;
+  margin-left: 0 !important;
+  margin-inline-start: 0 !important;
+  margin-inline-end: 12px !important;
 }
 
 tab-group.zentral-standard .tab-group-container::after {
   content: "" !important;
   position: absolute !important;
-  left: 0 !important;
-  right: auto !important;
+  right: -6px !important;
+  left: auto !important;
   top: 0 !important;
-  bottom: 0 !important;
-  background-color: var(--zentral-custom-color, var(--tab-group-color, #777777)) !important;
+  background: var(--zen-colors-border, rgba(255, 255, 255, 0.15)) !important;
   height: 100% !important;
-  width: 2px !important;
-  border-radius: 1px !important;
-  z-index: 2 !important;
+  width: 1.5px !important;
   pointer-events: none !important;
 }
 
-tab-group.zentral-standard[collapsed] .tab-group-container::after {
-  display: none !important;
+/* Right Sidebar Mode Overrides (Outer edge is on the RIGHT, webpage content on LEFT) */
+:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard tab-group.zentral-standard {
+  margin-left: 12px !important;
+  margin-right: 0 !important;
+}
+
+:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard tab-group.zentral-standard::before {
+  left: -6px !important;
+  right: auto !important;
+}
+
+:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard .tab-group-container {
+  margin-left: 12px !important;
+  margin-right: 0 !important;
+  margin-inline-start: 12px !important;
+  margin-inline-end: 0 !important;
+}
+
+:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard .tab-group-container::after {
+  left: -6px !important;
+  right: auto !important;
 }
 
 tab-group.zentral-standard .tab-group-container tab {
