@@ -4089,7 +4089,7 @@
             if (group.shadowRoot) {
               group.shadowRoot.querySelectorAll('.zentral-shadow-style').forEach(s => s.remove());
             }
-            group.querySelectorAll('.zentral-chevron, .zentral-group-initials, .ztg-drag-handle, .zentral-close-btn, .zentral-tab-title-wrapper').forEach(el => el.remove());
+            group.querySelectorAll('.zentral-chevron, .zentral-group-initials, .zentral-tg-drag-handle, .zentral-close-btn, .zentral-tab-title-wrapper').forEach(el => el.remove());
 
             const tabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
 
@@ -4415,7 +4415,6 @@
               group.style.setProperty("--tab-group-color-invert", info.color);
               group.style.setProperty("--zentral-custom-color", info.color);
               group.style.setProperty("--zentral-tabgroup-contrast-color", this.getContrastColor(info.color));
-              group.style.setProperty("--atg-contrast-color", this.getContrastColor(info.color));
             }
 
             // Restore collapsed state
@@ -4813,7 +4812,7 @@
           background: rgba(0, 0, 0, 0.3) !important;
           border: 1px solid color-mix(in srgb, currentColor 40%, transparent) !important;
           border-radius: 6px !important;
-          color: var(--zentral-tabgroup-contrast-color, var(--atg-contrast-color, #ffffff)) !important;
+          color: var(--zentral-tabgroup-contrast-color, #ffffff) !important;
           font-size: 12.5px !important;
           font-weight: 600 !important;
           font-family: inherit !important;
@@ -4881,7 +4880,7 @@
           margin: 0 !important;
         }
 
-        .ztg-cp-box {
+        .zentral-tg-cp-box {
           padding: 12px 14px 14px 14px !important;
           gap: 10px !important;
           background: #1e1e24 !important;
@@ -4912,7 +4911,7 @@
           z-index: 2 !important;
         }
 
-        .ztg-btn {
+        .zentral-tg-btn {
           flex: 1 !important;
           padding: 6px 8px !important;
           border: 1px solid color-mix(in srgb, currentColor 14%, transparent) !important;
@@ -4926,16 +4925,16 @@
           outline: none !important;
         }
 
-        .ztg-btn:hover {
+        .zentral-tg-btn:hover {
           background: color-mix(in srgb, currentColor 14%, transparent) !important;
           border-color: color-mix(in srgb, currentColor 22%, transparent) !important;
         }
 
-        .ztg-btn:active {
+        .zentral-tg-btn:active {
           transform: scale(0.97) !important;
         }
 
-        .ztg-input {
+        .zentral-tg-input {
           font-size: 11px !important;
           font-weight: 500 !important;
           padding: 5px 6px !important;
@@ -4948,12 +4947,12 @@
           transition: all 0.15s ease !important;
         }
 
-        .ztg-input:focus {
+        .zentral-tg-input:focus {
           border-color: var(--zen-primary-color, #70a0ff) !important;
           box-shadow: 0 0 0 2px color-mix(in srgb, var(--zen-primary-color, #70a0ff) 25%, transparent) !important;
         }
 
-        .ztg-drag-handle {
+        .zentral-tg-drag-handle {
           width: 100% !important;
           height: 18px !important;
           display: flex !important;
@@ -4966,11 +4965,11 @@
           -moz-user-select: none !important;
         }
 
-        .ztg-drag-handle:active {
+        .zentral-tg-drag-handle:active {
           cursor: grabbing !important;
         }
 
-        .ztg-drag-pill {
+        .zentral-tg-drag-pill {
           width: 32px !important;
           height: 4px !important;
           border-radius: 2px !important;
@@ -4979,7 +4978,7 @@
           pointer-events: none !important;
         }
 
-        .ztg-drag-handle:hover .ztg-drag-pill {
+        .zentral-tg-drag-handle:hover .zentral-tg-drag-pill {
           background: color-mix(in srgb, currentColor 45%, transparent) !important;
           width: 40px !important;
         }
@@ -5392,7 +5391,7 @@
       if (!labelContainer._zentralToggleBound) {
         labelContainer._zentralToggleBound = true;
         labelContainer.addEventListener("click", (e) => {
-          if (e.target.closest(".tab-close-button") || e.target.closest("#tab-label-input") || e.target.closest(".ztg-drag-handle")) return;
+          if (e.target.closest(".tab-close-button") || e.target.closest("#tab-label-input") || e.target.closest(".zentral-tg-drag-handle")) return;
           e.preventDefault();
           e.stopPropagation();
 
@@ -5666,7 +5665,7 @@
      */
     ensureSharedContextMenu() {
       const popupSet = document.getElementById("mainPopupSet") || document.documentElement || document.body;
-      let contextMenu = document.getElementById("zentral-tabgroup-context-menu") || document.getElementById("advanced-tab-groups-context-menu");
+      let contextMenu = document.getElementById("zentral-tabgroup-context-menu");
       
       if (!contextMenu || !contextMenu.isConnected) {
         if (contextMenu) contextMenu.remove();
@@ -5674,15 +5673,15 @@
         if (window.MozXULElement?.parseXULToFragment) {
           const frag = window.MozXULElement.parseXULToFragment(`
             <menupopup id="zentral-tabgroup-context-menu">
-              <menu id="ztg-menu-color" label="Change Group Color">
-                <menupopup id="ztg-menu-color-popup">
-                  <menuitem id="ztg-item-set-color" label="Set Custom Color"/>
-                  <menuitem id="ztg-item-auto-color" label="Average Group's Color"/>
+              <menu id="zentral-tg-menu-color" label="Change Group Color">
+                <menupopup id="zentral-tg-menu-color-popup">
+                  <menuitem id="zentral-tg-item-set-color" label="Set Custom Color"/>
+                  <menuitem id="zentral-tg-item-auto-color" label="Average Group's Color"/>
                 </menupopup>
               </menu>
-              <menuitem id="ztg-item-rename" label="Rename Group"/>
+              <menuitem id="zentral-tg-item-rename" label="Rename Group"/>
               <menuseparator/>
-              <menuitem id="ztg-item-ungroup" label="Ungroup Tabs"/>
+              <menuitem id="zentral-tg-item-ungroup" label="Ungroup Tabs"/>
             </menupopup>
           `);
           popupSet.appendChild(frag);
@@ -5692,15 +5691,17 @@
           contextMenu.id = "zentral-tabgroup-context-menu";
 
           const colorMenu = document.createXULElement("menu");
+          colorMenu.id = "zentral-tg-menu-color";
           colorMenu.setAttribute("label", "Change Group Color");
           const colorPopup = document.createXULElement("menupopup");
+          colorPopup.id = "zentral-tg-menu-color-popup";
 
           const setColorItem = document.createXULElement("menuitem");
-          setColorItem.id = "ztg-item-set-color";
+          setColorItem.id = "zentral-tg-item-set-color";
           setColorItem.setAttribute("label", "Set Custom Color");
 
           const autoColorItem = document.createXULElement("menuitem");
-          autoColorItem.id = "ztg-item-auto-color";
+          autoColorItem.id = "zentral-tg-item-auto-color";
           autoColorItem.setAttribute("label", "Average Group's Color");
 
           colorPopup.appendChild(setColorItem);
@@ -5709,7 +5710,7 @@
           contextMenu.appendChild(colorMenu);
 
           const renameItem = document.createXULElement("menuitem");
-          renameItem.id = "ztg-item-rename";
+          renameItem.id = "zentral-tg-item-rename";
           renameItem.setAttribute("label", "Rename Group");
           contextMenu.appendChild(renameItem);
 
@@ -5717,7 +5718,7 @@
           contextMenu.appendChild(sep);
 
           const ungroupItem = document.createXULElement("menuitem");
-          ungroupItem.id = "ztg-item-ungroup";
+          ungroupItem.id = "zentral-tg-item-ungroup";
           ungroupItem.setAttribute("label", "Ungroup Tabs");
           contextMenu.appendChild(ungroupItem);
 
@@ -5739,12 +5740,12 @@
               picker._currentGroup = grp;
               const currentColor = grp.style.getPropertyValue("--tab-group-color").trim() || "#2b2b2b";
               const hex = currentColor.startsWith("#") && currentColor.length >= 7 ? currentColor.substring(0, 7) : "#2b2b2b";
-              const hexInput = picker.querySelector("#ztg-input-hex");
+              const hexInput = picker.querySelector("#zentral-tg-input-hex");
               if (hexInput) hexInput.value = hex;
               const bigint = parseInt(hex.slice(1), 16);
-              const rgbInput = picker.querySelector("#ztg-input-rgb");
+              const rgbInput = picker.querySelector("#zentral-tg-input-rgb");
               if (rgbInput && !isNaN(bigint)) rgbInput.value = `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
-              const nativeColorInput = picker.querySelector("#ztg-native-color");
+              const nativeColorInput = picker.querySelector("#zentral-tg-native-color");
               if (nativeColorInput) nativeColorInput.value = hex;
               
               if (typeof picker.openPopupAtScreen === "function") {
@@ -5755,26 +5756,26 @@
             }
           };
 
-          contextMenu.querySelector("#ztg-item-set-color")?.addEventListener("command", (e) => {
+          contextMenu.querySelector("#zentral-tg-item-set-color")?.addEventListener("command", (e) => {
             e.stopPropagation();
             openColorPicker();
           });
 
-          contextMenu.querySelector("#ztg-item-auto-color")?.addEventListener("command", (e) => {
+          contextMenu.querySelector("#zentral-tg-item-auto-color")?.addEventListener("command", (e) => {
             e.stopPropagation();
             if (this.#state.contextMenuCurrentGroup?._useFaviconColor) {
               this.#state.contextMenuCurrentGroup._useFaviconColor();
             }
           });
 
-          contextMenu.querySelector("#ztg-item-rename")?.addEventListener("command", (e) => {
+          contextMenu.querySelector("#zentral-tg-item-rename")?.addEventListener("command", (e) => {
             e.stopPropagation();
             if (this.#state.contextMenuCurrentGroup) {
               this.renameGroupStart(this.#state.contextMenuCurrentGroup, true);
             }
           });
 
-          contextMenu.querySelector("#ztg-item-ungroup")?.addEventListener("command", (e) => {
+          contextMenu.querySelector("#zentral-tg-item-ungroup")?.addEventListener("command", (e) => {
             e.stopPropagation();
             if (this.#state.contextMenuCurrentGroup?.ungroupTabs) {
               this.#state.contextMenuCurrentGroup.ungroupTabs();
@@ -5821,25 +5822,25 @@
 
       const frag = window.MozXULElement.parseXULToFragment(`
         <panel id="zentral-group-color-picker" type="arrow" rolluponmousewheel="true" noautofocus="true" consumeoutsideclicks="false">
-          <vbox class="ztg-cp-box">
-            <html:div id="ztg-drag-handle" class="ztg-drag-handle" title="Drag to move">
-              <html:div class="ztg-drag-pill"></html:div>
+          <vbox class="zentral-tg-cp-box">
+            <html:div id="zentral-tg-drag-handle" class="zentral-tg-drag-handle" title="Drag to move">
+              <html:div class="zentral-tg-drag-pill"></html:div>
             </html:div>
-            <html:div id="ztg-palette-container" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 156px; height: 144px;">
+            <html:div id="zentral-tg-palette-container" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 156px; height: 144px;">
               ${htmlPalette}
             </html:div>
-            <html:div id="ztg-wheel-container" style="display: none; flex-direction: column; gap: 6px; align-items: center; width: 156px; height: 144px;">
-              <html:canvas id="ztg-satval-canvas" width="156" height="124" style="border-radius: 8px; cursor: crosshair; border: 1px solid color-mix(in srgb, currentColor 12%, transparent);"></html:canvas>
-              <html:canvas id="ztg-hue-canvas" width="156" height="14" style="border-radius: 8px; cursor: pointer; border: 1px solid color-mix(in srgb, currentColor 12%, transparent);"></html:canvas>
+            <html:div id="zentral-tg-wheel-container" style="display: none; flex-direction: column; gap: 6px; align-items: center; width: 156px; height: 144px;">
+              <html:canvas id="zentral-tg-satval-canvas" width="156" height="124" style="border-radius: 8px; cursor: crosshair; border: 1px solid color-mix(in srgb, currentColor 12%, transparent);"></html:canvas>
+              <html:canvas id="zentral-tg-hue-canvas" width="156" height="14" style="border-radius: 8px; cursor: pointer; border: 1px solid color-mix(in srgb, currentColor 12%, transparent);"></html:canvas>
             </html:div>
             <hbox style="align-items: center; justify-content: space-between; gap: 4px; width: 156px;">
-              <html:button id="ztg-btn-auto" class="ztg-btn" title="Average Group's Color">Auto</html:button>
-              <html:button id="ztg-btn-wheel" class="ztg-btn">Wheel</html:button>
-              <html:button id="ztg-btn-pick" class="ztg-btn">Pick</html:button>
+              <html:button id="zentral-tg-btn-auto" class="zentral-tg-btn" title="Average Group's Color">Auto</html:button>
+              <html:button id="zentral-tg-btn-wheel" class="zentral-tg-btn">Wheel</html:button>
+              <html:button id="zentral-tg-btn-pick" class="zentral-tg-btn">Pick</html:button>
             </hbox>
             <hbox style="align-items: center; justify-content: space-between; gap: 6px; width: 156px;">
-              <html:input id="ztg-input-hex" type="text" placeholder="#HEX" class="ztg-input" style="width: 70px;"/>
-              <html:input id="ztg-input-rgb" type="text" placeholder="R, G, B" class="ztg-input" style="width: 80px;"/>
+              <html:input id="zentral-tg-input-hex" type="text" placeholder="#HEX" class="zentral-tg-input" style="width: 70px;"/>
+              <html:input id="zentral-tg-input-rgb" type="text" placeholder="R, G, B" class="zentral-tg-input" style="width: 80px;"/>
             </hbox>
           </vbox>
         </panel>
@@ -5854,7 +5855,6 @@
           panel._currentGroup.style.setProperty("--tab-group-color-invert", color);
           panel._currentGroup.style.setProperty("--zentral-custom-color", color);
           panel._currentGroup.style.setProperty("--zentral-tabgroup-contrast-color", this.getContrastColor(color));
-          panel._currentGroup.style.setProperty("--atg-contrast-color", this.getContrastColor(color));
           this.saveTabGroupColors();
           this.scheduleStateSave();
         }
@@ -5866,9 +5866,9 @@
       });
 
       // Wheel/Palette toggle
-      const paletteContainer = panel.querySelector("#ztg-palette-container");
-      const wheelContainer = panel.querySelector("#ztg-wheel-container");
-      const btnWheel = panel.querySelector("#ztg-btn-wheel");
+      const paletteContainer = panel.querySelector("#zentral-tg-palette-container");
+      const wheelContainer = panel.querySelector("#zentral-tg-wheel-container");
+      const btnWheel = panel.querySelector("#zentral-tg-btn-wheel");
       btnWheel.addEventListener("click", () => {
         if (wheelContainer.style.display === "none") {
           wheelContainer.style.display = "flex";
@@ -5885,8 +5885,8 @@
 
       // Canvas Color Wheel Logic
       let currentHue = 0;
-      const satValCanvas = panel.querySelector("#ztg-satval-canvas");
-      const hueCanvas = panel.querySelector("#ztg-hue-canvas");
+      const satValCanvas = panel.querySelector("#zentral-tg-satval-canvas");
+      const hueCanvas = panel.querySelector("#zentral-tg-hue-canvas");
 
       const drawHue = () => {
         const ctx = hueCanvas.getContext("2d");
@@ -5928,12 +5928,12 @@
         const pixel = ctx.getImageData(x, y, 1, 1).data;
         const hex = "#" + [pixel[0], pixel[1], pixel[2]].map(x => x.toString(16).padStart(2, "0")).join("");
         applyColor(hex);
-        panel.querySelector("#ztg-input-hex").value = hex;
-        panel.querySelector("#ztg-input-rgb").value = `${pixel[0]}, ${pixel[1]}, ${pixel[2]}`;
+        panel.querySelector("#zentral-tg-input-hex").value = hex;
+        panel.querySelector("#zentral-tg-input-rgb").value = `${pixel[0]}, ${pixel[1]}, ${pixel[2]}`;
       });
 
       // Eyedropper API
-      const btnPick = panel.querySelector("#ztg-btn-pick");
+      const btnPick = panel.querySelector("#zentral-tg-btn-pick");
       if (window.EyeDropper) {
         btnPick.addEventListener("click", async () => {
           try {
@@ -5947,14 +5947,14 @@
       }
 
       // Auto Average Favicon Color
-      panel.querySelector("#ztg-btn-auto").addEventListener("click", () => {
+      panel.querySelector("#zentral-tg-btn-auto").addEventListener("click", () => {
         if (panel._currentGroup && panel._currentGroup._useFaviconColor) {
           panel._currentGroup._useFaviconColor();
         }
       });
 
       // Draggable Color Picker Logic
-      const handle = panel.querySelector("#ztg-drag-handle");
+      const handle = panel.querySelector("#zentral-tg-drag-handle");
       let isDragging = false;
       let startX, startY;
 
@@ -5986,11 +5986,11 @@
         }
       });
 
-      panel.querySelector("#ztg-input-hex").addEventListener("input", (e) => {
+      panel.querySelector("#zentral-tg-input-hex").addEventListener("input", (e) => {
         const val = e.target.value;
         if (/^#[0-9A-Fa-f]{6}$/.test(val)) applyColor(val);
       });
-      panel.querySelector("#ztg-input-rgb").addEventListener("change", (e) => {
+      panel.querySelector("#zentral-tg-input-rgb").addEventListener("change", (e) => {
         const parts = e.target.value.split(',').map(s => parseInt(s.trim()));
         if (parts.length === 3 && parts.every(n => !isNaN(n) && n >= 0 && n <= 255)) {
            applyColor("#" + parts.map(n => n.toString(16).padStart(2, '0')).join(''));
@@ -6006,15 +6006,15 @@
     addFolderContextMenuItems() {
       setTimeout(() => {
         const folderMenu = document.getElementById("zenFolderActions");
-        if (!folderMenu || folderMenu.querySelector("#atg-convert-folder-to-group")) return;
+        if (!folderMenu || folderMenu.querySelector("#zentral-tabgroup-convert-folder-to-group")) return;
         
         if (window.MozXULElement?.parseXULToFragment) {
-          const frag = window.MozXULElement.parseXULToFragment(`<menuseparator id="atg-folder-separator"/><menuitem id="atg-convert-folder-to-group" label="Convert Folder to Group"/>`);
+          const frag = window.MozXULElement.parseXULToFragment(`<menuseparator id="zentral-tabgroup-folder-separator"/><menuitem id="zentral-tabgroup-convert-folder-to-group" label="Convert Folder to Group"/>`);
           const convertToSpaceItem = folderMenu.querySelector("#context_zenFolderToSpace");
           if (convertToSpaceItem) { convertToSpaceItem.after(frag); } else { folderMenu.appendChild(frag); }
           
           folderMenu.addEventListener('command', (event) => {
-            if (event.target.id === 'atg-convert-folder-to-group') {
+            if (event.target.id === 'zentral-tabgroup-convert-folder-to-group') {
               const triggerNode = folderMenu.triggerNode;
               const folder = triggerNode?.closest('zen-folder');
               if (folder) this.convertFolderToGroup(folder);
@@ -6201,7 +6201,6 @@
           group.style.setProperty("--tab-group-color-invert", colorString);
           group.style.setProperty("--zentral-custom-color", colorString);
           group.style.setProperty("--zentral-tabgroup-contrast-color", this.getContrastColor(colorString));
-          group.style.setProperty("--atg-contrast-color", this.getContrastColor(colorString));
           this.saveTabGroupColors();
         }
       };
@@ -6720,7 +6719,6 @@
                 group.style.setProperty("--tab-group-color-invert", color);
                 group.style.setProperty("--zentral-custom-color", color);
                 group.style.setProperty("--zentral-tabgroup-contrast-color", this.getContrastColor(color));
-                group.style.setProperty("--atg-contrast-color", this.getContrastColor(color));
               }
             });
           }, 500);
