@@ -188,41 +188,9 @@ panel#zentral-group-color-picker,
   overflow: visible !important;
 }
 
-/* Right Sidebar Mode (Sidebar on Right side of screen -> Outer edge is on RIGHT) */
-:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard > .tab-group-label-container {
-  justify-content: flex-end !important;
-}
-
-html[zen-sidebar-right="true"] tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapper,
-html[zen-right-side="true"] tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapper {
-  justify-content: flex-end !important;
-  padding: 0 8px 0 10px !important;
-  margin-left: auto !important;
-  margin-right: 0 !important;
-  width: 100% !important;
-  min-width: 100% !important;
-}
-
-:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) :is(tab-group.zentral-standard tab-group.zentral-standard, tab-group.zentral-standard[depth], tab-group.zentral-standard[nesting-level]) > .tab-group-label-container .zentral-tab-title-wrapper {
-  margin-right: 16px !important;
-  margin-left: 0 !important;
-  width: calc(100% - 16px) !important;
-  min-width: calc(100% - 16px) !important;
-}
-
-html[zen-sidebar-right="true"] tab-group.zentral-standard > .tab-group-label-container::before,
-html[zen-right-side="true"] tab-group.zentral-standard > .tab-group-label-container::before {
-  display: none !important;
-  content: none !important;
-}
-
 /* Hover State Highlights for Full-Width Group Card */
 tab-group.zentral-standard > .tab-group-label-container:is(:hover, :has(tab:hover)) .zentral-tab-title-wrapper {
   background-color: color-mix(in srgb, var(--zentral-custom-color, var(--tab-group-color, #777777)) 85%, #ffffff 15%) !important;
-  border-radius: 8px !important;
-}
-
-:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard > .tab-group-label-container:is(:hover, :has(tab:hover)) .zentral-tab-title-wrapper {
   border-radius: 8px !important;
 }
 
@@ -231,12 +199,7 @@ html[zentral-label-opacity-below-85="true"] tab-group.zentral-standard > .tab-gr
   border-radius: 8px !important;
 }
 
-html[zentral-label-opacity-below-85="true"]:is([zen-sidebar-right="true"], [zen-right-side="true"]) tab-group.zentral-standard > .tab-group-label-container:is(:hover, :has(tab:hover)) .zentral-tab-title-wrapper {
-  border-radius: 8px !important;
-}
-
 /* Label text - Dynamically Auto-Contrast (Black or White) based on Label Color */
-/* Left Sidebar: Indicator is order 1, Text is order 2 */
 tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
   display: flex !important;
   flex-direction: row !important;
@@ -261,15 +224,7 @@ tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
   transition: color 0.15s ease !important;
 }
 
-/* Right Sidebar: Text is order 1, Indicator is order 2 */
-:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) #tabbrowser-tabs tab-group > .tab-group-label-container .tab-group-label {
-  text-align: end !important;
-  order: 1 !important;
-  margin: 0 6px 0 0 !important;
-}
-
-/* Icon container within title wrapper */
-/* Left Sidebar: Order 1 (Indicator at left edge) */
+/* Icon container within title wrapper (Indicator at left edge) */
 .tab-group-icon-container,
 #tabbrowser-tabs tab-group .tab-group-icon-container,
 #tabbrowser-tabs tab-group[collapsed] .tab-group-icon-container {
@@ -288,13 +243,6 @@ tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
   flex-shrink: 0 !important;
   order: 1 !important;
   overflow: visible !important;
-}
-
-/* Right Sidebar: Order 2 (Indicator at right edge) */
-:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) #tabbrowser-tabs tab-group .tab-group-icon-container,
-:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) #tabbrowser-tabs tab-group[collapsed] .tab-group-icon-container {
-  order: 2 !important;
-  margin: 0 !important;
 }
 
 /* Circular Group State Indicator - Dynamically Auto-Contrast (Black or White) based on Label Color */
@@ -520,32 +468,6 @@ tab-group.zentral-standard .tab-group-container::after {
   border-radius: 1px !important;
   z-index: 2 !important;
   pointer-events: none !important;
-}
-
-/* Right Sidebar Mode Overrides (Outer edge is on the RIGHT) */
-:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard tab-group.zentral-standard {
-  margin-right: 16px !important;
-  margin-left: 0 !important;
-  width: calc(100% - 16px) !important;
-}
-
-:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard tab-group.zentral-standard::before {
-  display: none !important;
-  content: none !important;
-}
-
-:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard .tab-group-container {
-  margin-right: 16px !important;
-  margin-left: 0 !important;
-  margin-inline-start: 0 !important;
-  margin-inline-end: 16px !important;
-}
-
-:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) tab-group.zentral-standard .tab-group-container::after {
-  left: auto !important;
-  right: 0 !important;
-  width: 2px !important;
-  background-color: var(--zentral-custom-color, var(--tab-group-color, #777777)) !important;
 }
 
 tab-group.zentral-standard[collapsed] .tab-group-container::after {
