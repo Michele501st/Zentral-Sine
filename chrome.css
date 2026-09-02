@@ -2481,6 +2481,17 @@ panel[id*="tabgroup-editor"] {
   box-sizing: border-box !important;
 }
 
+.zen-app-badge[data-dot="true"] {
+  min-width: 8px !important;
+  width: 8px !important;
+  height: 8px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  top: 2px !important;
+  right: 2px !important;
+  font-size: 0 !important;
+}
+
 #zentral-apps-vertical-bar .zen-app-vb-footer-btn svg {
   width: 18px !important;
   height: 18px !important;

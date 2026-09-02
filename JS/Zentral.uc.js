@@ -348,6 +348,10 @@
           this.#state.appBrowsers.forEach(b => { if (b && b.remove) b.remove(); });
           this.#state.appBrowsers.clear();
         }
+        if (this.#state && this.#state.badgeSyncTimer) {
+          clearInterval(this.#state.badgeSyncTimer);
+          this.#state.badgeSyncTimer = null;
+        }
 
         // 6. Reset DOM references and state
         this.#dom = {
@@ -2297,6 +2301,12 @@
       if (this.#dom.utilityAutohideBtn) {
         this.#dom.utilityAutohideBtn.title = isAutohide ? "Disable Autohide" : "Enable Autohide";
       }
+
+      if (!this.#state.badgeSyncTimer) {
+        this.#state.badgeSyncTimer = setInterval(() => {
+          this.syncAllAppBadges();
+        }, 2000);
+      }
     }
 
     /**
@@ -2947,8 +2957,98 @@
     }
 
     /**
+     * Extracts notification badge presence and count from an app window/document title.
+     * Accurately parses titles across all major web services:
+     *   - Gmail: "Inbox (118) - user@gmail.com - Gmail", "Posta in arrivo (12) - ...", etc.
+     *   - Telegram: "Telegram (2)", "(2) Telegram", "Telegram • 2", "• Telegram", etc.
+     *   - WhatsApp: "(4) WhatsApp"
+     *   - Outlook / OWA: "Inbox (5) - Outlook", "(5) Mail - Outlook"
+     *   - Slack / Discord / X / Reddit / YouTube / GitHub / Notion / etc.
+     * @param {string} title - The document or browser content title.
+     * @returns {{hasNotification: boolean, notifCount: number|null}} Notification details.
+     */
+    extractBadgeFromTitle(title) {
+      if (!title || typeof title !== "string") return { hasNotification: false, notifCount: null };
+      const trimmed = title.trim();
+
+      // 1. Explicit unread counter in parentheses, brackets, or with unread keyword
+      // Examples: "Inbox (118) - ...", "Telegram (2)", "(4) WhatsApp", "[5] Messages", "2 unread", "(99+)"
+      const numMatch = trimmed.match(/\((\d+)\+?\)/) || 
+                       trimmed.match(/\[(\d+)\+?\]/) || 
+                       trimmed.match(/\b(\d+)\s+unread\b/i) ||
+                       trimmed.match(/\b(?:unread|messages?|notif(?:ication)?s?)\s*[:(]?\s*(\d+)/i) ||
+                       trimmed.match(/(?:^|\s)•\s*(\d+)/);
+
+      if (numMatch && numMatch[1]) {
+        const count = parseInt(numMatch[1], 10);
+        if (!isNaN(count) && count > 0) {
+          return { hasNotification: true, notifCount: count };
+        }
+      }
+
+      // 2. Unread indicator dot/bullet/asterisk/symbol without explicit counter
+      // Examples: "• Telegram", "* Slack", "🔴", etc.
+      const dotPattern = /[\u2022\u25cf\u25cb\u25a0\u25aa\u22c5\u2219\u2731\u2732\u2733\u2734\u2735\u2736\u2605\u2606\u2b24\u2023\u25b6\u25c0]|^\s*\*\s+|\s+\*\s*$/;
+      if (dotPattern.test(trimmed)) {
+        return { hasNotification: true, notifCount: null };
+      }
+
+      return { hasNotification: false, notifCount: null };
+    }
+
+    /**
+     * Updates or removes the visual notification badge on an app tile button.
+     * @param {string} appId - Target app ID.
+     * @param {boolean} hasNotification - Whether notification badge should be visible.
+     * @param {number|null} notifCount - Optional numeric counter (e.g. 2, 118).
+     */
+    updateAppBadge(appId, hasNotification, notifCount) {
+      const btn = document.getElementById("zen-app-btn-" + appId);
+      if (!btn) return;
+      let badge = btn.querySelector(".zen-app-badge");
+      if (hasNotification) {
+        if (!badge) {
+          badge = document.createElement("div");
+          badge.className = "zen-app-badge";
+          btn.appendChild(badge);
+        }
+        if (notifCount) {
+          badge.textContent = notifCount > 99 ? "99+" : notifCount;
+          badge.removeAttribute("data-dot");
+        } else {
+          badge.textContent = "";
+          badge.setAttribute("data-dot", "true");
+        }
+      } else {
+        if (badge) badge.remove();
+      }
+    }
+
+    /**
+     * Synchronizes notification badges across all loaded app browser instances.
+     */
+    syncAllAppBadges() {
+      if (!this.#state.appBrowsers || this.#state.appBrowsers.size === 0) return;
+      for (const [appId, browser] of this.#state.appBrowsers.entries()) {
+        if (!browser || !browser.isConnected) continue;
+        const app = this.#state.apps.find(a => a.id === appId);
+        if (!app) continue;
+        const title = browser.contentTitle || browser.getAttribute("label") || browser.browsingContext?.title || "";
+        const badgeInfo = this.extractBadgeFromTitle(title);
+        const hasNotification = badgeInfo.hasNotification;
+        const notifCount = badgeInfo.notifCount;
+
+        if (app.hasNotification !== hasNotification || app.notificationCount !== notifCount) {
+          app.hasNotification = hasNotification;
+          app.notificationCount = notifCount;
+          this.updateAppBadge(appId, hasNotification, notifCount);
+        }
+      }
+    }
+
+    /**
      * Retrieves existing XUL browser element for an app, or instantiates a new content browser.
-     * Listens for title changes to trigger unread badge notifications.
+     * Listens for title changes to trigger unread badge notifications in real time.
      * @param {Object} app - Target app configuration object.
      * @returns {{browser: Element, isNew: boolean}} The browser element and new creation flag.
      */
@@ -2964,48 +3064,24 @@
       b.setAttribute("context", "contentAreaContextMenu"); b.setAttribute("flex", "1");
       b.style.cssText = "width: 100%; height: 100%; flex: 1; border: none; overflow: hidden;";
 
-      // Performance Optimization: Removed setInterval polling. Rely on DOMTitleChanged
-      const titleHandler = (e) => {
-        const title = b.contentTitle || "";
-        const match = title.match(/^\((\d+)\)/) || title.includes("ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢") || title.match(/^\[(\d+)\]/);
-        const hasNotification = !!match;
-        
-        let notifCount = null;
-        if (match && match[1]) {
-           notifCount = parseInt(match[1]);
-        }
+      const checkAndUpdateBadge = () => {
+        const title = b.contentTitle || b.getAttribute("label") || b.browsingContext?.title || "";
+        const badgeInfo = this.extractBadgeFromTitle(title);
+        const hasNotification = badgeInfo.hasNotification;
+        const notifCount = badgeInfo.notifCount;
         
         if (app.hasNotification !== hasNotification || app.notificationCount !== notifCount) {
           app.hasNotification = hasNotification;
           app.notificationCount = notifCount;
-          
-          const updateBadge = (btn) => {
-            if (btn) {
-              let badge = btn.querySelector(".zen-app-badge");
-              if (hasNotification) {
-                if (!badge) {
-                  badge = document.createElement("div");
-                  badge.className = "zen-app-badge";
-                  btn.appendChild(badge);
-                }
-                if (notifCount) {
-                   badge.textContent = notifCount > 99 ? "99+" : notifCount;
-                   badge.removeAttribute("data-dot");
-                } else {
-                   badge.textContent = "";
-                   badge.setAttribute("data-dot", "true");
-                }
-              } else {
-                if (badge) badge.remove();
-              }
-            }
-          };
-          updateBadge(document.getElementById("zen-app-btn-" + app.id));
+          this.updateAppBadge(app.id, hasNotification, notifCount);
         }
       };
-      b.addEventListener("pagetitlechanged", titleHandler);
-      b.addEventListener("DOMTitleChanged", titleHandler);
-      b.addEventListener("load", titleHandler);
+
+      b.addEventListener("pagetitlechanged", checkAndUpdateBadge);
+      b.addEventListener("DOMTitleChanged", checkAndUpdateBadge);
+      b.addEventListener("load", checkAndUpdateBadge);
+      b.addEventListener("pageshow", checkAndUpdateBadge);
+      b.addEventListener("DOMContentLoaded", checkAndUpdateBadge);
 
       this.#dom.panel.appendChild(b);
       this.#state.appBrowsers.set(app.id, b);

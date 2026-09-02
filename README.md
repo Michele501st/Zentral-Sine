@@ -20,7 +20,7 @@
 
 ## 📖 Overview
 
-**Zentral** transforms [Zen Browser](https://zen-browser.app/) into an ultra-productive powerhouse. It unifies your favorite communication tools, web applications, and tabs into a cohesive, fluidly animated sidebar experience.
+**Zentral** unifies your favorite communication tools, web applications, and tabs into a cohesive, fluidly animated sidebar experience.
 
 Designed natively for the **Sine Mod Engine**, Zentral features hot-reloading support (`supportsUnload: true`), declarative settings UI, session persistence, automatic high-contrast color calculations, and lightweight Gecko performance with zero external dependencies.
 
