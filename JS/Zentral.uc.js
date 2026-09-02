@@ -2088,6 +2088,7 @@
         vb.addEventListener("mouseenter", () => {
           if (this.isPlacementVerticalBar()) {
             vbHovered = true;
+            this.cancelAutohideReveal();
             this.setAutohideHovered(true);
           }
         });
@@ -2095,10 +2096,11 @@
           if (this.isPlacementVerticalBar()) {
             if (!vb.contains(e.relatedTarget) && e.relatedTarget !== trigger) {
               const isRight = this.isVerticalBarOnRight();
-              const barWidth = 48 + 8 + 24;
+              const barWidth = 48 + 8 + 16;
               const isInsideBar = isRight ? (e.clientX >= window.innerWidth - barWidth) : (e.clientX <= barWidth);
               if (!isInsideBar) {
                 vbHovered = false;
+                this.cancelAutohideReveal();
                 this.scheduleAutohideCollapse(160);
               }
             }
@@ -2181,7 +2183,7 @@
         trigger.addEventListener("mouseenter", () => {
           if (this.isPlacementVerticalBar()) {
             vbHovered = true;
-            this.scheduleAutohideReveal(130);
+            this.scheduleAutohideReveal(140);
           }
         });
         trigger.addEventListener("mouseleave", (e) => {
@@ -2209,25 +2211,24 @@
           const isCurrentlyRevealed = vbHovered || this.#dom.verticalBar?.hasAttribute("data-revealed");
 
           if (!isCurrentlyRevealed) {
-            // When hidden: ONLY schedule reveal if cursor touches the very edge with a brief hover intent delay
+            // When hidden: ONLY schedule reveal if cursor touches the very edge with hover intent delay
             if (isNearEdge) {
               vbHovered = true;
-              this.scheduleAutohideReveal(130);
+              this.scheduleAutohideReveal(140);
             } else {
               vbHovered = false;
               this.cancelAutohideReveal();
             }
           } else {
             // When already revealed: keep open while cursor is inside the bar or near edge
+            this.cancelAutohideReveal();
             if (isInsideBar || isNearEdge) {
-              this.cancelAutohideReveal();
               if (this.#state.autohideCollapseTimer) {
                 clearTimeout(this.#state.autohideCollapseTimer);
                 this.#state.autohideCollapseTimer = null;
               }
             } else {
               vbHovered = false;
-              this.cancelAutohideReveal();
               this.scheduleAutohideCollapse(140);
             }
           }
@@ -2336,9 +2337,9 @@
     /**
      * Schedules delayed reveal when cursor moves to the edge in autohide mode.
      * Prevents accidental opening during rapid mouse passes.
-     * @param {number} [delay=130] - Delay in milliseconds.
+     * @param {number} [delay=140] - Delay in milliseconds.
      */
-    scheduleAutohideReveal(delay = 130) {
+    scheduleAutohideReveal(delay = 140) {
       if (this.#state.autohideCollapseTimer) {
         clearTimeout(this.#state.autohideCollapseTimer);
         this.#state.autohideCollapseTimer = null;
