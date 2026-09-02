@@ -1673,13 +1673,13 @@
 
         :root[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar-trigger {
           display: block !important;
-          position: fixed;
-          top: 0;
-          bottom: 0;
-          width: 8px !important;
-          z-index: 2147483550;
-          pointer-events: auto;
-          background: transparent;
+          position: fixed !important;
+          top: 0 !important;
+          bottom: 0 !important;
+          width: 3px !important;
+          z-index: 2147483550 !important;
+          pointer-events: auto !important;
+          background: transparent !important;
         }
 
         :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar-trigger,
@@ -2200,7 +2200,7 @@
           if (this.#state.activeAppId) return; // Keep revealed while panel is open
 
           const isRight = this.isVerticalBarOnRight();
-          const triggerDist = 8; // Screen edge proximity (within 8px of bezel)
+          const triggerDist = 3; // Screen edge proximity (within 3px of bezel)
           const cancelDist = 24;  // Cancel reveal only if cursor departs beyond 24px from edge
           const barWidth = 48 + 8 + 16; // 8px outer margin + 48px bar + 16px inner buffer = 72px
 
