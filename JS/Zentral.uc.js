@@ -1676,7 +1676,7 @@
           position: fixed;
           top: 0;
           bottom: 0;
-          width: 6px !important;
+          width: 3px !important;
           z-index: 2147483550;
           pointer-events: auto;
           background: transparent;
@@ -2181,13 +2181,14 @@
         trigger.addEventListener("mouseenter", () => {
           if (this.isPlacementVerticalBar()) {
             vbHovered = true;
-            this.setAutohideHovered(true);
+            this.scheduleAutohideReveal(130);
           }
         });
         trigger.addEventListener("mouseleave", (e) => {
           if (this.isPlacementVerticalBar()) {
             if (e.relatedTarget !== vb && !vb.contains(e.relatedTarget)) {
               vbHovered = false;
+              this.cancelAutohideReveal();
               this.scheduleAutohideCollapse(140);
             }
           }
@@ -2199,7 +2200,7 @@
           if (this.#state.activeAppId) return; // Keep revealed while panel is open
 
           const isRight = this.isVerticalBarOnRight();
-          const triggerDist = 6; // Requires moving cursor directly to the screen edge (<= 6px)
+          const triggerDist = 3; // Requires moving cursor directly to the screen edge (within 3px of bezel)
           const barWidth = 48 + 8 + 16; // 8px outer margin + 48px bar + 16px inner buffer = 72px
 
           const isNearEdge = isRight ? (e.clientX >= window.innerWidth - triggerDist) : (e.clientX <= triggerDist);
@@ -2208,20 +2209,25 @@
           const isCurrentlyRevealed = vbHovered || this.#dom.verticalBar?.hasAttribute("data-revealed");
 
           if (!isCurrentlyRevealed) {
-            // When hidden: ONLY reveal if cursor touches the very edge
+            // When hidden: ONLY schedule reveal if cursor touches the very edge with a brief hover intent delay
             if (isNearEdge) {
               vbHovered = true;
-              this.setAutohideHovered(true);
+              this.scheduleAutohideReveal(130);
+            } else {
+              vbHovered = false;
+              this.cancelAutohideReveal();
             }
           } else {
             // When already revealed: keep open while cursor is inside the bar or near edge
             if (isInsideBar || isNearEdge) {
+              this.cancelAutohideReveal();
               if (this.#state.autohideCollapseTimer) {
                 clearTimeout(this.#state.autohideCollapseTimer);
                 this.#state.autohideCollapseTimer = null;
               }
             } else {
               vbHovered = false;
+              this.cancelAutohideReveal();
               this.scheduleAutohideCollapse(140);
             }
           }
@@ -2328,10 +2334,38 @@
     }
 
     /**
+     * Schedules delayed reveal when cursor moves to the edge in autohide mode.
+     * Prevents accidental opening during rapid mouse passes.
+     * @param {number} [delay=130] - Delay in milliseconds.
+     */
+    scheduleAutohideReveal(delay = 130) {
+      if (this.#state.autohideCollapseTimer) {
+        clearTimeout(this.#state.autohideCollapseTimer);
+        this.#state.autohideCollapseTimer = null;
+      }
+      if (this.#state.autohideRevealTimer) return;
+      this.#state.autohideRevealTimer = setTimeout(() => {
+        this.#state.autohideRevealTimer = null;
+        this.setAutohideHovered(true);
+      }, delay);
+    }
+
+    /**
+     * Cancels any pending autohide reveal timer.
+     */
+    cancelAutohideReveal() {
+      if (this.#state.autohideRevealTimer) {
+        clearTimeout(this.#state.autohideRevealTimer);
+        this.#state.autohideRevealTimer = null;
+      }
+    }
+
+    /**
      * Sets whether the autohide apps grid is currently revealed.
      * @param {boolean} hovered - Whether cursor is over trigger or grid.
      */
     setAutohideHovered(hovered) {
+      this.cancelAutohideReveal();
       if (this.#state.autohideCollapseTimer) {
         clearTimeout(this.#state.autohideCollapseTimer);
         this.#state.autohideCollapseTimer = null;
@@ -2358,6 +2392,7 @@
      * @param {number} [delay=300] - Delay in milliseconds.
      */
     scheduleAutohideCollapse(delay = 300) {
+      this.cancelAutohideReveal();
       if (this.#state.autohideCollapseTimer) clearTimeout(this.#state.autohideCollapseTimer);
       this.#state.autohideCollapseTimer = setTimeout(() => {
         this.#state.autohideCollapseTimer = null;
