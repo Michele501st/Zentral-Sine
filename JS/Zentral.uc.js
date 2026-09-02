@@ -2177,7 +2177,7 @@
         }
         trigger.addEventListener("mouseenter", () => {
           if (this.isPlacementVerticalBar()) {
-            this.scheduleAutohideReveal(200);
+            this.scheduleAutohideReveal(320);
           }
         });
         trigger.addEventListener("mouseleave", (e) => {
@@ -2213,7 +2213,7 @@
           if (!isCurrentlyRevealed) {
             // When hidden: schedule reveal when touching the edge
             if (isNearEdge) {
-              this.scheduleAutohideReveal(200);
+              this.scheduleAutohideReveal(320);
             } else if (isDeparting) {
               this.cancelAutohideReveal();
             }
@@ -2333,9 +2333,9 @@
     /**
      * Schedules delayed reveal when cursor moves to the edge in autohide mode.
      * Prevents accidental opening during rapid mouse passes.
-     * @param {number} [delay=200] - Delay in milliseconds.
+     * @param {number} [delay=320] - Delay in milliseconds.
      */
-    scheduleAutohideReveal(delay = 200) {
+    scheduleAutohideReveal(delay = 320) {
       if (this.#state.autohideCollapseTimer) {
         clearTimeout(this.#state.autohideCollapseTimer);
         this.#state.autohideCollapseTimer = null;
