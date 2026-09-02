@@ -293,6 +293,14 @@
           cancelAnimationFrame(this.#state.positionRafId);
           this.#state.positionRafId = null;
         }
+        if (this.#state.autohideRevealTimer) {
+          clearTimeout(this.#state.autohideRevealTimer);
+          this.#state.autohideRevealTimer = null;
+        }
+        if (this.#state.autohideCollapseTimer) {
+          clearTimeout(this.#state.autohideCollapseTimer);
+          this.#state.autohideCollapseTimer = null;
+        }
         this.stopPositionTracking();
 
         // 2. Disconnect observers
@@ -403,7 +411,9 @@
       cachedScrollbarWidth: null,
       repositionTimer: null,
       utilityCollapseTimer: null,
-      autohideCollapseTimer: null
+      autohideCollapseTimer: null,
+      autohideRevealTimer: null,
+      badgeSyncTimer: null
     };
 
     /**
@@ -2957,27 +2967,28 @@
     }
 
     /**
-     * Extracts notification badge presence and count from an app window/document title.
-     * Accurately parses titles across all major web services:
-     *   - Gmail: "Inbox (118) - user@gmail.com - Gmail", "Posta in arrivo (12) - ...", etc.
-     *   - Telegram: "Telegram (2)", "(2) Telegram", "Telegram • 2", "• Telegram", etc.
+     * Extracts notification badge presence and count from a document title string.
+     * Covers all major web services that embed unread counts in the title:
+     *   - Gmail: "Inbox (118) - user@gmail.com", "Posta in arrivo (12) - ..."
+     *   - Telegram: "Telegram (2)", "(2) Telegram"
      *   - WhatsApp: "(4) WhatsApp"
-     *   - Outlook / OWA: "Inbox (5) - Outlook", "(5) Mail - Outlook"
-     *   - Slack / Discord / X / Reddit / YouTube / GitHub / Notion / etc.
-     * @param {string} title - The document or browser content title.
-     * @returns {{hasNotification: boolean, notifCount: number|null}} Notification details.
+     *   - Slack: "(5) channel - Slack"
+     *   - Discord: "Discord | Your place to talk", etc.
+     *   - Any service using (N) or [N] prefix/suffix
+     * @param {string} title - The document title string.
+     * @returns {{hasNotification: boolean, notifCount: number|null}}
      */
     extractBadgeFromTitle(title) {
       if (!title || typeof title !== "string") return { hasNotification: false, notifCount: null };
       const trimmed = title.trim();
 
-      // 1. Explicit unread counter in parentheses, brackets, or with unread keyword
-      // Examples: "Inbox (118) - ...", "Telegram (2)", "(4) WhatsApp", "[5] Messages", "2 unread", "(99+)"
-      const numMatch = trimmed.match(/\((\d+)\+?\)/) || 
-                       trimmed.match(/\[(\d+)\+?\]/) || 
+      // Match numeric counts in parentheses or brackets anywhere in the title
+      // Covers: "Inbox (118)", "(4) WhatsApp", "[5] Messages", "(99+)"
+      const numMatch = trimmed.match(/\((\d+)\+?\)/) ||
+                       trimmed.match(/\[(\d+)\+?\]/) ||
                        trimmed.match(/\b(\d+)\s+unread\b/i) ||
-                       trimmed.match(/\b(?:unread|messages?|notif(?:ication)?s?)\s*[:(]?\s*(\d+)/i) ||
-                       trimmed.match(/(?:^|\s)•\s*(\d+)/);
+                       trimmed.match(/\b(?:messages?|notif(?:ication)?s?)\s*[:(]?\s*(\d+)/i) ||
+                       trimmed.match(/(?:^|\s)[\u2022\u25cf\u25cb]\s*(\d+)/);
 
       if (numMatch && numMatch[1]) {
         const count = parseInt(numMatch[1], 10);
@@ -2986,9 +2997,8 @@
         }
       }
 
-      // 2. Unread indicator dot/bullet/asterisk/symbol without explicit counter
-      // Examples: "• Telegram", "* Slack", "🔴", etc.
-      const dotPattern = /[\u2022\u25cf\u25cb\u25a0\u25aa\u22c5\u2219\u2731\u2732\u2733\u2734\u2735\u2736\u2605\u2606\u2b24\u2023\u25b6\u25c0]|^\s*\*\s+|\s+\*\s*$/;
+      // Match unread indicator dot/bullet without a number (renders red dot badge)
+      const dotPattern = /^[\u2022\u25cf\u25cb\u25a0\u25aa\u2219\u2731-\u2736\u2605\u2606\u2b24\u2023\u25b6\u25c0]\s|\s[\u2022\u25cf\u25cb\u25a0\u25aa\u2219\u2731-\u2736\u2605\u2606\u2b24\u2023\u25b6\u25c0]$|^\*\s|\s\*$/;
       if (dotPattern.test(trimmed)) {
         return { hasNotification: true, notifCount: null };
       }
@@ -2999,8 +3009,8 @@
     /**
      * Updates or removes the visual notification badge on an app tile button.
      * @param {string} appId - Target app ID.
-     * @param {boolean} hasNotification - Whether notification badge should be visible.
-     * @param {number|null} notifCount - Optional numeric counter (e.g. 2, 118).
+     * @param {boolean} hasNotification - Whether badge should be visible.
+     * @param {number|null} notifCount - Optional numeric counter.
      */
     updateAppBadge(appId, hasNotification, notifCount) {
       const btn = document.getElementById("zen-app-btn-" + appId);
@@ -3025,7 +3035,10 @@
     }
 
     /**
-     * Synchronizes notification badges across all loaded app browser instances.
+     * Polls all active app browsers for title changes and updates badges.
+     * Uses browsingContext.currentWindowGlobal.documentTitle as the authoritative
+     * title source — this works across process boundaries without FrameScripts
+     * and is the correct modern Gecko API for chrome-privileged scripts.
      */
     syncAllAppBadges() {
       if (!this.#state.appBrowsers || this.#state.appBrowsers.size === 0) return;
@@ -3033,11 +3046,19 @@
         if (!browser || !browser.isConnected) continue;
         const app = this.#state.apps.find(a => a.id === appId);
         if (!app) continue;
-        const title = browser.contentTitle || browser.getAttribute("label") || browser.browsingContext?.title || "";
-        const badgeInfo = this.extractBadgeFromTitle(title);
-        const hasNotification = badgeInfo.hasNotification;
-        const notifCount = badgeInfo.notifCount;
 
+        // Read title from all available sources — browsingContext.currentWindowGlobal
+        // is the most reliable cross-process API in modern Gecko (Firefox 128+)
+        let title = "";
+        try {
+          title = browser.browsingContext?.currentWindowGlobal?.documentTitle ||
+                  browser.contentTitle ||
+                  browser.getAttribute("label") || "";
+        } catch (_) {
+          title = browser.contentTitle || browser.getAttribute("label") || "";
+        }
+
+        const { hasNotification, notifCount } = this.extractBadgeFromTitle(title);
         if (app.hasNotification !== hasNotification || app.notificationCount !== notifCount) {
           app.hasNotification = hasNotification;
           app.notificationCount = notifCount;
@@ -3065,11 +3086,15 @@
       b.style.cssText = "width: 100%; height: 100%; flex: 1; border: none; overflow: hidden;";
 
       const checkAndUpdateBadge = () => {
-        const title = b.contentTitle || b.getAttribute("label") || b.browsingContext?.title || "";
-        const badgeInfo = this.extractBadgeFromTitle(title);
-        const hasNotification = badgeInfo.hasNotification;
-        const notifCount = badgeInfo.notifCount;
-        
+        let title = "";
+        try {
+          title = browser.browsingContext?.currentWindowGlobal?.documentTitle ||
+                  browser.contentTitle ||
+                  browser.getAttribute("label") || "";
+        } catch (_) {
+          title = browser.contentTitle || browser.getAttribute("label") || "";
+        }
+        const { hasNotification, notifCount } = this.extractBadgeFromTitle(title);
         if (app.hasNotification !== hasNotification || app.notificationCount !== notifCount) {
           app.hasNotification = hasNotification;
           app.notificationCount = notifCount;
@@ -3077,131 +3102,11 @@
         }
       };
 
+      // Chrome-side event listeners for immediate title-change response
       b.addEventListener("pagetitlechanged", checkAndUpdateBadge);
       b.addEventListener("DOMTitleChanged", checkAndUpdateBadge);
       b.addEventListener("load", checkAndUpdateBadge);
       b.addEventListener("pageshow", checkAndUpdateBadge);
-      b.addEventListener("DOMContentLoaded", checkAndUpdateBadge);
-
-      // In-page DOM notification bridge for web apps that don't reflect unread in document.title (e.g. Telegram Web)
-      if (b.messageManager) {
-        try {
-          b.messageManager.addMessageListener("Zentral:AppBadgeUpdate", (msg) => {
-            const data = msg.data || {};
-            const hasNotification = !!data.hasNotification;
-            const notifCount = data.count || null;
-            if (app.hasNotification !== hasNotification || app.notificationCount !== notifCount) {
-              app.hasNotification = hasNotification;
-              app.notificationCount = notifCount;
-              this.updateAppBadge(app.id, hasNotification, notifCount);
-            }
-          });
-
-          const frameScriptCode = `
-            (function() {
-              function extractLiveBadges() {
-                if (!content || !content.document) return { hasNotification: false, count: null };
-                const doc = content.document;
-                const url = (content.location ? content.location.href : "") || "";
-
-                // 1. Check Title First
-                const title = (doc.title || "").trim();
-                const numMatch = title.match(/\\((\\d+)\\+?\\)/) || 
-                                 title.match(/\\[(\\d+)\\+?\\]/) || 
-                                 title.match(/\\b(\\d+)\\s+unread\\b/i) ||
-                                 title.match(/(?:^|\\s)•\\s*(\\d+)/);
-                if (numMatch && numMatch[1]) {
-                  const c = parseInt(numMatch[1], 10);
-                  if (c > 0) return { hasNotification: true, count: c };
-                }
-                const dotPattern = /[\\u2022\\u25cf\\u25cb\\u25a0\\u25aa\\u22c5\\u2219\\u2731\\u2732\\u2733\\u2734\\u2735\\u2736\\u2605\\u2606\\u2b24\\u2023\\u25b6\\u25c0]|^\\s*\\*\\s+|\\s+\\*\\s*$/;
-                if (dotPattern.test(title)) {
-                  return { hasNotification: true, count: null };
-                }
-
-                // 2. Telegram Web DOM Selectors (Web K, Web A, Web Z)
-                if (url.includes("telegram.org")) {
-                  // Check tab folder counter (e.g. "All 14", "Contatti 2")
-                  const folderBadge = doc.querySelector(".folders-tabs .badge, .folders-tab.active .badge, .chatlist-top-badge, .tabs-tab.active .badge, .tabs-tab .badge");
-                  if (folderBadge) {
-                    const c = parseInt(folderBadge.textContent.trim(), 10);
-                    if (!isNaN(c) && c > 0) return { hasNotification: true, count: c };
-                  }
-
-                  // Check individual chat unread badges in chat list
-                  const tgBadges = doc.querySelectorAll(".badge.unread, .chatlist-chat .badge, .ListItem-badge.unread, .ListItem-badge, .chat-badge, [class*='badge'][class*='unread']");
-                  let totalTg = 0;
-                  tgBadges.forEach(el => {
-                    const txt = el.textContent.trim();
-                    const n = parseInt(txt, 10);
-                    if (!isNaN(n) && n > 0) totalTg += n;
-                    else if (txt === "" || txt === "•" || el.classList.contains("unread")) totalTg += 1;
-                  });
-                  if (totalTg > 0) return { hasNotification: true, count: totalTg };
-                }
-
-                // 3. Gmail Web DOM Selectors
-                if (url.includes("mail.google.com")) {
-                  const unreadItem = doc.querySelector(".aio.UKr6le .bsU, .J-Ke.n0 .bsU, [data-tooltip*='Inbox'] .bsU, [aria-label*='unread']");
-                  if (unreadItem) {
-                    const txt = unreadItem.textContent.trim();
-                    const n = parseInt(txt.replace(/[^0-9]/g, ""), 10);
-                    if (!isNaN(n) && n > 0) return { hasNotification: true, count: n };
-                  }
-                }
-
-                // 4. WhatsApp Web DOM Selectors
-                if (url.includes("whatsapp.com")) {
-                  const waBadges = doc.querySelectorAll("[data-testid='unread-count'], [aria-label*='unread'] span");
-                  let totalWa = 0;
-                  waBadges.forEach(el => {
-                    const n = parseInt(el.textContent.trim(), 10);
-                    if (!isNaN(n) && n > 0) totalWa += n;
-                  });
-                  if (totalWa > 0) return { hasNotification: true, count: totalWa };
-                }
-
-                // 5. Generic ARIA unread tags
-                const ariaUnreads = doc.querySelectorAll("[aria-label*='unread'], [aria-label*='non lett']");
-                if (ariaUnreads.length > 0) {
-                  let genericCount = 0;
-                  ariaUnreads.forEach(el => {
-                    const label = el.getAttribute("aria-label") || "";
-                    const m = label.match(/(\\d+)/);
-                    if (m && m[1]) genericCount += parseInt(m[1], 10);
-                    else genericCount += 1;
-                  });
-                  if (genericCount > 0) return { hasNotification: true, count: genericCount };
-                }
-
-                return { hasNotification: false, count: null };
-              }
-
-              function dispatchBadgeUpdate() {
-                try {
-                  const res = extractLiveBadges();
-                  sendAsyncMessage("Zentral:AppBadgeUpdate", res);
-                } catch (_) {}
-              }
-
-              addEventListener("DOMTitleChanged", dispatchBadgeUpdate, true);
-              addEventListener("DOMContentLoaded", dispatchBadgeUpdate, true);
-              addEventListener("load", dispatchBadgeUpdate, true);
-              addEventListener("pageshow", dispatchBadgeUpdate, true);
-
-              // Periodic live scan inside content frame every 1.5s
-              setInterval(dispatchBadgeUpdate, 1500);
-
-              dispatchBadgeUpdate();
-            })();
-          `;
-
-          const frameUri = "data:application/javascript;charset=utf-8," + encodeURIComponent(frameScriptCode);
-          b.messageManager.loadFrameScript(frameUri, true);
-        } catch (e) {
-          console.warn("[ZentralApps] FrameScript registration error:", e);
-        }
-      }
 
       this.#dom.panel.appendChild(b);
       this.#state.appBrowsers.set(app.id, b);
