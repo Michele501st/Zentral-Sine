@@ -3083,6 +3083,126 @@
       b.addEventListener("pageshow", checkAndUpdateBadge);
       b.addEventListener("DOMContentLoaded", checkAndUpdateBadge);
 
+      // In-page DOM notification bridge for web apps that don't reflect unread in document.title (e.g. Telegram Web)
+      if (b.messageManager) {
+        try {
+          b.messageManager.addMessageListener("Zentral:AppBadgeUpdate", (msg) => {
+            const data = msg.data || {};
+            const hasNotification = !!data.hasNotification;
+            const notifCount = data.count || null;
+            if (app.hasNotification !== hasNotification || app.notificationCount !== notifCount) {
+              app.hasNotification = hasNotification;
+              app.notificationCount = notifCount;
+              this.updateAppBadge(app.id, hasNotification, notifCount);
+            }
+          });
+
+          const frameScriptCode = `
+            (function() {
+              function extractLiveBadges() {
+                if (!content || !content.document) return { hasNotification: false, count: null };
+                const doc = content.document;
+                const url = (content.location ? content.location.href : "") || "";
+
+                // 1. Check Title First
+                const title = (doc.title || "").trim();
+                const numMatch = title.match(/\\((\\d+)\\+?\\)/) || 
+                                 title.match(/\\[(\\d+)\\+?\\]/) || 
+                                 title.match(/\\b(\\d+)\\s+unread\\b/i) ||
+                                 title.match(/(?:^|\\s)•\\s*(\\d+)/);
+                if (numMatch && numMatch[1]) {
+                  const c = parseInt(numMatch[1], 10);
+                  if (c > 0) return { hasNotification: true, count: c };
+                }
+                const dotPattern = /[\\u2022\\u25cf\\u25cb\\u25a0\\u25aa\\u22c5\\u2219\\u2731\\u2732\\u2733\\u2734\\u2735\\u2736\\u2605\\u2606\\u2b24\\u2023\\u25b6\\u25c0]|^\\s*\\*\\s+|\\s+\\*\\s*$/;
+                if (dotPattern.test(title)) {
+                  return { hasNotification: true, count: null };
+                }
+
+                // 2. Telegram Web DOM Selectors (Web K, Web A, Web Z)
+                if (url.includes("telegram.org")) {
+                  // Check tab folder counter (e.g. "All 14", "Contatti 2")
+                  const folderBadge = doc.querySelector(".folders-tabs .badge, .folders-tab.active .badge, .chatlist-top-badge, .tabs-tab.active .badge, .tabs-tab .badge");
+                  if (folderBadge) {
+                    const c = parseInt(folderBadge.textContent.trim(), 10);
+                    if (!isNaN(c) && c > 0) return { hasNotification: true, count: c };
+                  }
+
+                  // Check individual chat unread badges in chat list
+                  const tgBadges = doc.querySelectorAll(".badge.unread, .chatlist-chat .badge, .ListItem-badge.unread, .ListItem-badge, .chat-badge, [class*='badge'][class*='unread']");
+                  let totalTg = 0;
+                  tgBadges.forEach(el => {
+                    const txt = el.textContent.trim();
+                    const n = parseInt(txt, 10);
+                    if (!isNaN(n) && n > 0) totalTg += n;
+                    else if (txt === "" || txt === "•" || el.classList.contains("unread")) totalTg += 1;
+                  });
+                  if (totalTg > 0) return { hasNotification: true, count: totalTg };
+                }
+
+                // 3. Gmail Web DOM Selectors
+                if (url.includes("mail.google.com")) {
+                  const unreadItem = doc.querySelector(".aio.UKr6le .bsU, .J-Ke.n0 .bsU, [data-tooltip*='Inbox'] .bsU, [aria-label*='unread']");
+                  if (unreadItem) {
+                    const txt = unreadItem.textContent.trim();
+                    const n = parseInt(txt.replace(/[^0-9]/g, ""), 10);
+                    if (!isNaN(n) && n > 0) return { hasNotification: true, count: n };
+                  }
+                }
+
+                // 4. WhatsApp Web DOM Selectors
+                if (url.includes("whatsapp.com")) {
+                  const waBadges = doc.querySelectorAll("[data-testid='unread-count'], [aria-label*='unread'] span");
+                  let totalWa = 0;
+                  waBadges.forEach(el => {
+                    const n = parseInt(el.textContent.trim(), 10);
+                    if (!isNaN(n) && n > 0) totalWa += n;
+                  });
+                  if (totalWa > 0) return { hasNotification: true, count: totalWa };
+                }
+
+                // 5. Generic ARIA unread tags
+                const ariaUnreads = doc.querySelectorAll("[aria-label*='unread'], [aria-label*='non lett']");
+                if (ariaUnreads.length > 0) {
+                  let genericCount = 0;
+                  ariaUnreads.forEach(el => {
+                    const label = el.getAttribute("aria-label") || "";
+                    const m = label.match(/(\\d+)/);
+                    if (m && m[1]) genericCount += parseInt(m[1], 10);
+                    else genericCount += 1;
+                  });
+                  if (genericCount > 0) return { hasNotification: true, count: genericCount };
+                }
+
+                return { hasNotification: false, count: null };
+              }
+
+              function dispatchBadgeUpdate() {
+                try {
+                  const res = extractLiveBadges();
+                  sendAsyncMessage("Zentral:AppBadgeUpdate", res);
+                } catch (_) {}
+              }
+
+              addEventListener("DOMTitleChanged", dispatchBadgeUpdate, true);
+              addEventListener("DOMContentLoaded", dispatchBadgeUpdate, true);
+              addEventListener("load", dispatchBadgeUpdate, true);
+              addEventListener("pageshow", dispatchBadgeUpdate, true);
+
+              // Periodic live scan inside content frame every 1.5s
+              setInterval(dispatchBadgeUpdate, 1500);
+
+              dispatchBadgeUpdate();
+            })();
+          `;
+
+          const frameUri = "data:application/javascript;charset=utf-8," + encodeURIComponent(frameScriptCode);
+          b.messageManager.loadFrameScript(frameUri, true);
+        } catch (e) {
+          console.warn("[ZentralApps] FrameScript registration error:", e);
+        }
+      }
+
       this.#dom.panel.appendChild(b);
       this.#state.appBrowsers.set(app.id, b);
       return { browser: b, isNew: true };
