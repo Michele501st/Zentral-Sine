@@ -272,6 +272,10 @@
     #resizeObs = null;
     /** @private TabSelect event listener */
     #tabSelectListener = null;
+    /** @private Workspace switch event listener */
+    #workspaceSwitchListener = null;
+    /** @private Toolbar background observer */
+    #toolbarBgObserver = null;
 
     /**
      * Module tear down for Sine hot unloading
@@ -327,6 +331,16 @@
         if (this.#tabSelectListener) {
           window.removeEventListener("TabSelect", this.#tabSelectListener);
           this.#tabSelectListener = null;
+        }
+        if (this.#workspaceSwitchListener) {
+          window.removeEventListener("zen-workspace-switched", this.#workspaceSwitchListener);
+          window.removeEventListener("zen-workspace-changed", this.#workspaceSwitchListener);
+          window.removeEventListener("zen-workspaces-change", this.#workspaceSwitchListener);
+          this.#workspaceSwitchListener = null;
+        }
+        if (this.#toolbarBgObserver) {
+          try { this.#toolbarBgObserver.disconnect(); } catch (_) {}
+          this.#toolbarBgObserver = null;
         }
         document.removeEventListener("mousemove", this.onDrag);
         document.removeEventListener("mouseup", this.onStopDrag);
@@ -800,7 +814,7 @@
         }
 
         /* Scrollbox grid layout in Vertical Sidebar */
-        #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-apps-scroll-box {
+        :root:not([zentral-apps-placement="vertical-bar"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-apps-scroll-box {
           display: grid !important;
           grid-template-columns: repeat(var(--zentral-grid-cols, 7), minmax(0, 1fr)) !important;
           justify-items: center !important;
@@ -1473,6 +1487,7 @@
           width: 100% !important;
           height: auto !important;
           min-height: min-content !important;
+          max-height: none !important;
           flex-shrink: 0 !important;
           opacity: 1 !important;
           transform: none !important;
@@ -3434,7 +3449,7 @@
       if (!addBtn || !footer || !grid) return;
 
       const vbHeight = vb.clientHeight;
-      if (vbHeight <= 0) return;
+      const effectiveVbHeight = (vbHeight > 0) ? vbHeight : (window.innerHeight - 60);
 
       const activeAppsCount = scrollBox ? scrollBox.querySelectorAll(".zen-app-tile:not(.zen-app-add-btn):not(.zen-app-vb-footer-btn)").length : 0;
       const footerBaseHeight = 82; // Eye + Gear buttons + padding
@@ -3443,7 +3458,7 @@
 
       const autohideBtn = footer.querySelector("#zentral-apps-vb-autohide-btn");
 
-      if (requiredHeight > vbHeight) {
+      if (requiredHeight > effectiveVbHeight) {
         // Reached limit: place addBtn inside the fixed footer right above autohideBtn
         if (addBtn.parentElement !== footer) {
           if (autohideBtn) {
@@ -3491,6 +3506,11 @@
         const cs = window.getComputedStyle(zenToolbarBg);
         if (cs && cs.backgroundImage && cs.backgroundImage !== "none") {
           vb.style.setProperty("--zen-theme-gradient-override", cs.backgroundImage);
+          return;
+        }
+        const csAfter = window.getComputedStyle(zenToolbarBg, "::after");
+        if (csAfter && csAfter.backgroundImage && csAfter.backgroundImage !== "none") {
+          vb.style.setProperty("--zen-theme-gradient-override", csAfter.backgroundImage);
           return;
         }
       }
@@ -3932,8 +3952,22 @@
           this.#state.lastWorkspaceId = currentWs;
           this.renderGrid();
         }
+        this.syncVerticalBarTheme();
+        setTimeout(() => this.syncVerticalBarTheme(), 100);
       };
       window.addEventListener("TabSelect", this.#tabSelectListener);
+
+      // Workspace switch listener with staggered theme synchronizations to capture cross-fading workspace colors
+      this.#workspaceSwitchListener = () => {
+        const currentWs = window.gZenWorkspaces?.activeWorkspace;
+        this.#state.lastWorkspaceId = currentWs;
+        this.renderGrid();
+        this.syncVerticalBarTheme();
+        [50, 120, 250, 400, 600].forEach(ms => setTimeout(() => this.syncVerticalBarTheme(), ms));
+      };
+      window.addEventListener("zen-workspace-switched", this.#workspaceSwitchListener);
+      window.addEventListener("zen-workspace-changed", this.#workspaceSwitchListener);
+      window.addEventListener("zen-workspaces-change", this.#workspaceSwitchListener);
 
       // Observer 1: DOM attribute changes (zen-right-side, zen-sidebar-collapsed, zen-compact-mode, style)
       this.#sideObserver = new window.MutationObserver((mutations) => {
@@ -3969,6 +4003,22 @@
           attributes: true,
           attributeFilter: ["style", "class"]
         });
+      }
+
+      // Observer 1c: Direct theme transition observer on #zen-toolbar-background
+      const zenToolbarBg = document.getElementById("zen-toolbar-background") || document.querySelector(".zen-toolbar-background");
+      if (zenToolbarBg) {
+        this.#toolbarBgObserver = new window.MutationObserver(() => {
+          this.syncVerticalBarTheme();
+          setTimeout(() => this.syncVerticalBarTheme(), 80);
+        });
+        this.#toolbarBgObserver.observe(zenToolbarBg, {
+          attributes: true,
+          attributeFilter: ["style", "class"],
+          childList: true
+        });
+        zenToolbarBg.addEventListener("transitionend", () => this.syncVerticalBarTheme(), { passive: true });
+        zenToolbarBg.addEventListener("animationend", () => this.syncVerticalBarTheme(), { passive: true });
       }
 
       // Observer 2: Preference changes for toolbar/sidebar mode

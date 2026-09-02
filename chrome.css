@@ -2422,6 +2422,7 @@ panel[id*="tabgroup-editor"] {
   width: 100% !important;
   height: auto !important;
   min-height: min-content !important;
+  max-height: none !important;
   flex-shrink: 0 !important;
   opacity: 1 !important;
   transform: none !important;
@@ -2734,7 +2735,7 @@ panel[id*="tabgroup-editor"] {
 }
 
 /* Scrollbox grid layout in Vertical Sidebar */
-#zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-apps-scroll-box {
+:root:not([zentral-apps-placement="vertical-bar"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-apps-scroll-box {
   display: grid !important;
   grid-template-columns: repeat(var(--zentral-grid-cols, 7), minmax(0, 1fr)) !important;
   justify-items: center !important;
