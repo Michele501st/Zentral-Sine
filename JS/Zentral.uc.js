@@ -1676,7 +1676,7 @@
           position: fixed !important;
           top: 0 !important;
           bottom: 0 !important;
-          width: 3px !important;
+          width: 1px !important;
           z-index: 2147483550 !important;
           pointer-events: auto !important;
           background: transparent !important;
@@ -2200,8 +2200,8 @@
           if (this.#state.activeAppId) return; // Keep revealed while panel is open
 
           const isRight = this.isVerticalBarOnRight();
-          const triggerDist = 3; // Screen edge proximity (within 3px of bezel)
-          const cancelDist = 24;  // Cancel reveal only if cursor departs beyond 24px from edge
+          const triggerDist = 1; // Screen edge proximity (within 1px of bezel)
+          const cancelDist = 14;  // Cancel reveal only if cursor departs beyond 14px from edge
           const barWidth = 48 + 8 + 20; // 8px outer margin + 48px bar + 20px inner buffer = 76px
 
           const isNearEdge = isRight ? (e.clientX >= window.innerWidth - triggerDist) : (e.clientX <= triggerDist);
