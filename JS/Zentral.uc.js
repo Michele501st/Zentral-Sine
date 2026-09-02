@@ -1337,7 +1337,7 @@
           border-radius: var(--zen-border-radius, 8px) !important;
           box-shadow: var(--zen-big-shadow, rgba(0, 0, 0, 0.24) 0px 3px 8px 0px) !important;
           border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-          transition: transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.12s ease, visibility 0.24s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
+          transition: transform 0.25s cubic-bezier(0.075, 0.82, 0.165, 1), opacity 0.15s ease, visibility 0.25s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
           will-change: transform, opacity;
           overflow: visible !important;
           padding: 8px 5px !important;
@@ -2093,10 +2093,10 @@
           if (this.isPlacementVerticalBar()) {
             if (!vb.contains(e.relatedTarget) && e.relatedTarget !== trigger) {
               const isRight = this.isVerticalBarOnRight();
-              const barWidth = 48 + 8 + 16;
+              const barWidth = 48 + 8 + 20;
               const isInsideBar = isRight ? (e.clientX >= window.innerWidth - barWidth) : (e.clientX <= barWidth);
               if (!isInsideBar) {
-                this.scheduleAutohideCollapse(160);
+                this.scheduleAutohideCollapse(250);
               }
             }
           }
@@ -2177,18 +2177,18 @@
         }
         trigger.addEventListener("mouseenter", () => {
           if (this.isPlacementVerticalBar()) {
-            this.scheduleAutohideReveal(80);
+            this.scheduleAutohideReveal(200);
           }
         });
         trigger.addEventListener("mouseleave", (e) => {
           if (this.isPlacementVerticalBar()) {
             if (e.relatedTarget !== vb && !vb.contains(e.relatedTarget)) {
               const isRight = this.isVerticalBarOnRight();
-              const cancelDist = 20;
+              const cancelDist = 24;
               const isStillNearEdge = isRight ? (e.clientX >= window.innerWidth - cancelDist) : (e.clientX <= cancelDist);
               if (!isStillNearEdge) {
                 this.cancelAutohideReveal();
-                this.scheduleAutohideCollapse(140);
+                this.scheduleAutohideCollapse(250);
               }
             }
           }
@@ -2202,7 +2202,7 @@
           const isRight = this.isVerticalBarOnRight();
           const triggerDist = 3; // Screen edge proximity (within 3px of bezel)
           const cancelDist = 24;  // Cancel reveal only if cursor departs beyond 24px from edge
-          const barWidth = 48 + 8 + 16; // 8px outer margin + 48px bar + 16px inner buffer = 72px
+          const barWidth = 48 + 8 + 20; // 8px outer margin + 48px bar + 20px inner buffer = 76px
 
           const isNearEdge = isRight ? (e.clientX >= window.innerWidth - triggerDist) : (e.clientX <= triggerDist);
           const isDeparting = isRight ? (e.clientX < window.innerWidth - cancelDist) : (e.clientX > cancelDist);
@@ -2213,7 +2213,7 @@
           if (!isCurrentlyRevealed) {
             // When hidden: schedule reveal when touching the edge
             if (isNearEdge) {
-              this.scheduleAutohideReveal(80);
+              this.scheduleAutohideReveal(200);
             } else if (isDeparting) {
               this.cancelAutohideReveal();
             }
@@ -2225,7 +2225,7 @@
                 this.#state.autohideCollapseTimer = null;
               }
             } else {
-              this.scheduleAutohideCollapse(140);
+              this.scheduleAutohideCollapse(250);
             }
           }
         }, { passive: true });
@@ -2333,9 +2333,9 @@
     /**
      * Schedules delayed reveal when cursor moves to the edge in autohide mode.
      * Prevents accidental opening during rapid mouse passes.
-     * @param {number} [delay=80] - Delay in milliseconds.
+     * @param {number} [delay=200] - Delay in milliseconds.
      */
-    scheduleAutohideReveal(delay = 80) {
+    scheduleAutohideReveal(delay = 200) {
       if (this.#state.autohideCollapseTimer) {
         clearTimeout(this.#state.autohideCollapseTimer);
         this.#state.autohideCollapseTimer = null;
@@ -2386,9 +2386,9 @@
 
     /**
      * Schedules delayed collapse after cursor leaves apps grid.
-     * @param {number} [delay=300] - Delay in milliseconds.
+     * @param {number} [delay=250] - Delay in milliseconds.
      */
-    scheduleAutohideCollapse(delay = 300) {
+    scheduleAutohideCollapse(delay = 250) {
       this.cancelAutohideReveal();
       if (this.#state.autohideCollapseTimer) clearTimeout(this.#state.autohideCollapseTimer);
       this.#state.autohideCollapseTimer = setTimeout(() => {
