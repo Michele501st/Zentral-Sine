@@ -2296,11 +2296,12 @@ panel[id*="tabgroup-editor"] {
   min-width: 48px !important;
   max-width: 48px !important;
   z-index: 2147483500 !important;
-  background-color: var(--zen-colors-base, rgb(19, 19, 19)) !important;
+  background-color: color-mix(in srgb, var(--zen-primary-color, rgb(112, 122, 194)) 14%, var(--zen-colors-base, rgb(19, 19, 19))) !important;
   border-radius: var(--zen-border-radius, 8px) !important;
   box-shadow: var(--zen-big-shadow, rgba(0, 0, 0, 0.24) 0px 3px 8px 0px) !important;
-  border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-  transition: transform 0.25s cubic-bezier(0.075, 0.82, 0.165, 1), opacity 0.15s ease, visibility 0.25s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
+  border: 1px solid color-mix(in srgb, var(--zen-primary-color, rgb(112, 122, 194)) 25%, transparent) !important;
+  backdrop-filter: blur(24px) saturate(130%) !important;
+  transition: transform 0.25s cubic-bezier(0.075, 0.82, 0.165, 1), opacity 0.15s ease, visibility 0.25s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.25s ease, border-color 0.25s ease !important;
   will-change: transform, opacity;
   overflow: visible !important;
   padding: 8px 5px !important;
@@ -2318,22 +2319,12 @@ panel[id*="tabgroup-editor"] {
   inset: 0 !important;
   z-index: -2 !important;
   border-radius: inherit !important;
-  background-image: var(--zen-theme-gradient-override, var(--zen-theme-gradient, var(--zen-main-browser-background, none))) !important;
-  background-size: 100vw 100vh !important;
+  background-image: var(--zen-theme-gradient-override, radial-gradient(circle at top, color-mix(in srgb, var(--zen-primary-color, transparent) 30%, transparent) 0%, transparent 85%)) !important;
+  background-size: 100% 100% !important;
   background-repeat: no-repeat !important;
-  background-position: var(--zen-vb-gradient-pos, left top) !important;
+  background-position: center top !important;
   pointer-events: none !important;
-}
-
-/* When Vertical Bar is on Left (Sidebar on Right): Sample top-left gradient color */
-:root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar::before,
-:root[zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar::before {
-  background-position: left top !important;
-}
-
-/* When Vertical Bar is on Right (Sidebar on Left): Sample top-right gradient color */
-:root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar::before {
-  background-position: right top !important;
+  transition: background-image 0.25s ease !important;
 }
 
 /* Zen Film Grain Texture Layer */

@@ -1361,11 +1361,12 @@
           min-width: 48px !important;
           max-width: 48px !important;
           z-index: 2147483500 !important;
-          background-color: var(--zen-colors-base, rgb(19, 19, 19)) !important;
+          background-color: color-mix(in srgb, var(--zen-primary-color, rgb(112, 122, 194)) 14%, var(--zen-colors-base, rgb(19, 19, 19))) !important;
           border-radius: var(--zen-border-radius, 8px) !important;
           box-shadow: var(--zen-big-shadow, rgba(0, 0, 0, 0.24) 0px 3px 8px 0px) !important;
-          border: 1px solid var(--zen-colors-border, color-mix(in srgb, currentColor 10%, transparent)) !important;
-          transition: transform 0.25s cubic-bezier(0.075, 0.82, 0.165, 1), opacity 0.15s ease, visibility 0.25s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1) !important;
+          border: 1px solid color-mix(in srgb, var(--zen-primary-color, rgb(112, 122, 194)) 25%, transparent) !important;
+          backdrop-filter: blur(24px) saturate(130%) !important;
+          transition: transform 0.25s cubic-bezier(0.075, 0.82, 0.165, 1), opacity 0.15s ease, visibility 0.25s ease, top 0.18s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.25s ease, border-color 0.25s ease !important;
           will-change: transform, opacity;
           overflow: visible !important;
           padding: 8px 5px !important;
@@ -1383,22 +1384,12 @@
           inset: 0 !important;
           z-index: -2 !important;
           border-radius: inherit !important;
-          background-image: var(--zen-theme-gradient-override, var(--zen-theme-gradient, var(--zen-main-browser-background, none))) !important;
-          background-size: 100vw 100vh !important;
+          background-image: var(--zen-theme-gradient-override, radial-gradient(circle at top, color-mix(in srgb, var(--zen-primary-color, transparent) 30%, transparent) 0%, transparent 85%)) !important;
+          background-size: 100% 100% !important;
           background-repeat: no-repeat !important;
-          background-position: var(--zen-vb-gradient-pos, left top) !important;
+          background-position: center top !important;
           pointer-events: none !important;
-        }
-
-        /* When Vertical Bar is on Left (Sidebar on Right): Sample top-left gradient color */
-        :root[zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar::before,
-        :root[zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar::before {
-          background-position: left top !important;
-        }
-
-        /* When Vertical Bar is on Right (Sidebar on Left): Sample top-right gradient color */
-        :root[zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar::before {
-          background-position: right top !important;
+          transition: background-image 0.25s ease !important;
         }
 
         /* Zen Film Grain Texture Layer */
@@ -3962,6 +3953,9 @@
         const currentWs = window.gZenWorkspaces?.activeWorkspace;
         this.#state.lastWorkspaceId = currentWs;
         this.renderGrid();
+        if (this.#dom.verticalBar) {
+          this.#dom.verticalBar.style.removeProperty("--zen-theme-gradient-override");
+        }
         this.syncVerticalBarTheme();
         [50, 120, 250, 400, 600].forEach(ms => setTimeout(() => this.syncVerticalBarTheme(), ms));
       };
@@ -4089,6 +4083,8 @@
     #sessionRestoreObserver = null;
     /** @private Settlement fallback timer */
     #restoreSettleTimer = null;
+    /** @private Workspace switch listener for multi-space reconstruction */
+    #workspaceSwitchListener = null;
 
     /**
      * Safely retrieves Firefox SessionStore service for persistent tab metadata across restarts.
@@ -4176,6 +4172,12 @@
           try { this.#dragGuardCleanup(); } catch (_) {}
           this.#dragGuardCleanup = null;
         }
+        if (this.#workspaceSwitchListener) {
+          try { window.removeEventListener("zen-workspace-switched", this.#workspaceSwitchListener); } catch (_) {}
+          try { window.removeEventListener("zen-workspace-changed", this.#workspaceSwitchListener); } catch (_) {}
+          try { window.removeEventListener("zen-workspaces-change", this.#workspaceSwitchListener); } catch (_) {}
+          this.#workspaceSwitchListener = null;
+        }
 
         // 3. Remove injected DOM elements
         const idsToRemove = [
@@ -4194,12 +4196,35 @@
           if (el) el.remove();
         });
 
-        // 4. Secure state persistence across restarts: capture full hierarchy and tab assignments
+        // 4. Secure state persistence across restarts: capture full hierarchy and tab assignments across all workspaces
         const ss = this.#getSessionStore();
+        const currentWs = window.gZenWorkspaces?.activeWorkspace;
         const allGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
-        const stateToSave = {
-          groups: {}
-        };
+
+        // Load existing state to preserve groups from other workspaces
+        let existingGroups = {};
+        let existingTabMapping = {};
+        try {
+          const stateStr = Core.getPref(Constants.TabGroups.PREF_STATE);
+          if (stateStr && stateStr !== "{}") {
+            const parsed = JSON.parse(stateStr);
+            existingGroups = (parsed && parsed.groups) ? parsed.groups : (parsed || {});
+            existingTabMapping = (parsed && parsed.tabMapping) ? parsed.tabMapping : {};
+          }
+        } catch (_) {}
+
+        const mergedGroups = {};
+        const mergedTabMapping = {};
+
+        // Retain any groups and tab mappings from other workspaces
+        for (const [gId, gMeta] of Object.entries(existingGroups)) {
+          if (gMeta && gMeta.workspaceId && currentWs && gMeta.workspaceId !== currentWs) {
+            mergedGroups[gId] = gMeta;
+            if (existingTabMapping[gId]) {
+              mergedTabMapping[gId] = existingTabMapping[gId];
+            }
+          }
+        }
 
         allGroups.forEach(group => {
           if (!group.id) group.id = "zentral-group-" + Math.random().toString(36).substr(2, 9);
@@ -4208,7 +4233,7 @@
           const label = group.label || group.getAttribute("label") || "Group";
           const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || "";
           const isCollapsed = group.hasAttribute("collapsed") && group.getAttribute("collapsed") === "true";
-          const wsId = group.getAttribute("zen-workspace-id") || "";
+          const wsId = group.getAttribute("zen-workspace-id") || currentWs || "";
 
           const posContainer = parentGroup || group.parentElement;
           const groupSiblings = posContainer
@@ -4216,7 +4241,7 @@
             : [];
           const index = groupSiblings.indexOf(group);
 
-          stateToSave.groups[group.id] = {
+          mergedGroups[group.id] = {
             id: group.id,
             label,
             color,
@@ -4231,6 +4256,11 @@
           if (directTabs.length === 0 && group.tabs) {
             directTabs = Array.from(group.tabs);
           }
+
+          mergedTabMapping[group.id] = directTabs.map(t => ({
+            zenTabId: t.getAttribute("zen-tab-id") || t.id,
+            url: t.linkedBrowser?.currentURI?.spec || ""
+          }));
 
           directTabs.forEach(tab => {
             if (!tab) return;
@@ -4255,8 +4285,11 @@
           });
         });
 
-        // Persist full state to preferences
-        Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify(stateToSave));
+        // Persist full merged state across all workspaces to preferences
+        Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify({
+          groups: mergedGroups,
+          tabMapping: mergedTabMapping
+        }));
 
         // 5. Flatten groups cleanly without leaving gaps in the root strip
         const rootTabContainer = (typeof gZenWorkspaces !== "undefined" && gZenWorkspaces.activeWorkspaceStrip) ||
@@ -4551,7 +4584,11 @@
             }
 
             if (!parentEl) {
-              parentEl = rootTabContainer;
+              if (info.tabs.length > 0 && info.tabs[0].parentNode) {
+                parentEl = info.tabs[0].parentNode;
+              } else {
+                parentEl = rootTabContainer;
+              }
             }
 
             // Only move the group if it's completely disconnected or in the wrong parent.
@@ -4835,6 +4872,18 @@
 
       // Safety fallback timer in case sessionstore-windows-restored already fired or does not fire
       this.#restoreSettleTimer = setTimeout(settleRestore, 2500);
+
+      // Workspace switch listener to ensure tab groups in newly focused Space are rendered & restored
+      this.#workspaceSwitchListener = () => {
+        try {
+          this.reconstructSavedGroups();
+          this.loadTabGroupState();
+          document.querySelectorAll("tab-group:not([split-view-group])").forEach(g => this.processGroup(g));
+        } catch (_) {}
+      };
+      window.addEventListener("zen-workspace-switched", this.#workspaceSwitchListener);
+      window.addEventListener("zen-workspace-changed", this.#workspaceSwitchListener);
+      window.addEventListener("zen-workspaces-change", this.#workspaceSwitchListener);
 
       // Collapsed Sidebar observer for Tab Groups
       const updateSidebarAttr = () => {
@@ -6950,13 +6999,16 @@
     saveTabGroupState() {
       try {
         const ss = this.#getSessionStore();
-        const state = {
-          groups: {}
-        };
+        const currentWs = window.gZenWorkspaces?.activeWorkspace;
 
-        // Clean any tabs that are no longer part of any tab group
+        // Clean any tabs that are no longer part of any tab group (guarding other workspaces)
         const allBrowserTabs = Array.from(gBrowser?.tabs || document.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab"));
         allBrowserTabs.forEach(tab => {
+          // Guard: Never strip attributes or SessionStore from tabs belonging to other workspaces
+          const tabWs = tab.getAttribute("zen-workspace-id") || tab.getAttribute("data-zentral-group-ws");
+          if (currentWs && tabWs && tabWs !== currentWs) return;
+          if (tab.hidden && currentWs && tab.getAttribute("zen-workspace-id") && tab.getAttribute("zen-workspace-id") !== currentWs) return;
+
           const isSplit = tab.hasAttribute?.("is-zen-split") || tab.hasAttribute?.("zen-split-view") || tab.closest?.("tab-group[split-view-group], tab-group[zen-split-view], tab-group[is-zen-split]");
           const tabGroup = !isSplit ? (tab.closest("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])") || (tab.group && !tab.group.hasAttribute?.("split-view-group") && !tab.group.hasAttribute?.("zen-split-view") && !tab.group.hasAttribute?.("is-zen-split") ? tab.group : null)) : null;
           if (!tabGroup) {
@@ -6971,6 +7023,31 @@
             }
           }
         });
+
+        // Load existing state to preserve groups and tab mappings from other workspaces
+        let existingGroups = {};
+        let existingTabMapping = {};
+        try {
+          const stateStr = Core.getPref(Constants.TabGroups.PREF_STATE);
+          if (stateStr && stateStr !== "{}") {
+            const parsed = JSON.parse(stateStr);
+            existingGroups = (parsed && parsed.groups) ? parsed.groups : (parsed || {});
+            existingTabMapping = (parsed && parsed.tabMapping) ? parsed.tabMapping : {};
+          }
+        } catch (_) {}
+
+        const mergedGroups = {};
+        const mergedTabMapping = {};
+
+        // Retain groups and tab mappings from other workspaces
+        for (const [gId, gMeta] of Object.entries(existingGroups)) {
+          if (gMeta && gMeta.workspaceId && currentWs && gMeta.workspaceId !== currentWs) {
+            mergedGroups[gId] = gMeta;
+            if (existingTabMapping[gId]) {
+              mergedTabMapping[gId] = existingTabMapping[gId];
+            }
+          }
+        }
 
         document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])").forEach(group => {
           if (!group.id) return;
@@ -6987,9 +7064,9 @@
 
           const label = group.label || group.getAttribute("label") || "Group";
           const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || "";
-          const wsId = group.getAttribute("zen-workspace-id") || "";
+          const wsId = group.getAttribute("zen-workspace-id") || currentWs || "";
 
-          state.groups[group.id] = {
+          mergedGroups[group.id] = {
             id: group.id,
             label,
             color,
@@ -7003,6 +7080,11 @@
           if (directTabs.length === 0 && group.tabs) {
             directTabs = Array.from(group.tabs);
           }
+
+          mergedTabMapping[group.id] = directTabs.map(t => ({
+            zenTabId: t.getAttribute("zen-tab-id") || t.id,
+            url: t.linkedBrowser?.currentURI?.spec || ""
+          }));
 
           // Synchronize DOM attributes and SessionStore with live state
           directTabs.forEach(tab => {
@@ -7039,7 +7121,10 @@
           });
         });
 
-        Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify(state));
+        Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify({
+          groups: mergedGroups,
+          tabMapping: mergedTabMapping
+        }));
       } catch (e) {
         console.warn("[ZentralTabGroups] Error saving state", e);
       }
