@@ -1676,7 +1676,7 @@
           position: fixed;
           top: 0;
           bottom: 0;
-          width: 3px !important;
+          width: 8px !important;
           z-index: 2147483550;
           pointer-events: auto;
           background: transparent;
@@ -2183,15 +2183,20 @@
         trigger.addEventListener("mouseenter", () => {
           if (this.isPlacementVerticalBar()) {
             vbHovered = true;
-            this.scheduleAutohideReveal(140);
+            this.scheduleAutohideReveal(80);
           }
         });
         trigger.addEventListener("mouseleave", (e) => {
           if (this.isPlacementVerticalBar()) {
             if (e.relatedTarget !== vb && !vb.contains(e.relatedTarget)) {
-              vbHovered = false;
-              this.cancelAutohideReveal();
-              this.scheduleAutohideCollapse(140);
+              const isRight = this.isVerticalBarOnRight();
+              const cancelDist = 18;
+              const isStillNearEdge = isRight ? (e.clientX >= window.innerWidth - cancelDist) : (e.clientX <= cancelDist);
+              if (!isStillNearEdge) {
+                vbHovered = false;
+                this.cancelAutohideReveal();
+                this.scheduleAutohideCollapse(140);
+              }
             }
           }
         });
@@ -2202,20 +2207,22 @@
           if (this.#state.activeAppId) return; // Keep revealed while panel is open
 
           const isRight = this.isVerticalBarOnRight();
-          const triggerDist = 3; // Requires moving cursor directly to the screen edge (within 3px of bezel)
+          const triggerDist = 8; // Screen edge proximity (within 8px of bezel)
+          const cancelDist = 20;  // Cancel reveal only if cursor departs beyond 20px from edge
           const barWidth = 48 + 8 + 16; // 8px outer margin + 48px bar + 16px inner buffer = 72px
 
           const isNearEdge = isRight ? (e.clientX >= window.innerWidth - triggerDist) : (e.clientX <= triggerDist);
+          const isDeparting = isRight ? (e.clientX < window.innerWidth - cancelDist) : (e.clientX > cancelDist);
           const isInsideBar = isRight ? (e.clientX >= window.innerWidth - barWidth) : (e.clientX <= barWidth);
 
           const isCurrentlyRevealed = vbHovered || this.#dom.verticalBar?.hasAttribute("data-revealed");
 
           if (!isCurrentlyRevealed) {
-            // When hidden: ONLY schedule reveal if cursor touches the very edge with hover intent delay
+            // When hidden: schedule reveal when touching the edge
             if (isNearEdge) {
               vbHovered = true;
-              this.scheduleAutohideReveal(140);
-            } else {
+              this.scheduleAutohideReveal(80);
+            } else if (isDeparting) {
               vbHovered = false;
               this.cancelAutohideReveal();
             }
@@ -2337,9 +2344,9 @@
     /**
      * Schedules delayed reveal when cursor moves to the edge in autohide mode.
      * Prevents accidental opening during rapid mouse passes.
-     * @param {number} [delay=140] - Delay in milliseconds.
+     * @param {number} [delay=80] - Delay in milliseconds.
      */
-    scheduleAutohideReveal(delay = 140) {
+    scheduleAutohideReveal(delay = 80) {
       if (this.#state.autohideCollapseTimer) {
         clearTimeout(this.#state.autohideCollapseTimer);
         this.#state.autohideCollapseTimer = null;

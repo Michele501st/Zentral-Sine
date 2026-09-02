@@ -2657,7 +2657,7 @@ panel[id*="tabgroup-editor"] {
   position: fixed;
   top: 0;
   bottom: 0;
-  width: 3px !important;
+  width: 8px !important;
   z-index: 2147483550;
   pointer-events: auto;
   background: transparent;
