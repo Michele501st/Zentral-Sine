@@ -1400,8 +1400,8 @@
         }
 
         /* Autohide Mode B: Idle/Collapsed State on Left */
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]),
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not([zentral-app-panel-open="true"]),
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar:not([data-revealed="true"]):not([zentral-app-panel-open="true"]) {
           transform: translateX(calc(-100% - 16px)) !important;
           opacity: 0 !important;
           pointer-events: none !important;
@@ -1409,7 +1409,7 @@
         }
 
         /* Autohide Mode B: Idle/Collapsed State on Right */
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar:not([data-revealed="true"]):not(:hover):not([zentral-app-panel-open="true"]) {
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar:not([data-revealed="true"]):not([zentral-app-panel-open="true"]) {
           transform: translateX(calc(100% + 16px)) !important;
           opacity: 0 !important;
           pointer-events: none !important;
@@ -1418,7 +1418,6 @@
 
         /* Autohide Mode B: Revealed State on Hover / Active Panel */
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar[data-revealed="true"],
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:hover,
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar[zentral-app-panel-open="true"] {
           transform: translateX(0) !important;
           opacity: 1 !important;
@@ -1704,7 +1703,6 @@
           background: transparent !important;
         }
 
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar:hover .zen-app-vb-hover-zone,
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar[data-revealed="true"] .zen-app-vb-hover-zone {
           pointer-events: auto !important;
         }
@@ -2085,8 +2083,10 @@
 
         vb.addEventListener("mouseenter", () => {
           if (this.isPlacementVerticalBar()) {
-            this.cancelAutohideReveal();
-            this.setAutohideHovered(true);
+            if (this.#state.autohideCollapseTimer) {
+              clearTimeout(this.#state.autohideCollapseTimer);
+              this.#state.autohideCollapseTimer = null;
+            }
           }
         });
         vb.addEventListener("mouseleave", (e) => {
