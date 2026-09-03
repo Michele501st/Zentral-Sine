@@ -124,6 +124,103 @@
   };
 
   /* ============================================================================
+   * 1.5 MODULE-SCOPE CONSTANTS (shared SVG strings & lookup tables)
+   * ============================================================================
+   */
+
+  /**
+   * Frozen lookup table of well-known service hostnames → display names.
+   * Allocated once at module load; never mutated.
+   */
+  const WELL_KNOWN_SERVICES = Object.freeze({
+    "discord.com": "Discord",
+    "web.whatsapp.com": "WhatsApp",
+    "whatsapp.com": "WhatsApp",
+    "web.telegram.org": "Telegram",
+    "telegram.org": "Telegram",
+    "t.me": "Telegram",
+    "reddit.com": "Reddit",
+    "youtube.com": "YouTube",
+    "music.youtube.com": "YouTube Music",
+    "mail.google.com": "Gmail",
+    "gmail.com": "Gmail",
+    "github.com": "GitHub",
+    "twitter.com": "Twitter",
+    "x.com": "X",
+    "chatgpt.com": "ChatGPT",
+    "chat.openai.com": "ChatGPT",
+    "instagram.com": "Instagram",
+    "facebook.com": "Facebook",
+    "linkedin.com": "LinkedIn",
+    "spotify.com": "Spotify",
+    "open.spotify.com": "Spotify",
+    "twitch.tv": "Twitch",
+    "slack.com": "Slack",
+    "notion.so": "Notion",
+    "netflix.com": "Netflix",
+    "google.com": "Google",
+    "drive.google.com": "Google Drive",
+    "calendar.google.com": "Google Calendar",
+    "maps.google.com": "Google Maps",
+    "translate.google.com": "Google Translate",
+    "keep.google.com": "Google Keep",
+    "pinterest.com": "Pinterest",
+    "amazon.com": "Amazon",
+    "wikipedia.org": "Wikipedia",
+    "outlook.live.com": "Outlook",
+    "outlook.com": "Outlook",
+    "messenger.com": "Messenger",
+    "tiktok.com": "TikTok",
+    "soundcloud.com": "SoundCloud",
+    "music.apple.com": "Apple Music",
+    "bsky.app": "Bluesky",
+    "mastodon.social": "Mastodon",
+    "threads.net": "Threads",
+    "medium.com": "Medium",
+    "substack.com": "Substack",
+    "trello.com": "Trello",
+    "asana.com": "Asana",
+    "figma.com": "Figma",
+    "canva.com": "Canva",
+    "dropbox.com": "Dropbox",
+    "steamcommunity.com": "Steam",
+    "store.steampowered.com": "Steam",
+    "mail.proton.me": "ProtonMail",
+    "proton.me": "Proton",
+    "deezer.com": "Deezer",
+    "crunchyroll.com": "Crunchyroll"
+  });
+
+  /**
+   * Shared SVG string constants. Defined once at module scope to avoid
+   * re-allocating identical string literals at every renderGrid() call.
+   */
+  const SVG_STRINGS = Object.freeze({
+    SETTINGS: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+    EYE_OPEN: `<svg class="zs-eye-open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+    EYE_CLOSED: `<svg class="zs-eye-closed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`,
+    CLOSE_X: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>`,
+    EXPAND: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/></svg>`,
+    COLLAPSE: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M4 6V2h2v4H4zm6 0V2h2v4h-2zm-6 4v4h2v-4H4zm6 0v4h2v-4h-2z"/></svg>`,
+    PIN: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M8 11V15M3.5 11.5h9c0 0 0-2-1.5-3l-.5-4c0 0 .5-.5.5-1H5.5c0 .5.5 1 .5 1L5.5 8.5c-1.5 1-2 3-2 3z"/></svg>`,
+    REFRESH: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M13.8 6.5A5.5 5.5 0 1 0 8 13.5a5.5 5.5 0 0 0 5.2-3.7M14 2v4.5H9.5"/></svg>`,
+    GRABBER: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 14"><circle cx="3" cy="2.5" r="1.2"/><circle cx="7" cy="2.5" r="1.2"/><circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="3" cy="11.5" r="1.2"/><circle cx="7" cy="11.5" r="1.2"/></svg>`,
+    ADD: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`
+  });
+
+  /**
+   * Creates an SVG element from a string using innerHTML (no DOMParser overhead).
+   * Shared by all Zentral modules. Clones elements on repeated use.
+   * @param {string} svgString - Raw SVG markup.
+   * @returns {Element} The SVG DOM element.
+   */
+  function createSVGElement(svgString) {
+    const wrap = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
+    wrap.innerHTML = svgString;
+    return wrap.firstElementChild;
+  }
+
+  /* ============================================================================
    * 2.0 ZENTRAL CORE ENGINE (ZentralCore)
    * ============================================================================
    */
@@ -375,9 +472,17 @@
           this.#state.appBrowsers.forEach(b => { if (b && b.remove) b.remove(); });
           this.#state.appBrowsers.clear();
         }
-        if (this.#state && this.#state.badgeSyncTimer) {
-          clearInterval(this.#state.badgeSyncTimer);
-          this.#state.badgeSyncTimer = null;
+        // CRIT-01: Remove event-driven badge sync handlers (replaced polling interval)
+        if (this._badgeSyncHandler) {
+          window.removeEventListener("TabSelect", this._badgeSyncHandler);
+          window.removeEventListener("TabAttrModified", this._badgeSyncHandler);
+          this._badgeSyncHandler = null;
+        }
+        this._badgeSyncInitialized = false;
+        // HIGH-04: Cancel any pending debounced theme sync timer
+        if (this._syncThemeTimer) {
+          clearTimeout(this._syncThemeTimer);
+          this._syncThemeTimer = null;
         }
 
         // 6. Reset DOM references and state
@@ -433,7 +538,6 @@
       utilityCollapseTimer: null,
       autohideCollapseTimer: null,
       autohideRevealTimer: null,
-      badgeSyncTimer: null,
       isInstaPeeking: false
     };
 
@@ -559,7 +663,8 @@
      * Loads the preferred display slot positions for the Apps Grid Utility Section buttons.
      */
     loadUtilityOrder() {
-      const slotCount = Constants.Apps.UTILITY_SLOTS_COUNT || 4;
+      // LOW-02: UTILITY_SLOTS_COUNT is always 4 (defined constant); || 4 fallback was dead code.
+      const slotCount = Constants.Apps.UTILITY_SLOTS_COUNT;
       try {
         const raw = Core.getPref(Constants.Apps.PREF_UTILITY_ORDER);
         const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
@@ -1883,15 +1988,14 @@
      */
 
     /**
-     * Safely constructs SVG elements from an raw XML string.
+     * Creates an SVG element from a raw markup string using the shared module helper
+     * (innerHTML-based, no DOMParser). Kept as a class method for API compatibility.
      * @private
-     * @param {string} svgString - Valid SVG XML markup string.
-     * @returns {Element} SVG Document root element.
+     * @param {string} svgString - Valid SVG markup string.
+     * @returns {Element} SVG element.
      */
     #createSVG(svgString) {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(svgString, "image/svg+xml");
-      return doc.documentElement;
+      return createSVGElement(svgString);
     }
 
     /**
@@ -2050,7 +2154,14 @@
           }
         });
 
+        // CRIT-03: Throttled to max once per 16ms (one animation frame) to avoid
+        // firing the hit-test on every pixel of mouse movement at 60fps.
+        let _gridMoveThrottleLast = 0;
         window.addEventListener("mousemove", (e) => {
+          const now = performance.now();
+          if (now - _gridMoveThrottleLast < 16) return;
+          _gridMoveThrottleLast = now;
+
           if (this.isPlacementVerticalBar()) return;
           const grid = this.#dom.grid;
           if (!grid) return;
@@ -2196,8 +2307,8 @@
           autohideBtn.id = "zentral-apps-vb-autohide-btn";
           autohideBtn.className = "zen-app-tile zen-app-vb-footer-btn";
           autohideBtn.title = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true ? "Disable Autohide" : "Enable Autohide";
-          autohideBtn.appendChild(this.#createSVG(`<svg class="zs-eye-open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`));
-          autohideBtn.appendChild(this.#createSVG(`<svg class="zs-eye-closed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`));
+          autohideBtn.appendChild(this.#createSVG(SVG_STRINGS.EYE_OPEN));
+          autohideBtn.appendChild(this.#createSVG(SVG_STRINGS.EYE_CLOSED));
           autohideBtn.addEventListener("click", (e) => {
             e.stopPropagation();
             const cur = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
@@ -2217,7 +2328,7 @@
           settingsBtn.id = "zentral-apps-vb-settings-btn";
           settingsBtn.className = "zen-app-tile zen-app-vb-footer-btn";
           settingsBtn.title = "Zentral Settings";
-          settingsBtn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`));
+          settingsBtn.appendChild(this.#createSVG(SVG_STRINGS.SETTINGS));
           settingsBtn.addEventListener("click", (e) => {
             e.stopPropagation();
             if (window.Zentral?.Settings) window.Zentral.Settings.open();
@@ -2309,19 +2420,19 @@
         const pill = document.createElement("div"); pill.id = "zen-app-panel-pill";
 
         const pinBtn = document.createElement("button"); pinBtn.className = "zen-app-btn"; pinBtn.title = "Pin panel";
-        pinBtn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M8 11V15M3.5 11.5h9c0 0 0-2-1.5-3l-.5-4c0 0 .5-.5.5-1H5.5c0 .5.5 1 .5 1L5.5 8.5c-1.5 1-2 3-2 3z"/></svg>`));
+        pinBtn.appendChild(this.#createSVG(SVG_STRINGS.PIN));
         pinBtn.addEventListener("click", (e) => { e.stopPropagation(); this.togglePin(); });
 
         const expandBtn = document.createElement("button"); expandBtn.className = "zen-app-btn"; expandBtn.title = "Expand panel";
-        expandBtn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/></svg>`));
+        expandBtn.appendChild(this.#createSVG(SVG_STRINGS.EXPAND));
         expandBtn.addEventListener("click", (e) => { e.stopPropagation(); this.toggleExpand(); });
 
         const grabberBtn = document.createElement("div"); grabberBtn.className = "zen-app-grabber"; grabberBtn.title = "Drag to resize";
-        grabberBtn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 14"><circle cx="3" cy="2.5" r="1.2"/><circle cx="7" cy="2.5" r="1.2"/><circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="3" cy="11.5" r="1.2"/><circle cx="7" cy="11.5" r="1.2"/></svg>`));
+        grabberBtn.appendChild(this.#createSVG(SVG_STRINGS.GRABBER));
         grabberBtn.addEventListener("mousedown", this.startResize);
 
         const refreshBtn = document.createElement("button"); refreshBtn.className = "zen-app-btn zen-app-refresh-btn"; refreshBtn.title = "Refresh app";
-        refreshBtn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M13.8 6.5A5.5 5.5 0 1 0 8 13.5a5.5 5.5 0 0 0 5.2-3.7M14 2v4.5H9.5"/></svg>`));
+        refreshBtn.appendChild(this.#createSVG(SVG_STRINGS.REFRESH));
         refreshBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           if (this.#state.activeAppId) {
@@ -2332,7 +2443,7 @@
         });
 
         const closeBtn = document.createElement("button"); closeBtn.className = "zen-app-btn zen-app-close-btn"; closeBtn.title = "Close panel";
-        closeBtn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>`));
+        closeBtn.appendChild(this.#createSVG(SVG_STRINGS.CLOSE_X));
         closeBtn.addEventListener("click", (e) => { e.stopPropagation(); this.closePanel(); });
 
         pill.append(pinBtn, expandBtn, grabberBtn, refreshBtn, closeBtn);
@@ -2378,10 +2489,11 @@
         this.#dom.utilityAutohideBtn.title = isAutohide ? "Disable Autohide" : "Enable Autohide";
       }
 
-      if (!this.#state.badgeSyncTimer) {
-        this.#state.badgeSyncTimer = setInterval(() => {
-          this.syncAllAppBadges();
-        }, 2000);
+      if (!this._badgeSyncInitialized) {
+        this._badgeSyncInitialized = true;
+        this._badgeSyncHandler = () => this.syncAllAppBadges();
+        window.addEventListener("TabSelect", this._badgeSyncHandler, { passive: true });
+        window.addEventListener("TabAttrModified", this._badgeSyncHandler, { passive: true });
       }
     }
 
@@ -2496,17 +2608,16 @@
 
       const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
       const isHorizontal = this.#dom.grid?.classList.contains("zen-apps-horizontal");
-      const slotCount = Constants.Apps.UTILITY_SLOTS_COUNT || 4;
+      const slotCount = Constants.Apps.UTILITY_SLOTS_COUNT;
       row.style.setProperty("--zentral-grid-cols", slotCount);
 
       if (isHorizontal) {
-        // Horizontal Toolbar Mode: Single inline flex row with Settings button (autohide excluded)
         const btn = document.createElement("button");
         btn.id = "zentral-utility-settings-btn";
         btn.className = "zen-app-tile zentral-utility-btn";
         btn.dataset.utilityKey = "settings";
         btn.title = "Zentral Settings";
-        btn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`));
+        btn.appendChild(this.#createSVG(SVG_STRINGS.SETTINGS));
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
           if (window.Zentral?.Settings) window.Zentral.Settings.open();
@@ -2520,7 +2631,6 @@
         return;
       }
 
-      // Vertical Sidebar Mode: Always fixed 4-slot grid supporting free drag & drop
       if (!Array.isArray(this.#state.utilitySlots) || this.#state.utilitySlots.length !== slotCount) {
         const slots = new Array(slotCount).fill(null);
         if (Array.isArray(this.#state.utilitySlots)) {
@@ -2560,7 +2670,7 @@
             btn.dataset.utilityKey = "settings";
             btn.title = "Zentral Settings";
             btn.draggable = true;
-            btn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`));
+            btn.appendChild(this.#createSVG(SVG_STRINGS.SETTINGS));
             btn.addEventListener("click", (e) => {
               e.stopPropagation();
               if (window.Zentral?.Settings) window.Zentral.Settings.open();
@@ -2577,8 +2687,8 @@
             btn.dataset.utilityKey = "autohide";
             btn.title = isAutohide ? "Disable Autohide" : "Enable Autohide";
             btn.draggable = true;
-            btn.appendChild(this.#createSVG(`<svg class="zs-eye-open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`));
-            btn.appendChild(this.#createSVG(`<svg class="zs-eye-closed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`));
+            btn.appendChild(this.#createSVG(SVG_STRINGS.EYE_OPEN));
+            btn.appendChild(this.#createSVG(SVG_STRINGS.EYE_CLOSED));
             btn.addEventListener("click", (e) => {
               e.stopPropagation();
               const cur = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
@@ -2653,65 +2763,6 @@
      * @returns {string} Human-friendly service title.
      */
     formatAppDisplayName(title, url = "") {
-      const WELL_KNOWN_SERVICES = {
-        "discord.com": "Discord",
-        "web.whatsapp.com": "WhatsApp",
-        "whatsapp.com": "WhatsApp",
-        "web.telegram.org": "Telegram",
-        "telegram.org": "Telegram",
-        "t.me": "Telegram",
-        "reddit.com": "Reddit",
-        "youtube.com": "YouTube",
-        "music.youtube.com": "YouTube Music",
-        "mail.google.com": "Gmail",
-        "gmail.com": "Gmail",
-        "github.com": "GitHub",
-        "twitter.com": "Twitter",
-        "x.com": "X",
-        "chatgpt.com": "ChatGPT",
-        "chat.openai.com": "ChatGPT",
-        "instagram.com": "Instagram",
-        "facebook.com": "Facebook",
-        "linkedin.com": "LinkedIn",
-        "spotify.com": "Spotify",
-        "open.spotify.com": "Spotify",
-        "twitch.tv": "Twitch",
-        "slack.com": "Slack",
-        "notion.so": "Notion",
-        "netflix.com": "Netflix",
-        "google.com": "Google",
-        "drive.google.com": "Google Drive",
-        "calendar.google.com": "Google Calendar",
-        "maps.google.com": "Google Maps",
-        "translate.google.com": "Google Translate",
-        "keep.google.com": "Google Keep",
-        "pinterest.com": "Pinterest",
-        "amazon.com": "Amazon",
-        "wikipedia.org": "Wikipedia",
-        "outlook.live.com": "Outlook",
-        "outlook.com": "Outlook",
-        "messenger.com": "Messenger",
-        "tiktok.com": "TikTok",
-        "soundcloud.com": "SoundCloud",
-        "music.apple.com": "Apple Music",
-        "bsky.app": "Bluesky",
-        "mastodon.social": "Mastodon",
-        "threads.net": "Threads",
-        "medium.com": "Medium",
-        "substack.com": "Substack",
-        "trello.com": "Trello",
-        "asana.com": "Asana",
-        "figma.com": "Figma",
-        "canva.com": "Canva",
-        "dropbox.com": "Dropbox",
-        "steamcommunity.com": "Steam",
-        "store.steampowered.com": "Steam",
-        "mail.proton.me": "ProtonMail",
-        "proton.me": "Proton",
-        "deezer.com": "Deezer",
-        "crunchyroll.com": "Crunchyroll"
-      };
-
       let host = "";
       if (url) {
         try {
@@ -2919,12 +2970,10 @@
         const addBtn = document.createElement("button");
         addBtn.className = "zen-app-tile zen-app-add-btn";
         addBtn.title = "Add App";
-        addBtn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`));
+        addBtn.appendChild(this.#createSVG(SVG_STRINGS.ADD));
         addBtn.addEventListener("click", (e) => {
           const tab = gBrowser.selectedTab; if (!tab) return;
           const url = tab.linkedBrowser?.currentURI?.spec || "about:blank";
-          // Prefer the actual document title over tab.label, which can be contaminated by
-          // tab group labels, loading states, or truncation. Fall back to hostname → URL.
           let title = "";
           try {
             title = tab.linkedBrowser?.contentDocument?.title || "";
@@ -2982,14 +3031,6 @@
       });
     }
 
-
-
-    /**
-     * Adds a new app tile to the configuration and re-renders the grid.
-     * @param {string} url - Target website URL.
-     * @param {string} title - App display label.
-     * @param {string} [icon] - Custom icon URI or favicon path.
-     */
     addApp(url, title, icon) {
       if (this.#state.apps.length >= Core.getPref(Constants.Apps.PREF_MAX_APPS)) return;
       const id = "app_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
@@ -3001,10 +3042,6 @@
       this.renderGrid();
     }
 
-    /**
-     * Removes an app tile by ID and cleans up its loaded browser frame.
-     * @param {string} id - App unique identifier string.
-     */
     removeApp(id) {
       const idx = this.#state.apps.findIndex(app => app.id === id);
       if (idx === -1) return;
@@ -3014,21 +3051,12 @@
       if (this.#state.activeAppId === id) this.closePanel();
       
       const b = this.#state.appBrowsers.get(id);
-      if (b && b.parentNode) b.parentNode.removeChild(b);
+      if (b && b.isConnected) b.parentNode.removeChild(b);
       this.#state.appBrowsers.delete(id);
       
       this.renderGrid();
     }
 
-    /* --------------------------------------------------------------------------
-     * 3.5 App Panel Lifecycle & Animations
-     * --------------------------------------------------------------------------
-     */
-
-    /**
-     * Checks whether any app panel is currently open and active.
-     * @returns {boolean}
-     */
     isPanelOpen() {
       return !!(
         this.#state.activeAppId !== null ||
@@ -3038,10 +3066,6 @@
       );
     }
 
-    /**
-     * Opens the floating app panel for a selected web app with smooth sliding transitions.
-     * @param {Object} app - The target app configuration object.
-     */
     openPanel(app) {
       if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] openPanel called for app:", app.id, "URL:", app.url);
       if (this.#state.closeTimerId) {
@@ -3060,10 +3084,9 @@
       if(this.#dom.pinBtn) this.#dom.pinBtn.setAttribute("data-pinned", "false");
       if(this.#dom.expandBtn) {
         this.#dom.expandBtn.title = "Expand panel";
-        this.#dom.expandBtn.replaceChildren(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/></svg>`));
+        this.#dom.expandBtn.replaceChildren(this.#createSVG(SVG_STRINGS.EXPAND));
       }
       
-      // Update tile selection
       const tiles = document.querySelectorAll(".zen-app-tile[data-app-id]");
       tiles.forEach(tile => tile.dataset.active = (tile.dataset.appId === app.id) ? "true" : "false");
       
@@ -3117,9 +3140,6 @@
       });
     }
 
-    /**
-     * Closes the active floating app panel and triggers closing slide-out transition.
-     */
     closePanel() {
       if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] closePanel called");
       if (!this.#state.activeAppId && !this.#dom.root?.hasAttribute("open")) return;
@@ -3188,13 +3208,6 @@
       }, slideMs + 20);
     }
 
-    /**
-     * Refreshes the specified web app.
-     * - If the app currently has an open panel, it simply reloads and the panel stays open.
-     * - If the app panel is closed (or a different app is open), it reloads or lazily instantiates
-     *   the browser in the background without opening the panel.
-     * @param {string} appId - Target app ID.
-     */
     refreshApp(appId) {
       if (!appId) return;
       const app = this.#state.apps.find(a => a.id === appId);
@@ -3243,12 +3256,6 @@
       }
     }
 
-    /**
-     * Closes and unloads the specified web app from memory.
-     * If the app's panel is currently open, closes the panel.
-     * Removes the content browser element from the DOM and state map, and clears notification badges.
-     * @param {string} appId - Target app ID.
-     */
     closeApp(appId) {
       if (!appId) return;
       if (this.#state.activeAppId === appId) {
@@ -3273,10 +3280,6 @@
       }
     }
 
-    /**
-     * Retrieves all available Zen workspaces from gZenWorkspaces or DOM fallback.
-     * @returns {Array<{id: string, name: string}>}
-     */
     getZenWorkspacesList() {
       const list = [];
       const seen = new Set();
@@ -3310,24 +3313,10 @@
       return list;
     }
 
-    /**
-     * Extracts notification badge presence and count from a document title string.
-     * Covers all major web services that embed unread counts in the title:
-     *   - Gmail: "Inbox (118) - user@gmail.com", "Posta in arrivo (12) - ..."
-     *   - Telegram: "Telegram (2)", "(2) Telegram"
-     *   - WhatsApp: "(4) WhatsApp"
-     *   - Slack: "(5) channel - Slack"
-     *   - Discord: "Discord | Your place to talk", etc.
-     *   - Any service using (N) or [N] prefix/suffix
-     * @param {string} title - The document title string.
-     * @returns {{hasNotification: boolean, notifCount: number|null}}
-     */
     extractBadgeFromTitle(title) {
       if (!title || typeof title !== "string") return { hasNotification: false, notifCount: null };
       const trimmed = title.trim();
 
-      // Match numeric counts in parentheses or brackets anywhere in the title
-      // Covers: "Inbox (118)", "(4) WhatsApp", "[5] Messages", "(99+)"
       const numMatch = trimmed.match(/\((\d+)\+?\)/) ||
                        trimmed.match(/\[(\d+)\+?\]/) ||
                        trimmed.match(/\b(\d+)\s+unread\b/i) ||
@@ -3341,7 +3330,6 @@
         }
       }
 
-      // Match unread indicator dot/bullet without a number (renders red dot badge)
       const dotPattern = /^[\u2022\u25cf\u25cb\u25a0\u25aa\u2219\u2731-\u2736\u2605\u2606\u2b24\u2023\u25b6\u25c0]\s|\s[\u2022\u25cf\u25cb\u25a0\u25aa\u2219\u2731-\u2736\u2605\u2606\u2b24\u2023\u25b6\u25c0]$|^\*\s|\s\*$/;
       if (dotPattern.test(trimmed)) {
         return { hasNotification: true, notifCount: null };
@@ -3350,12 +3338,6 @@
       return { hasNotification: false, notifCount: null };
     }
 
-    /**
-     * Updates or removes the visual notification badge on an app tile button.
-     * @param {string} appId - Target app ID.
-     * @param {boolean} hasNotification - Whether badge should be visible.
-     * @param {number|null} notifCount - Optional numeric counter.
-     */
     updateAppBadge(appId, hasNotification, notifCount) {
       const btn = document.getElementById("zen-app-btn-" + appId);
       if (!btn) return;
@@ -3378,12 +3360,6 @@
       }
     }
 
-    /**
-     * Polls all active app browsers for title changes and updates badges.
-     * Uses browsingContext.currentWindowGlobal.documentTitle as the authoritative
-     * title source — this works across process boundaries without FrameScripts
-     * and is the correct modern Gecko API for chrome-privileged scripts.
-     */
     syncAllAppBadges() {
       if (!this.#state.appBrowsers || this.#state.appBrowsers.size === 0) return;
       for (const [appId, browser] of this.#state.appBrowsers.entries()) {
@@ -3391,8 +3367,6 @@
         const app = this.#state.apps.find(a => a.id === appId);
         if (!app) continue;
 
-        // Read title from all available sources — browsingContext.currentWindowGlobal
-        // is the most reliable cross-process API in modern Gecko (Firefox 128+)
         let title = "";
         try {
           title = browser.browsingContext?.currentWindowGlobal?.documentTitle ||
@@ -3411,12 +3385,6 @@
       }
     }
 
-    /**
-     * Retrieves existing XUL browser element for an app, or instantiates a new content browser.
-     * Listens for title changes to trigger unread badge notifications in real time.
-     * @param {Object} app - Target app configuration object.
-     * @returns {{browser: Element, isNew: boolean}} The browser element and new creation flag.
-     */
     getOrCreateAppBrowser(app) {
       let b = this.#state.appBrowsers.get(app.id);
       if (b && b.isConnected) return { browser: b, isNew: false };
@@ -3446,7 +3414,6 @@
         }
       };
 
-      // Chrome-side event listeners for immediate title-change response
       b.addEventListener("pagetitlechanged", checkAndUpdateBadge);
       b.addEventListener("DOMTitleChanged", checkAndUpdateBadge);
       b.addEventListener("load", checkAndUpdateBadge);
@@ -3456,23 +3423,12 @@
       this.#state.appBrowsers.set(app.id, b);
       return { browser: b, isNew: true };
     }
-    /**
-     * Starts sidebar-aware position tracking for the floating app panel.
-     *
-     * Zen Browser's compact sidebar mode hides and expands via:
-     *   (a) CSS width transitions on #sidebar-box / tabContainer
-     *   (b) DOM attribute changes on document.documentElement (zen-sidebar-expanded, etc.)
-     *   (c) CSS transform transitions (which do NOT trigger ResizeObserver)
-     *
-     * To track smooth hover-expands without burning CPU on a permanent 60fps loop,
-     * this uses a "RAF Burst" mechanism: a requestAnimationFrame loop runs only
-     * while the mouse is moving or a CSS transition is active, and lingers for 500ms.
-     */
+
     startPositionTracking() {
       if (this._isTrackingPosition) return;
       this._isTrackingPosition = true;
 
-      this.positionPanel(); // Immediate initial positioning
+      this.positionPanel();
 
       const reposition = () => {
         if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) {
@@ -3483,15 +3439,13 @@
         }
       };
 
-      // --- Vector 1: RAF Burst (Smooth tracking for transforms/hovers) ---
       let rafId = null;
       let lastActivityTime = 0;
 
       const rafLoop = () => {
         if (!this._isTrackingPosition) return;
         reposition();
-        
-        if (Date.now() - lastActivityTime < 500) {
+        if (Date.now() - lastActivityTime < 200) {
           rafId = requestAnimationFrame(rafLoop);
         } else {
           rafId = null;
@@ -3499,7 +3453,6 @@
       };
 
       const triggerBurst = () => {
-        // Run burst when floating panel is open OR when vertical bar is active
         if (!this.isPlacementVerticalBar() && !this.#dom.root?.hasAttribute("open")) return;
         lastActivityTime = Date.now();
         if (!rafId) {
@@ -3507,7 +3460,13 @@
         }
       };
 
-      this._mouseMoveHandler = triggerBurst;
+      this._mouseMoveHandler = (e) => {
+        const now = Date.now();
+        if (now - (this._lastThrottle || 0) > 16) {
+          triggerBurst();
+          this._lastThrottle = now;
+        }
+      };
       window.addEventListener("mousemove", this._mouseMoveHandler, { passive: true });
 
       this._globalTransitionHandler = () => {
@@ -3518,9 +3477,9 @@
       window.addEventListener("transitionrun", this._globalTransitionHandler, { passive: true });
       window.addEventListener("transitionend", this._globalTransitionHandler, { passive: true });
 
-      // --- Vector 2: ResizeObserver ---
-      // Catches structural layout box changes (like window resize or sidebar/toolbar toggle)
-      this._sidebarResizeObserver = new ResizeObserver(reposition);
+      this._sidebarResizeObserver = new ResizeObserver((entries) => {
+        reposition();
+      });
       const idsToObserve = [
         "sidebar-box", "sidebar-container", "vertical-tabs", 
         "navigator-toolbox", "zen-appcontent-navbar-wrapper",
@@ -3535,11 +3494,9 @@
         this._sidebarResizeObserver.observe(gBrowser.tabContainer);
       }
 
-      // --- Vector 3: MutationObserver ---
-      // Catches Zen's live DOM attributes
       this._docAttrObserver = new MutationObserver((mutations) => {
         reposition();
-        triggerBurst(); // A class change might kick off an animation
+        triggerBurst();
       });
       this._docAttrObserver.observe(document.documentElement, {
         attributes: true,
@@ -3553,14 +3510,10 @@
         ],
       });
 
-      // --- Vector 4: window resize fallback ---
       this._windowResizeListener = reposition;
       window.addEventListener("resize", this._windowResizeListener, { passive: true });
     }
 
-    /**
-     * Stops sidebar-aware position tracking and disconnects all observers/listeners.
-     */
     stopPositionTracking() {
       this._isTrackingPosition = false;
       
@@ -3588,10 +3541,6 @@
       }
     }
 
-    /**
-     * Updates CSS variable and root container width for active app panel.
-     * @param {number} px - Width dimension in pixels.
-     */
     updateWidthVar(px) {
       if (this.#state.activeAppId && !this.#state.isExpanded) {
         const app = this.#state.apps.find(a => a.id === this.#state.activeAppId);
@@ -3601,14 +3550,11 @@
       if (this.#dom.root) this.#dom.root.style.width = Math.round(px) + "px";
     }
 
-    /**
-     * Recalculates and positions the floating app panel relative to sidebar bounds and top navigation bar.
-     */
     positionPanel() {
       const root = this.#dom.root;
       if (!root || !gBrowser?.tabContainer) return;
       const tcRect = gBrowser.tabContainer.getBoundingClientRect();
-      const gap = 12; // Fallback scrollbar width
+      const gap = 12;
 
       let sidebarRect = tcRect;
       const sidebarEl = document.getElementById("sidebar-box") || 
@@ -3700,11 +3646,6 @@
       }
     }
 
-    /**
-     * Dynamically calculates and applies the top offset for the Vertical Bar
-     * so it always starts under the top bar / toolbar / window controls,
-     * sliding down seamlessly whenever the toolbar expands or moves.
-     */
     updateVerticalBarBounds() {
       const vb = this.#dom.verticalBar;
       if (!vb || !this.isPlacementVerticalBar()) return;
@@ -3762,12 +3703,6 @@
       this.updateVerticalBarAddBtnPlacement();
     }
 
-    /**
-     * Checks if the Vertical Bar has reached its vertical capacity limit.
-     * When capacity is reached, moves the Add App (+) button into the fixed footer container (#zentral-apps-vertical-bar-footer)
-     * so that apps scroll cleanly underneath it.
-     * When there is remaining space, places the Add App button back in the natural flow immediately below the apps.
-     */
     updateVerticalBarAddBtnPlacement() {
       if (!this.isPlacementVerticalBar() || !this.#dom.verticalBar) return;
       const vb = this.#dom.verticalBar;
@@ -3781,14 +3716,13 @@
       const effectiveVbHeight = (vbHeight > 0) ? vbHeight : (window.innerHeight - 60);
 
       const activeAppsCount = scrollBox ? scrollBox.querySelectorAll(".zen-app-tile:not(.zen-app-add-btn):not(.zen-app-vb-footer-btn)").length : 0;
-      const footerBaseHeight = 82; // Eye + Gear buttons + padding
-      const itemHeight = 42; // 36px tile + 6px gap
-      const requiredHeight = (activeAppsCount + 1) * itemHeight + footerBaseHeight + 16; // 16px padding
+      const footerBaseHeight = 82;
+      const itemHeight = 42;
+      const requiredHeight = (activeAppsCount + 1) * itemHeight + footerBaseHeight + 16;
 
       const autohideBtn = footer.querySelector("#zentral-apps-vb-autohide-btn");
 
       if (requiredHeight > effectiveVbHeight) {
-        // Reached limit: place addBtn inside the fixed footer right above autohideBtn
         if (addBtn.parentElement !== footer) {
           if (autohideBtn) {
             footer.insertBefore(addBtn, autohideBtn);
@@ -3797,7 +3731,6 @@
           }
         }
       } else {
-        // Under limit: place addBtn back inside grid / scrollBox naturally below the apps
         const targetContainer = scrollBox || grid;
         if (addBtn.parentElement !== targetContainer) {
           targetContainer.appendChild(addBtn);
@@ -3805,10 +3738,14 @@
       }
     }
 
-    /**
-     * Synchronizes theme background gradient from the native background elements
-     * to the Vertical Bar in autohide (compact) mode so it matches the Compact Sidebar.
-     */
+    _debouncedSyncTheme(delay = 32) {
+      if (this._syncThemeTimer) clearTimeout(this._syncThemeTimer);
+      this._syncThemeTimer = setTimeout(() => {
+        this._syncThemeTimer = null;
+        this.syncVerticalBarTheme();
+      }, delay);
+    }
+
     syncVerticalBarTheme() {
       const vb = this.#dom.verticalBar;
       if (!vb) return;
@@ -3835,7 +3772,6 @@
       const isRight = this.isVerticalBarOnRight();
       bgEl.style.setProperty("--zentral-vb-side", isRight ? "right" : "left");
 
-      // 1. Mirror live properties from Zen's native toolbar & browser background elements
       const zenTb = document.getElementById("zen-toolbar-background");
       const zenBb = document.getElementById("zen-browser-background");
 
@@ -3864,7 +3800,6 @@
         }
       }
 
-      // 2. Check browser background if toolbar background is empty or fallback
       if ((!tbGrad || tbGrad === "none" || tbGrad.startsWith("light-dark")) && zenBb) {
         const bbGrad = zenBb.style.getPropertyValue("--zen-main-browser-background") || "";
         const bbOldGrad = zenBb.style.getPropertyValue("--zen-main-browser-background-old") || "";
@@ -3887,7 +3822,6 @@
         }
       }
 
-      // 3. Fallback: generate via gZenThemePicker if not yet populated on native elements
       if (!tbGrad || tbGrad === "none" || tbGrad.startsWith("light-dark")) {
         if (window.gZenThemePicker && typeof window.gZenThemePicker.getGradient === "function") {
           try {
@@ -3909,13 +3843,9 @@
         }
       }
 
-      // 4. Ensure vb also clears old override to avoid conflict
       vb.style.removeProperty("--zen-theme-gradient-override");
     }
 
-    /**
-     * Toggles pinned state for floating app panel. Pinned panels remain visible when clicking outside.
-     */
     togglePin() {
       this.#state.isPinned = !this.#state.isPinned;
       if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] togglePin - isPinned:", this.#state.isPinned);
@@ -3925,9 +3855,6 @@
       }
     }
 
-    /**
-     * Toggles expanded state for active floating app panel, maximizing width to fit viewport.
-     */
     toggleExpand() {
       if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] toggleExpand - current isExpanded:", this.#state.isExpanded);
       if (!this.#state.isExpanded) {
@@ -3957,7 +3884,7 @@
 
         if (this.#dom.expandBtn) {
           this.#dom.expandBtn.title = "Restore panel";
-          this.#dom.expandBtn.replaceChildren(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M4 6V2h2v4H4zm6 0V2h2v4h-2zm-6 4v4h2v-4H4zm6 0v4h2v-4h-2z"/></svg>`));
+          this.#dom.expandBtn.replaceChildren(this.#createSVG(SVG_STRINGS.COLLAPSE));
         }
       } else {
         const restoreW = this.#state.preExpandWidth || this.loadWidth();
@@ -3966,20 +3893,11 @@
 
         if (this.#dom.expandBtn) {
           this.#dom.expandBtn.title = "Expand panel";
-          this.#dom.expandBtn.replaceChildren(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/></svg>`));
+          this.#dom.expandBtn.replaceChildren(this.#createSVG(SVG_STRINGS.EXPAND));
         }
       }
     }
 
-    /* --------------------------------------------------------------------------
-     * 3.6 Drag & Drop / Grid Reordering
-     * --------------------------------------------------------------------------
-     */
-
-    /**
-     * Initiates manual panel width resize via mouse drag handler.
-     * @param {MouseEvent} e - Mouse down event on resize strip or grabber.
-     */
     startResize(e) {
       if (e.button !== 0) return;
       e.preventDefault();
@@ -3991,16 +3909,12 @@
       document.addEventListener("mouseup", this.onStopDrag);
     }
 
-    /**
-     * Mouse drag handler updating panel width dynamically during mousemove.
-     * @param {MouseEvent} e - Mouse move event.
-     */
     onDrag(e) {
       if (this.#state.isExpanded) {
         this.#state.isExpanded = false;
         if (this.#dom.expandBtn) {
           this.#dom.expandBtn.title = "Expand panel";
-          this.#dom.expandBtn.replaceChildren(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/></svg>`));
+          this.#dom.expandBtn.replaceChildren(this.#createSVG(SVG_STRINGS.EXPAND));
         }
       }
       const diff = e.clientX - this._startX;
@@ -4009,9 +3923,6 @@
       this.updateWidthVar(newW);
     }
 
-    /**
-     * Concludes panel width resize drag operation and persists new width setting.
-     */
     onStopDrag() {
       document.removeEventListener("mousemove", this.onDrag);
       document.removeEventListener("mouseup", this.onStopDrag);
@@ -4019,14 +3930,6 @@
       this.saveWidth(this.#state.panelWidthPx);
     }
 
-    /* --------------------------------------------------------------------------
-     * 3.7 App Context Menus & Space Scoping
-     * --------------------------------------------------------------------------
-     */
-
-    /**
-     * Constructs and initializes context menu for app tiles (Refresh, Load at Startup, Close App, Pin App to, Autohide, Settings, Remove).
-     */
     setupContextMenu() {
       let oldPopup = document.getElementById("zen-apps-sidebar-tile-context");
       if (oldPopup) oldPopup.remove();
@@ -4034,21 +3937,17 @@
       let popup = null;
       if (window.MozXULElement?.parseXULToFragment) {
         const frag = window.MozXULElement.parseXULToFragment(`<menupopup id="zen-apps-sidebar-tile-context">
-          <!-- Section 1 -->
           <menuitem id="zen-apps-sidebar-refresh-item" label="Refresh App"/>
           <menuitem id="zen-apps-sidebar-preload-item" type="checkbox" label="Load at Startup"/>
           <menuitem id="zen-apps-sidebar-close-app-item" label="Close App"/>
           <menuseparator id="zen-apps-sidebar-sec1-sep"/>
-          <!-- Section 2 -->
           <menu id="zen-apps-sidebar-pin-to-menu" label="Pin App to">
             <menupopup id="zen-apps-sidebar-pin-to-popup"></menupopup>
           </menu>
           <menuseparator id="zen-apps-sidebar-sec2-sep"/>
-          <!-- Section 3 -->
           <menuitem id="zen-apps-sidebar-autohide-item" type="checkbox" label="Autohide Apps"/>
           <menuitem id="zen-apps-sidebar-settings-item" label="Zentral Settings"/>
           <menuseparator id="zen-apps-sidebar-sec3-sep"/>
-          <!-- Section 4 (Last) -->
           <menuitem id="zen-apps-sidebar-remove-item" label="Remove App"/>
         </menupopup>`);
         (document.getElementById("mainPopupSet") || document.body).appendChild(frag);
@@ -4128,13 +4027,11 @@
               else preloadBtn.removeAttribute("checked");
             }
             
-            // Populate "Pin App to" submenu
             const pinPopup = popup.querySelector("#zen-apps-sidebar-pin-to-popup");
             if (pinPopup) {
               pinPopup.replaceChildren();
               const currentWsId = window.gZenWorkspaces?.activeWorkspace || "default";
 
-              // 1. "All Spaces" (Default when adding new app)
               const allSpacesItem = document.createXULElement ? document.createXULElement("menuitem") : document.createElement("menuitem");
               allSpacesItem.setAttribute("label", "All Spaces");
               allSpacesItem.setAttribute("type", "checkbox");
@@ -4148,7 +4045,6 @@
               });
               pinPopup.appendChild(allSpacesItem);
 
-              // 2. "this Space" (Current Space)
               const thisSpaceItem = document.createXULElement ? document.createXULElement("menuitem") : document.createElement("menuitem");
               thisSpaceItem.setAttribute("label", "this Space");
               thisSpaceItem.setAttribute("type", "checkbox");
@@ -4162,7 +4058,6 @@
               });
               pinPopup.appendChild(thisSpaceItem);
 
-              // 3. Other Spaces below with their respective names
               const allWorkspaces = this.getZenWorkspacesList();
               for (const ws of allWorkspaces) {
                 if (ws.id === currentWsId) continue;
@@ -4226,9 +4121,6 @@
       });
     }
 
-    /**
-     * Tab context menu handler to create a new app tile from the selected tab URL.
-     */
     handleTabContextMenuCommand() {
       const tab = (typeof TabContextMenu !== "undefined" && TabContextMenu.contextTab) ? TabContextMenu.contextTab : gBrowser.selectedTab;
       if (!tab) return;
@@ -4238,10 +4130,6 @@
       if (url !== "about:blank") this.addApp(url, title, icon);
     }
 
-    /**
-     * Global outside click event listener to auto-close unpinned app panels.
-     * @param {MouseEvent} e - Global mouse click event.
-     */
     handleOutsideClick(e) {
       if (!this.#state.activeAppId || this.#state.isPinned || this.#state.isInstaPeeking) {
         return;
@@ -4259,12 +4147,6 @@
       this.closePanel();
     }
 
-    /**
-     * Checks if a keyboard event matches the configured shortcut string.
-     * @param {KeyboardEvent} e - Key event.
-     * @param {string} shortcutStr - Canonical shortcut string (e.g. "Alt+P").
-     * @returns {boolean} True if matching.
-     */
     isShortcutMatch(e, shortcutStr) {
       if (!shortcutStr || shortcutStr === "None") return false;
       const parts = shortcutStr.split("+").map(p => p.trim());
@@ -4295,10 +4177,6 @@
       return false;
     }
 
-    /**
-     * Handles keydown on window to trigger Insta-Peek mode if the shortcut is pressed.
-     * @param {KeyboardEvent} e - Keydown event.
-     */
     handleInstaPeekKeyDown(e) {
       const shortcut = Core.getPref(Constants.Apps.PREF_INSTA_PEEK_SHORTCUT, "Alt+Q");
       if (!shortcut || shortcut === "None") return;
@@ -4318,10 +4196,6 @@
       }
     }
 
-    /**
-     * Handles keyup on window to end Insta-Peek mode when any key of the shortcut combo is released.
-     * @param {KeyboardEvent} e - Keyup event.
-     */
     handleInstaPeekKeyUp(e) {
       if (!this.#state.isInstaPeeking) return;
 
@@ -4354,18 +4228,12 @@
       }
     }
 
-    /**
-     * Handles window blur to ensure Insta-Peek cleanly resets if the browser window loses focus.
-     */
     handleInstaPeekBlur() {
       if (this.#state.isInstaPeeking) {
         this.endInstaPeek();
       }
     }
 
-    /**
-     * Ends Insta-Peek mode, removing data-insta-peek and restoring full panel visibility.
-     */
     endInstaPeek() {
       if (this.#state.isInstaPeeking) {
         this.#state.isInstaPeeking = false;
@@ -4375,13 +4243,6 @@
       }
     }
 
-    /**
-     * Debounces repositionGrid() calls — cancels any pending call and reschedules.
-     * This prevents the 2–4× redundant DOM moves that fire when multiple observers
-     * (MutationObserver + Services.prefs + ResizeObserver) all trigger simultaneously
-     * during a single layout mode switch.
-     * @param {number} [delay=120] - Debounce delay in milliseconds.
-     */
     scheduleRepositionGrid(delay = 120) {
       if (this.#state.repositionTimer) clearTimeout(this.#state.repositionTimer);
       this.#state.repositionTimer = setTimeout(() => {
@@ -4390,14 +4251,6 @@
       }, delay);
     }
 
-    /**
-     * Repositions app grid container between vertical sidebar, horizontal toolbar, or opposite vertical bar based on configuration.
-     * Correctly handles:
-     *   - Opposite Vertical Bar mode -> grid placed in dedicated vertical bar on screen edge opposite to sidebar
-     *   - Normal Sidebar (expanded) -> grid in sidebar
-     *   - Collapsed Sidebar layout mode -> grid in top toolbar
-     *   - Compact Mode (sidebar-expanded=true but sidebar is visually icon-only) -> grid in top toolbar
-     */
     repositionGrid() {
       const grid = this.#dom.grid;
       if (!grid) return;
@@ -4429,12 +4282,10 @@
             const isRightSidebar = this.isSidebarRight();
 
             if (isRightSidebar) {
-              // Sidebar is on right -> Vertical Bar on LEFT (first child of #browser)
               if (vb.parentNode !== browserEl || browserEl.firstChild !== vb) {
                 browserEl.insertBefore(vb, browserEl.firstChild);
               }
             } else {
-              // Sidebar is on left -> Vertical Bar on RIGHT (last child of #browser)
               if (vb.parentNode !== browserEl || vb.nextSibling !== null) {
                 browserEl.appendChild(vb);
               }
@@ -4499,11 +4350,7 @@
       }
     }
 
-    /**
-     * Registers preference observers and event listeners for workspace and layout changes.
-     */
     setupObservers() {
-      // Tab Context Menu integration
       const menu = document.getElementById("tabContextMenu");
       if (menu && !document.getElementById("context_zenAppsSidebarAdd")) {
         let menuItem;
@@ -4532,12 +4379,9 @@
           this.#state.lastWorkspaceId = currentWs;
           this.renderGrid();
         }
-        this.syncVerticalBarTheme();
-        setTimeout(() => this.syncVerticalBarTheme(), 100);
       };
       window.addEventListener("TabSelect", this.#tabSelectListener);
 
-      // Workspace switch listener with staggered theme synchronizations to capture cross-fading workspace colors
       this.#workspaceSwitchListener = () => {
         const currentWs = window.gZenWorkspaces?.activeWorkspace;
         this.#state.lastWorkspaceId = currentWs;
@@ -4545,14 +4389,12 @@
         if (this.#dom.verticalBar) {
           this.#dom.verticalBar.style.removeProperty("--zen-theme-gradient-override");
         }
-        this.syncVerticalBarTheme();
-        [50, 120, 250, 400, 600].forEach(ms => setTimeout(() => this.syncVerticalBarTheme(), ms));
+        this._debouncedSyncTheme(600);
       };
       window.addEventListener("zen-workspace-switched", this.#workspaceSwitchListener);
       window.addEventListener("zen-workspace-changed", this.#workspaceSwitchListener);
       window.addEventListener("zen-workspaces-change", this.#workspaceSwitchListener);
 
-      // Observer 1: DOM attribute changes (zen-right-side, zen-sidebar-collapsed, zen-compact-mode, style)
       this.#sideObserver = new window.MutationObserver((mutations) => {
         for (const m of mutations) {
           if (m.attributeName === "zen-right-side") {
@@ -4562,7 +4404,6 @@
           }
           if (m.attributeName === "zen-sidebar-collapsed" || m.attributeName === "zen-compact-mode" || m.attributeName === "zen-sidebar-expanded") {
             if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] layout attribute changed \u2192 triggering repositionGrid");
-            // Debounced — collapses simultaneous observer firings into one call
             this.scheduleRepositionGrid(80);
           }
           if (m.attributeName === "style" || m.attributeName === "zen-compact-mode") {
@@ -4576,7 +4417,6 @@
         attributeFilter: ["zen-right-side", "zen-sidebar-collapsed", "zen-compact-mode", "zen-sidebar-expanded", "zen-sidebar-hidden", "style"]
       });
 
-      // Observer 1b: Live theme changes on #navigator-toolbox
       const toolboxEl = document.getElementById("navigator-toolbox");
       if (toolboxEl) {
         this.#toolboxThemeObserver = new window.MutationObserver(() => {
@@ -4588,14 +4428,12 @@
         });
       }
 
-      // Observer 1c: Direct theme transition observer on #zen-toolbar-background and #zen-browser-background
       const zenToolbarBg = document.getElementById("zen-toolbar-background") || document.querySelector(".zen-toolbar-background");
       const zenBrowserBg = document.getElementById("zen-browser-background");
       const bgElements = [zenToolbarBg, zenBrowserBg].filter(Boolean);
       if (bgElements.length > 0) {
         this.#toolbarBgObserver = new window.MutationObserver(() => {
-          this.syncVerticalBarTheme();
-          setTimeout(() => this.syncVerticalBarTheme(), 80);
+          this._debouncedSyncTheme(80);
         });
         bgElements.forEach(el => {
           this.#toolbarBgObserver.observe(el, {
@@ -4603,42 +4441,37 @@
             attributeFilter: ["style", "class"],
             childList: true
           });
-          el.addEventListener("transitionend", () => this.syncVerticalBarTheme(), { passive: true });
-          el.addEventListener("animationend", () => this.syncVerticalBarTheme(), { passive: true });
+          el.addEventListener("transitionend", () => this._debouncedSyncTheme(), { passive: true });
+          el.addEventListener("animationend", () => this._debouncedSyncTheme(), { passive: true });
         });
       }
 
-      // Observer 2: Preference changes for toolbar/sidebar mode
       this.#layoutObserver = (subject, topic, data) => {
         if (data === "zen.view.use-single-toolbar" || data === "zen.view.sidebar-expanded") {
-          // Debounced Ã¢â‚¬â€ longer delay for prefs since DOM width lags behind pref change
           this.scheduleRepositionGrid(150);
         }
       };
       Services.prefs.addObserver("zen.view.use-single-toolbar", this.#layoutObserver, false);
       Services.prefs.addObserver("zen.view.sidebar-expanded", this.#layoutObserver, false);
 
-      // Observer 3: sidebar-box width changes via ResizeObserver (catches Compact Mode transitions)
       const sidebarBox = document.getElementById("tabbrowser-tabbox") ||
                          document.getElementById("sidebar-box") ||
                          document.getElementById("sidebar-container");
       if (sidebarBox && typeof ResizeObserver !== "undefined") {
         let lastWidth = sidebarBox.getBoundingClientRect().width;
-        this.#resizeObs = new ResizeObserver(() => {
-          const newWidth = sidebarBox.getBoundingClientRect().width;
+        this.#resizeObs = new ResizeObserver((entries) => {
+          const newWidth = entries[0]?.contentRect?.width ?? sidebarBox.getBoundingClientRect().width;
           const crossedThreshold = (lastWidth >= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD && newWidth < Constants.Apps.COLLAPSED_WIDTH_THRESHOLD) || (lastWidth < Constants.Apps.COLLAPSED_WIDTH_THRESHOLD && newWidth >= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD);
           lastWidth = newWidth;
           if (crossedThreshold) {
-            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] Sidebar width crossed threshold (", newWidth, "px) \u2192 repositionGrid");
+            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] Sidebar width crossed threshold (", newWidth, "px) → repositionGrid");
             this.scheduleRepositionGrid(80);
           }
         });
         this.#resizeObs.observe(sidebarBox);
       }
 
-      // Clean up pref observers when window closes to prevent ghost observers (H-03)
       window.addEventListener("unload", () => {
-        try { Services.prefs.removeObserver("zen.view.use-single-toolbar", layoutObserver); } catch (_) {}
         try { Services.prefs.removeObserver("zen.view.sidebar-expanded", layoutObserver); } catch (_) {}
         this.stopPositionTracking();
       }, { once: true });
@@ -4751,10 +4584,12 @@
      * @param {string} xmlString - SVG XML markup string.
      * @returns {Element} Parsed SVG DOM element.
      */
+    /**
+     * Creates an SVG element using the shared module helper (no DOMParser).
+     * @private
+     */
     #createSVG(xmlString) {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(xmlString, "image/svg+xml");
-      return doc.documentElement;
+      return createSVGElement(xmlString);
     }
 
     /**

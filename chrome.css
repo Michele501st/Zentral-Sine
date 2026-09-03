@@ -2988,7 +2988,7 @@ panel[id*="tabgroup-editor"] {
   border-radius: var(--toolbarbutton-border-radius, 6px);
   position: relative !important;
   background-color: transparent;
-  will-change: max-height, padding, background-color;
+  will-change: transform;
   transition: max-height 0.24s cubic-bezier(0.25, 1, 0.5, 1),
               padding 0.24s cubic-bezier(0.25, 1, 0.5, 1),
               background-color 0.18s ease !important;
@@ -3190,7 +3190,7 @@ panel[id*="tabgroup-editor"] {
   pointer-events: none;
   transform: translateY(-8px);
   order: 1;
-  will-change: max-height, opacity, transform;
+  will-change: transform, opacity;
   transition: max-height 0.24s cubic-bezier(0.25, 1, 0.5, 1),
               opacity 0.12s ease,
               transform 0.24s cubic-bezier(0.25, 1, 0.5, 1),
