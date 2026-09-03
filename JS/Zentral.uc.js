@@ -5673,12 +5673,37 @@
         if (!tab || tab.tagName?.toLowerCase() !== "tab") return;
 
         // 1. App Panel Isolation: If link was opened while an App panel is open, keep outside any group
-        const isAppPanelOpen = document.documentElement.getAttribute("zentral-app-panel-open") === "true";
+        const isAppPanelOpen = document.documentElement.getAttribute("zentral-app-panel-open") === "true" ||
+                               document.getElementById("zen-app-panel-root")?.hasAttribute("open") ||
+                               !!document.activeElement?.closest?.("#zen-app-panel-root, #zen-app-panel-slider, .zen-app-panel-wrapper");
         if (isAppPanelOpen) {
-          if (tab.group) {
-            tab.group = null;
+          const currentGroup = tab.closest?.("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])") || tab.group;
+          if (currentGroup) {
+            try {
+              // Move tab out of the group, placing it immediately after the group in the tab strip
+              currentGroup.after(tab);
+            } catch (_) {
+              try {
+                currentGroup.parentElement?.insertBefore(tab, currentGroup.nextSibling);
+              } catch (_) {}
+            }
             tab.removeAttribute("group");
-            try { if (typeof window.gBrowser?.addTabToGroup === "function") window.gBrowser.addTabToGroup(tab, null); } catch (_) {}
+            ["data-zentral-group-id", "data-zentral-group-label", "data-zentral-group-color", "data-zentral-group-collapsed", "data-zentral-group-ws"].forEach(attr => tab.removeAttribute(attr));
+            
+            const ss = this.#getSessionStore();
+            if (ss) {
+              try {
+                ss.deleteCustomTabValue?.(tab, "zentral-group-id");
+                ss.deleteCustomTabValue?.(tab, "zentral-group-label");
+                ss.deleteCustomTabValue?.(tab, "zentral-group-color");
+                ss.deleteCustomTabValue?.(tab, "zentral-group-collapsed");
+                ss.deleteCustomTabValue?.(tab, "zentral-group-ws");
+              } catch (_) {}
+            }
+            try {
+              window.gBrowser?.tabContainer?._invalidateCachedTabs?.();
+            } catch (_) {}
+            this.scheduleStateSave();
           }
           return;
         }
@@ -5705,7 +5730,8 @@
         }
 
         // 5. Associate tab with group
-        try { tab.group = originGroup; } catch (_) {}
+        // NOTE: tab.group is a getter-only property on MozTabbrowserTab. We do NOT assign to tab.group.
+        // Being inside targetContainer (.tab-group-container), tab.group automatically returns originGroup.
         try { tab.setAttribute("group", originGroup.id); } catch (_) {}
         if (originGroup.tabs && typeof originGroup.tabs.add === "function") {
           try { originGroup.tabs.add(tab); } catch (_) {}
@@ -5730,6 +5756,10 @@
           originGroup.removeAttribute("collapsed");
           originGroup.collapsed = false;
         }
+
+        try {
+          window.gBrowser?.tabContainer?._invalidateCachedTabs?.();
+        } catch (_) {}
 
         this.scheduleStateSave();
       };
