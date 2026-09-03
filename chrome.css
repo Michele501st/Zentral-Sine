@@ -1068,130 +1068,11 @@ panel[id*="tabgroup-editor"] {
   border-radius: 4px !important;
 }
 
-/* Hide all app-specific items when opened on empty grid space or vertical bar (no active app) */
-#zen-apps-sidebar-tile-context:not([data-active-app-id]) menuitem:not(#zen-apps-sidebar-autohide-item):not(#zen-apps-sidebar-settings-item),
-#zen-apps-sidebar-tile-context:not([data-active-app-id]) menuseparator,
-#zen-apps-sidebar-tile-context[data-active-app-id=""] menuitem:not(#zen-apps-sidebar-autohide-item):not(#zen-apps-sidebar-settings-item),
-#zen-apps-sidebar-tile-context[data-active-app-id=""] menuseparator,
-#zen-apps-sidebar-tile-context menuitem[hidden="true"],
-#zen-apps-sidebar-tile-context menuseparator[hidden="true"],
-#zen-apps-sidebar-tile-context menuitem[hidden],
-#zen-apps-sidebar-tile-context menuseparator[hidden] {
+/* Hide separator line in Apps Grid context menu when only Settings is shown */
+#zen-apps-sidebar-tile-context #zen-apps-sidebar-settings-sep[hidden="true"],
+#zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-settings-sep,
+#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-settings-sep {
   display: none !important;
-}
-
-/* --------------------------------------------------------------------------
- * Zentral - Apps Context Menu Vectorial Icons & Right-Aligned Checkmarks
- * -------------------------------------------------------------------------- */
-#zen-apps-sidebar-tile-context {
-  --panel-padding: 4px !important;
-}
-
-#zen-apps-sidebar-tile-context menuitem.menuitem-iconic {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  padding: 6px 10px !important;
-  appearance: none !important;
-  -moz-appearance: none !important;
-}
-
-/* Force left icon container (.menu-iconic-left & .menu-iconic-icon) to be displayed, remove native checkbox styling */
-#zen-apps-sidebar-tile-context menuitem.menuitem-iconic .menu-iconic-left,
-#zen-apps-sidebar-tile-context menuitem[type="checkbox"] .menu-iconic-left {
-  display: -moz-box !important;
-  visibility: visible !important;
-  appearance: none !important;
-  -moz-appearance: none !important;
-  background: none !important;
-  border: none !important;
-  width: 16px !important;
-  min-width: 16px !important;
-  height: 16px !important;
-  min-height: 16px !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-#zen-apps-sidebar-tile-context menuitem.menuitem-iconic .menu-iconic-icon,
-#zen-apps-sidebar-tile-context menuitem[type="checkbox"] .menu-iconic-icon {
-  display: -moz-box !important;
-  visibility: visible !important;
-  appearance: none !important;
-  -moz-appearance: none !important;
-  background: none !important;
-  border: none !important;
-  width: 16px !important;
-  height: 16px !important;
-  min-width: 16px !important;
-  min-height: 16px !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  opacity: 0.88 !important;
-  -moz-context-properties: fill, stroke, fill-opacity, stroke-opacity !important;
-  stroke: currentColor !important;
-  fill: none !important;
-}
-
-#zen-apps-sidebar-tile-context menuitem.menuitem-iconic:hover .menu-iconic-icon {
-  opacity: 1 !important;
-}
-
-/* Vectorial Icons (Left side) - URL encoded for Gecko CSS engine */
-#zen-apps-sidebar-tile-context #zen-apps-sidebar-refresh-item .menu-iconic-icon {
-  list-style-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2016%2016%27%20fill%3D%27none%27%20stroke%3D%27currentColor%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M13.8%206.5A5.5%205.5%200%201%200%208%2013.5a5.5%205.5%200%200%200%205.2-3.7M14%202v4.5H9.5%27%2F%3E%3C%2Fsvg%3E") !important;
-}
-
-#zen-apps-sidebar-tile-context #zen-apps-sidebar-remove-item .menu-iconic-icon {
-  list-style-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2016%2016%27%20fill%3D%27none%27%20stroke%3D%27currentColor%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M3%204h10M5.5%204V2.5a1%201%200%200%201%201-1h3a1%201%200%200%201%201%201V4M12%204v9.5a1%201%200%200%201-1%201H5a1%201%200%200%201-1-1V4M6.5%207v4.5M9.5%207v4.5%27%2F%3E%3C%2Fsvg%3E") !important;
-}
-
-#zen-apps-sidebar-tile-context #zen-apps-sidebar-preload-item .menu-iconic-icon {
-  list-style-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2016%2016%27%20fill%3D%27none%27%20stroke%3D%27currentColor%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M9%201.5L3%209h5l-1%205.5L13%207H8l1-5.5z%27%2F%3E%3C%2Fsvg%3E") !important;
-}
-
-#zen-apps-sidebar-tile-context #zen-apps-sidebar-space-current-item .menu-iconic-icon {
-  list-style-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2016%2016%27%20fill%3D%27none%27%20stroke%3D%27currentColor%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%272%27%20y%3D%272.5%27%20width%3D%2712%27%20height%3D%279%27%20rx%3D%271.5%27%2F%3E%3Cline%20x1%3D%275%27%20y1%3D%2714.5%27%20x2%3D%2711%27%20y2%3D%2714.5%27%2F%3E%3Cline%20x1%3D%278%27%20y1%3D%2711.5%27%20x2%3D%278%27%20y2%3D%2714.5%27%2F%3E%3C%2Fsvg%3E") !important;
-}
-
-#zen-apps-sidebar-tile-context #zen-apps-sidebar-space-all-item .menu-iconic-icon {
-  list-style-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2016%2016%27%20fill%3D%27none%27%20stroke%3D%27currentColor%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpolygon%20points%3D%278%201.5%2014.5%205%208%208.5%201.5%205%208%201.5%27%2F%3E%3Cpolyline%20points%3D%271.5%208.5%208%2012%2014.5%208.5%27%2F%3E%3Cpolyline%20points%3D%271.5%2012%208%2015.5%2014.5%2012%27%2F%3E%3C%2Fsvg%3E") !important;
-}
-
-#zen-apps-sidebar-tile-context #zen-apps-sidebar-autohide-item .menu-iconic-icon {
-  list-style-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2016%2016%27%20fill%3D%27none%27%20stroke%3D%27currentColor%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%272%27%20y%3D%272%27%20width%3D%2712%27%20height%3D%2712%27%20rx%3D%272%27%2F%3E%3Cline%20x1%3D%276%27%20y1%3D%272%27%20x2%3D%276%27%20y2%3D%2714%27%2F%3E%3Cpath%20d%3D%27M10%206l-2%202%202%202%27%2F%3E%3C%2Fsvg%3E") !important;
-}
-
-#zen-apps-sidebar-tile-context #zen-apps-sidebar-settings-item .menu-iconic-icon {
-  list-style-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2016%2016%27%20fill%3D%27none%27%20stroke%3D%27currentColor%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Ccircle%20cx%3D%278%27%20cy%3D%278%27%20r%3D%272.5%27%2F%3E%3Cpath%20d%3D%27M13.2%2010.2a1%201%200%200%200%20.2%201.1l.1.1a1.2%201.2%200%200%201-1.7%201.7l-.1-.1a1%201%200%200%200-1.1-.2%201%201%200%200%200-.6.9v.3a1.2%201.2%200%200%201-2.4%200v-.3a1%201%200%200%200-.6-.9%201%201%200%200%200-1.1.2l-.1.1a1.2%201.2%200%200%201-1.7-1.7l.1-.1a1%201%200%200%200%20.2-1.1%201%201%200%200%200-.9-.6H3.3a1.2%201.2%200%200%201%200-2.4h.3a1%201%200%200%200%20.9-.6%201%201%200%200%200-.2-1.1l-.1-.1a1.2%201.2%200%200%201%201.7-1.7l.1.1a1%201%200%200%200%201.1.2%201%201%200%200%200%20.6-.9v-.3a1.2%201.2%200%200%201%202.4%200v.3a1%201%200%200%200%20.6.9%201%201%200%200%200%201.1-.2l.1-.1a1.2%201.2%200%200%201%201.7%201.7l-.1.1a1%201%200%200%200-.2%201.1%201%201%200%200%200%20.9.6h.3a1.2%201.2%200%200%201%200%202.4h-.3a1%201%200%200%200-.9.6z%27%2F%3E%3C%2Fsvg%3E") !important;
-}
-
-/* Ensure menu label takes available flex space */
-#zen-apps-sidebar-tile-context .menu-iconic-text {
-  flex: 1 1 auto !important;
-  margin-inline-start: 2px !important;
-}
-
-/* Right-aligned Accent Checkmarks for Checkbox Items */
-#zen-apps-sidebar-tile-context menuitem[type="checkbox"]::after {
-  content: "" !important;
-  display: block !important;
-  width: 14px !important;
-  height: 14px !important;
-  min-width: 14px !important;
-  margin-inline-start: auto !important;
-  margin-inline-end: 2px !important;
-  background-color: var(--zen-primary-color, #707ac2) !important;
-  mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2016%2016%27%3E%3Cpolyline%20points%3D%273.5%208.5%206.5%2011.5%2012.5%204.5%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272.2%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%2F%3E%3C%2Fsvg%3E") center / contain no-repeat !important;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2016%2016%27%3E%3Cpolyline%20points%3D%273.5%208.5%206.5%2011.5%2012.5%204.5%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272.2%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3C%2Fsvg%3E") center / contain no-repeat !important;
-  opacity: 0 !important;
-  transform: scale(0.65) !important;
-  transition: opacity 0.16s ease, transform 0.16s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-}
-
-#zen-apps-sidebar-tile-context menuitem[type="checkbox"][checked="true"]::after {
-  opacity: 1 !important;
-  transform: scale(1) !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -2994,17 +2875,6 @@ panel[id*="tabgroup-editor"] {
 #zen-app-panel-root[data-panel-side="right"] .zen-app-resize-strip { left: -5px !important; right: auto !important; }
 #zen-app-panel-root[data-panel-side="left"] .zen-app-resize-strip { right: -5px !important; left: auto !important; }
 
-/* Floating App Panel Pill: Refresh Button */
-.zen-app-refresh-btn svg {
-  transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1) !important;
-}
-.zen-app-refresh-btn:active svg {
-  transform: scale(0.9) !important;
-}
-.zen-app-refresh-btn.zen-app-refresh-spinning svg {
-  transform: rotate(360deg) !important;
-}
-
 /* When Autohide is active in expanded vertical sidebar */
 :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) {
   min-height: 22px;
@@ -3303,11 +3173,20 @@ panel[id*="tabgroup-editor"] {
   order: 2;
 }
 
-/* When Autohide is OFF in Sidebar Apps Box: Utility Section is permanently open (never autohides) */
-:root:not([zentral-apps-autohide="true"]):not([zentral-apps-placement="vertical-bar"]) #zentral-apps-utility-section .zentral-apps-utility-dots {
+/* When Hidden in Autohide OFF: Divider takes 0 space */
+:root:not([zentral-apps-autohide="true"]) #zentral-apps-utility-section:not([data-utility-revealed="true"]) .zentral-apps-utility-divider {
+  display: none !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* When Revealed (Autohide OFF): Dots disappear, Content slides down as a single piece */
+#zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-dots {
   display: none !important;
 }
-:root:not([zentral-apps-autohide="true"]):not([zentral-apps-placement="vertical-bar"]) #zentral-apps-utility-section .zentral-apps-utility-content {
+
+#zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-content {
   max-height: 38px !important;
   opacity: 1 !important;
   transform: translateY(0) !important;
@@ -3316,7 +3195,8 @@ panel[id*="tabgroup-editor"] {
   overflow: visible !important;
   margin-bottom: 2px !important;
 }
-:root:not([zentral-apps-autohide="true"]):not([zentral-apps-placement="vertical-bar"]) #zentral-apps-utility-section .zentral-apps-utility-divider {
+
+#zentral-apps-utility-section[data-utility-revealed="true"] .zentral-apps-utility-divider {
   display: block !important;
   opacity: 0.5 !important;
 }
