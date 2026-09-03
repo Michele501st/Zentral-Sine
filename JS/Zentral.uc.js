@@ -4571,7 +4571,29 @@
         const savedGroupsMap = (savedState && savedState.groups) ? savedState.groups : (savedState || {});
         const savedTabMapping = (savedState && savedState.tabMapping) ? savedState.tabMapping : {};
 
-        const allTabs = Array.from(gBrowser?.tabs || document.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab"));
+        const getAllTabs = () => {
+          const tabSet = new Set();
+          if (window.gZenWorkspaces?.allStoredTabs) {
+            try {
+              for (const t of window.gZenWorkspaces.allStoredTabs) {
+                if (t) tabSet.add(t);
+              }
+            } catch (_) {}
+          }
+          try {
+            document.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab").forEach(t => tabSet.add(t));
+          } catch (_) {}
+          try {
+            if (gBrowser?.tabs) {
+              for (const t of gBrowser.tabs) {
+                if (t) tabSet.add(t);
+              }
+            }
+          } catch (_) {}
+          return Array.from(tabSet);
+        };
+
+        const allTabs = getAllTabs();
         const groupsToReconstruct = new Map();
 
         // 1. Match tabs to groups using DOM attributes, SessionStore, or URL fallback
@@ -4830,21 +4852,15 @@
             // Move member tabs into this group container
             const targetTabContainer = group.querySelector(".tab-group-container") || group;
             info.tabs.forEach(tab => {
-              try {
-                if (typeof gBrowser?.addTabToGroup === "function") {
-                  gBrowser.addTabToGroup(tab, group);
-                } else if (typeof group.addTabs === "function") {
-                  group.addTabs([tab]);
-                } else {
-                  targetTabContainer.appendChild(tab);
-                  tab.group = group;
-                }
-              } catch (_) {
+              if (tab.parentNode !== targetTabContainer) {
                 try {
                   targetTabContainer.appendChild(tab);
-                  tab.group = group;
                 } catch (_) {}
               }
+              try { tab.group = group; } catch (_) {}
+              try { tab.setAttribute("group", group.id); } catch (_) {}
+              try { tab.setAttribute("zen-group", group.id); } catch (_) {}
+              try { if (typeof gBrowser?.addTabToGroup === "function") gBrowser.addTabToGroup(tab, group); } catch (_) {}
 
               // Preserve tracking attributes on tabs for resilience
               tab.setAttribute("data-zentral-group-id", group.id);
@@ -4857,11 +4873,17 @@
             });
 
             // Restore colors
-            if (info.color) {
-              group.style.setProperty("--tab-group-color", info.color);
-              group.style.setProperty("--tab-group-color-invert", info.color);
-              group.style.setProperty("--zentral-custom-color", info.color);
-              group.style.setProperty("--zentral-tabgroup-contrast-color", this.getContrastColor(info.color));
+            let savedColorsMap = {};
+            try {
+              const rawColors = Core.getPref(Constants.TabGroups.PREF_COLORS);
+              if (rawColors && rawColors !== "{}") savedColorsMap = JSON.parse(rawColors) || {};
+            } catch (_) {}
+            const savedColor = info.color || savedColorsMap[gId] || (savedGroupsMap[gId]?.color);
+            if (savedColor) {
+              group.style.setProperty("--tab-group-color", savedColor);
+              group.style.setProperty("--tab-group-color-invert", savedColor);
+              group.style.setProperty("--zentral-custom-color", savedColor);
+              group.style.setProperty("--zentral-tabgroup-contrast-color", this.getContrastColor(savedColor));
             }
 
             // Restore collapsed state
@@ -6086,8 +6108,14 @@
           event.preventDefault();
           try {
             this.removeSavedColor(group.id);
-            gBrowser.removeTabGroup(group);
-          } catch (error) { console.error("[ZentralTabGroups] Error removing tab group:", error); }
+            if (typeof gBrowser?.removeTabGroup === "function") {
+              try { gBrowser.removeTabGroup(group); } catch (_) {}
+            }
+          } catch (error) {
+            console.error("[ZentralTabGroups] Error removing tab group:", error);
+          }
+          try { group.remove(); } catch (_) {}
+          this.scheduleStateSave();
         });
       }
 
@@ -6113,10 +6141,6 @@
       group.setAttribute("data-close-button-added", "true"); // Kept for external compatibility
 
       this.addContextMenu(group);
-
-      if (typeof group._useFaviconColor === 'function') {
-        group._useFaviconColor();
-      }
 
       if (!group.label || group.label === '' || ("defaultGroupName" in group && group.label === group.defaultGroupName)) {
         this.renameGroupStart(group, false);
@@ -6146,6 +6170,7 @@
               <menuitem id="zentral-tg-item-rename" label="Rename Group"/>
               <menuseparator/>
               <menuitem id="zentral-tg-item-ungroup" label="Ungroup Tabs"/>
+              <menuitem id="zentral-tg-item-close" label="Close Group"/>
             </menupopup>
           `);
           popupSet.appendChild(frag);
@@ -6185,6 +6210,11 @@
           ungroupItem.id = "zentral-tg-item-ungroup";
           ungroupItem.setAttribute("label", "Ungroup Tabs");
           contextMenu.appendChild(ungroupItem);
+
+          const closeItem = document.createXULElement("menuitem");
+          closeItem.id = "zentral-tg-item-close";
+          closeItem.setAttribute("label", "Close Group");
+          contextMenu.appendChild(closeItem);
 
           popupSet.appendChild(contextMenu);
         }
@@ -6241,8 +6271,28 @@
 
           contextMenu.querySelector("#zentral-tg-item-ungroup")?.addEventListener("command", (e) => {
             e.stopPropagation();
-            if (this.#state.contextMenuCurrentGroup?.ungroupTabs) {
-              this.#state.contextMenuCurrentGroup.ungroupTabs();
+            const grp = this.#state.contextMenuCurrentGroup;
+            if (grp) {
+              if (typeof grp.ungroupTabs === "function") {
+                try { grp.ungroupTabs(); } catch (_) {}
+              }
+              try { grp.remove(); } catch (_) {}
+              this.scheduleStateSave();
+            }
+          });
+
+          contextMenu.querySelector("#zentral-tg-item-close")?.addEventListener("command", (e) => {
+            e.stopPropagation();
+            const grp = this.#state.contextMenuCurrentGroup;
+            if (grp) {
+              try {
+                this.removeSavedColor(grp.id);
+                if (typeof gBrowser?.removeTabGroup === "function") {
+                  try { gBrowser.removeTabGroup(grp); } catch (_) {}
+                }
+              } catch (_) {}
+              try { grp.remove(); } catch (_) {}
+              this.scheduleStateSave();
             }
           });
         }
@@ -7157,10 +7207,14 @@
      * Saves tab group custom colors map to user preferences.
      */
     async saveTabGroupColors() {
-      const colors = {};
+      let colors = {};
+      try {
+        const raw = Core.getPref(Constants.TabGroups.PREF_COLORS);
+        if (raw && raw !== "{}") colors = JSON.parse(raw) || {};
+      } catch (_) {}
       document.querySelectorAll("tab-group:not([split-view-group])").forEach(group => {
         if (group.id) {
-          const color = group.style.getPropertyValue("--tab-group-color");
+          const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color");
           if (color) colors[group.id] = color;
         }
       });
@@ -7274,7 +7328,7 @@
           const index = groupSiblings.indexOf(group);
 
           const label = group.label || group.getAttribute("label") || "Group";
-          const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || "";
+          const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || (existingGroups[group.id]?.color) || "";
           const wsId = this.getWorkspaceForElement(group);
           if (wsId) group.setAttribute("zen-workspace-id", wsId);
 
