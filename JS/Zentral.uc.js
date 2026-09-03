@@ -1998,7 +1998,10 @@
 
         this.#dom.grid.addEventListener("mouseenter", () => {
           if (!this.isPlacementVerticalBar()) {
-            this.setAutohideHovered(true);
+            if (Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true) {
+              this.setAutohideHovered(true);
+            }
+            this.setUtilityHovered(true);
             refreshGridRect();
             if (this.#state.utilityCollapseTimer) {
               clearTimeout(this.#state.utilityCollapseTimer);
@@ -2012,13 +2015,16 @@
         });
         this.#dom.grid.addEventListener("mouseleave", () => {
           if (!this.isPlacementVerticalBar()) {
-            this.scheduleAutohideCollapse(260);
+            if (Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true) {
+              this.scheduleAutohideCollapse(260);
+            }
             this.scheduleUtilityCollapse(260);
           }
         });
 
         window.addEventListener("mousemove", (e) => {
           if (this.isPlacementVerticalBar()) return;
+          const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
           const grid = this.#dom.grid;
           if (!grid) return;
           if (grid.classList.contains("zen-apps-horizontal")) return;
@@ -2054,13 +2060,14 @@
             }
           } else if (isNearTopEdge) {
             // Hovering near top edge: refresh collapse timer
-            this.scheduleAutohideCollapse(260);
+            if (isAutohide) this.scheduleAutohideCollapse(260);
             this.scheduleUtilityCollapse(260);
           } else {
             // Cursor is outside grid and outside top buffer (e.g. webpage, top bar, lower sidebar)
-            const isRevealed = grid.hasAttribute("data-revealed") || this.#dom.utilitySection?.hasAttribute("data-utility-revealed");
-            if (isRevealed) {
+            if (isAutohide && grid.hasAttribute("data-revealed")) {
               this.scheduleAutohideCollapse(260);
+            }
+            if (this.#dom.utilitySection?.hasAttribute("data-utility-revealed")) {
               this.scheduleUtilityCollapse(260);
             }
           }
@@ -2131,6 +2138,16 @@
             if (scroller) scroller.scrollTop += e.deltaY;
           }
         }, { passive: true });
+        vb.addEventListener("contextmenu", (e) => {
+          if (e.target.closest(".zen-app-tile[data-app-id]") || e.target.closest(".zen-app-vb-footer-btn")) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const popup = document.getElementById("zen-apps-sidebar-tile-context");
+          if (popup) {
+            delete popup.dataset.activeAppId;
+            popup.openPopupAtScreen(e.screenX, e.screenY, true);
+          }
+        });
         this.#dom.verticalBar = vb;
 
         let bgEl = vb.querySelector("#zentral-apps-vertical-bar-bg");
@@ -3973,14 +3990,20 @@
         const spaceSep = popup.querySelector("#zen-apps-sidebar-space-sep");
         const settingsSep = popup.querySelector("#zen-apps-sidebar-settings-sep");
         
-        if (refreshBtn) refreshBtn.hidden = !hasApp;
-        if (refreshSep) refreshSep.hidden = !hasApp;
-        if (removeBtn) removeBtn.hidden = !hasApp;
-        if (preloadBtn) preloadBtn.hidden = !hasApp;
-        if (currentSpaceBtn) currentSpaceBtn.hidden = !hasApp;
-        if (allSpacesBtn) allSpacesBtn.hidden = !hasApp;
-        if (spaceSep) spaceSep.hidden = !hasApp;
-        if (settingsSep) settingsSep.hidden = !hasApp;
+        const setHidden = (el, hide) => {
+          if (!el) return;
+          if (hide) el.setAttribute("hidden", "true");
+          else el.removeAttribute("hidden");
+        };
+
+        setHidden(refreshBtn, !hasApp);
+        setHidden(refreshSep, !hasApp);
+        setHidden(removeBtn, !hasApp);
+        setHidden(preloadBtn, !hasApp);
+        setHidden(currentSpaceBtn, !hasApp);
+        setHidden(allSpacesBtn, !hasApp);
+        setHidden(spaceSep, !hasApp);
+        setHidden(settingsSep, !hasApp);
 
         const autohideBtn = popup.querySelector("#zen-apps-sidebar-autohide-item");
         if (autohideBtn) {
