@@ -35,26 +35,23 @@ Designed natively for the **Sine Mod Engine**, Zentral features hot-reloading su
 Zentral significantly expands Zen Browser's native tab group capabilities with styling, smooth interactions, and rich color customization:
 
 - **🎨 Multi-Mode Color Picker Panel**:
-  - **Quick Swatches**: 25 curated vibrant color presets.
-  - **2D Spectrum Canvas**: Interactive Saturation-Value box with a 360° Hue slider for infinite color options.
+  - **Quick Swatches**: 25 color presets.
+  - **2D Spectrum Canvas**: Interactive Saturation-Value box with a 360° Hue slider.
   - **System Eyedropper Tool**: Direct screen color sampler (via native `EyeDropper` API).
   - **Direct Hex & RGB Inputs**: Live dual-way input fields.
-  - **Auto Average Favicon Color**: Automatically extracts and blends colors from group tab favicons with a single click.
+  - **Auto Average Favicon Color**: Automatically extracts the average color from group tab favicons in a click.
 - **🏷️ Collapsed Sidebar Marquee Carousel**:
-  - In collapsed sidebar mode, resting state displays clean, non-truncated initials or title text.
-  - On hover, automatically initiates a seamless, infinite horizontal scrolling marquee for long names with **zero initial text jump** and adaptive speed (~30px/s).
-- **📐 Standardized Layout & Geometry**:
-  - Consistent **26px** height across all tab groups with native `var(--zen-border-radius)` rounded corners.
-  - Automatic dynamic contrast calculation (text auto-toggles between crisp white `#ffffff` and deep charcoal `#111111` depending on background luminance).
+  - In Collapsed Sidebar mode, resting state displays clean, non-truncated initials or title text.
+  - On hover, starts a looping horizontal scrolling marquee for long names.
 - **🔘 Open/Close Indicators**:
-  - Toggle and customize group indicators between **Circle Dots** (`circle`) and **Chevron Arrows** (`chevron`).
+  - Toggle and customize group indicators between **Circle Dots** (inspired by Zen logo) and **Chevron Arrows**.
 - **🌳 Deep Hierarchy & Nesting**:
   - Full support for multi-level nested tab groups with proper indentation and drag-and-drop support.
-  - Native Zen Split Views inside groups drag as unified items without tearing.
+  - Native Zen Split Views inside groups drag as unified items.
 - **🛡️ Tab Selection & Drag Guard**:
-  - Distinguishes click intent from drag-and-drop gestures to prevent dormant tabs from waking up during reordering.
+  - Drag and Drop for dormant tabs without waking them up during reordering.
 - **📁 One-Click Zen Folder Conversion**:
-  - Right-click any bookmark folder in your sidebar to convert the entire tree into an active Tab Group.
+  - Right-click any folder in your sidebar to convert it to a Tab Group.
 - **💾 Full State Persistence**:
   - Persists custom colors, group labels, collapsed states, and nesting structures across browser reboots and workspace switches via Firefox SessionStore.
 
@@ -63,31 +60,32 @@ Zentral significantly expands Zen Browser's native tab group capabilities with s
 <br>
 
 <details open>
-<summary><b>📱 2. Floating Apps Bar & Multi-Instance Web Panels</b></summary>
+<summary><b>📱 2. App Box and App Bar & Multi-Instance Web Panels</b></summary>
 <br>
 
-Keep your essential web apps (Discord, WhatsApp, Telegram, Spotify, Notion, YouTube, etc.) one click away without cluttering your tab strip:
+Keep your essential web apps (Discord, WhatsApp, Reddit, Spotify, Notion, YouTube, etc.) one click away without cluttering your tab strip:
 
 - **📍 Flexible Placement Modes**:
-  - **Sidebar Grid**: Embeds directly into Zen's sidebar with customizable rows and columns.
-  - **Horizontal Toolbar**: Compact top/bottom bar layout.
+  - **Sidebar**: Embeds directly into Zen's sidebar with customizable grid in Zetral Settings.
   - **Vertical Edge Bar**: Standalone vertical dock positioned on the opposite screen edge from Zen's sidebar (left or right).
+  - **Top Toolbar**: Compact top bar layout specific for the Collapsed Sidebar layout mode.
 - **👻 Intelligent Autohide**:
-  - Automatically collapses the floating bar when not in use; expands with smooth hover transitions when approaching the trigger edge.
-- **🖼️ Native Zen Wallpaper & Grain Integration**:
-  - Matches Zen Browser's active theme gradient and film grain texture with rounded panel borders.
+  - Automatically collapses the floating App Bar or App Box when not in use; expands with smooth hover transitions when approaching the trigger edge.
+- **🖼️ Native Zen Theme & Grain Integration**:
+  - App Bar matches Zen Browser's active theme gradient and film grain texture with rounded panel borders.
 - **🎛️ Full Panel Controls**:
-  - **Pin / Unpin**: Keep panels persistently open side-by-side with web content.
+  - **Pin / Unpin**: Keep panels persistently open side-by-side with main web content.
   - **Dynamic Drag Resizing**: Smooth draggable edge resize handle with per-app width memory.
   - **Expand to Full Width**: Maximize panels instantly.
-  - **Navigation Bar**: Built-in Home, Reload, and "Open in Regular Tab" actions.
+  - **Refresh App**: Reloads the App when necessary.
+  - **Close App**: Unloads App to free resources.
 - **🌐 Workspace Isolation**:
-  - Right-click any app button to toggle between **Visible in Current Workspace Only** or **Visible in All Workspaces**.
+  - Right-click any app button to choose to which Space pin the App.
 - **🔔 Live Unread Notification Badges**:
   - Automatically parses unread message counts from page titles and renders clean overlay badges.
 - **⚡ Staggered Background Preloading**:
   - Silently preloads active apps in the background for instant, zero-latency panel popups.
-- **🌀 Physics-Based Panel Animation Curves**:
+- **🌀 Panel Animation**:
   - Choose between **Smooth Slide**, **Gentle Spring**, **Bouncy Spring**, or **Elastic** transitions.
 
 </details>
@@ -118,14 +116,13 @@ All preferences are declaratively registered via [`preferences.json`](preference
 <br>
 
 <details>
-<summary><b>🩺 4. Built-in Diagnostics & Serverless Issue Reporter</b></summary>
+<summary><b>🩺 4. Built-in Diagnostics & Issue Reporter</b></summary>
 <br>
 
-Zentral includes an enterprise-grade telemetry and diagnostics subsystem:
+Zentral includes a telemetry and diagnostics subsystem:
 
-- **Hotkey Export (`Alt+L`)**: Press <kbd>Alt</kbd> + <kbd>L</kbd> anywhere in Zen to instantly generate and download a clean, structured diagnostic snapshot.
-- **Granular Module Tracing**: Independent toggles for Core engine, Tab Groups, Apps Bar, Context Menus, and Computed CSS layout snapshots.
-- **Serverless Cloud Reporter**: Integrated endpoint for seamless one-click issue debugging.
+- **Hotkey Export (`Alt+L`)**: Press <kbd>Alt</kbd> + <kbd>L</kbd> anywhere in Zen to instantly generate and download a clean, structured diagnostic log.
+- **Granular Module Tracing**: Independent toggles for Core engine, Tab Groups, Apps Bar, Context Menus, and Computed CSS layout logs.
 
 </details>
 
@@ -135,12 +132,12 @@ Zentral includes an enterprise-grade telemetry and diagnostics subsystem:
 
 ### Method 1: Instant Install via Sine Mod Engine (Recommended)
 
-1. In Zen Browser, navigate to **Settings** (<kbd>Ctrl</kbd> + <kbd>,</kbd>) → **Mods / Themes**.
-2. Select **Install from GitHub / URL** (or open the Command Palette with <kbd>Ctrl</kbd> + <kbd>P</kbd> and search for *Sine: Install Mod*).
-3. Paste the repository URL:
+1. In Zen Browser, navigate to **Settings** (<kbd>Ctrl</kbd> + <kbd>,</kbd>) → **Sine Mods**.
+2. Paste the repository URL:
    ```text
    https://github.com/Michele501st/Zentral-Sine
    ```
+3. Click the **Install** button.
 4. Sine will automatically download, validate, and activate Zentral instantly!
 
 ---

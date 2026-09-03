@@ -38,7 +38,7 @@
     "property": "zen.workspace.apps.insta_peek.shortcut",
     "label": "Insta-Peek Shortcut",
     "type": "string",
-    "defaultValue": "Alt+P"
+    "defaultValue": "Alt+Q"
   },
   {
     "property": "zen.workspace.apps.sidebar.animation_type",

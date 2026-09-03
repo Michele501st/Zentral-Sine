@@ -150,7 +150,7 @@
         [Constants.Apps.PREF_APPS_PER_ROW]: Constants.Apps.DEFAULT_APPS_PER_ROW,
         [Constants.Apps.PREF_MAX_ROWS]: Constants.Apps.DEFAULT_MAX_ROWS,
         [Constants.Apps.PREF_AUTOHIDE]: false,
-        [Constants.Apps.PREF_INSTA_PEEK_SHORTCUT]: "Alt+P",
+        [Constants.Apps.PREF_INSTA_PEEK_SHORTCUT]: "Alt+Q",
         [Constants.Apps.PREF_PLACEMENT]: "sidebar",
         [Constants.Apps.PREF_UTILITY_ORDER]: '["autohide",null,null,"settings"]',
         [Constants.TabGroups.PREF_COLORS]: "{}",
@@ -3223,6 +3223,73 @@
     }
 
     /**
+     * Closes and unloads the specified web app from memory.
+     * If the app's panel is currently open, closes the panel.
+     * Removes the content browser element from the DOM and state map, and clears notification badges.
+     * @param {string} appId - Target app ID.
+     */
+    closeApp(appId) {
+      if (!appId) return;
+      if (this.#state.activeAppId === appId) {
+        this.closePanel();
+      }
+      const browser = this.#state.appBrowsers.get(appId);
+      if (browser) {
+        try {
+          if (browser.webNavigation) {
+            browser.webNavigation.stop(Ci.nsIWebNavigation.STOP_ALL);
+          }
+        } catch (_) {}
+        browser.remove();
+        this.#state.appBrowsers.delete(appId);
+      }
+      const tile = this.#dom.grid?.querySelector(`.zen-app-tile[data-app-id="${appId}"]`);
+      tile?.querySelector(".zen-app-badge")?.remove();
+      const app = this.#state.apps.find(a => a.id === appId);
+      if (app) {
+        app.badgeCount = 0;
+        app.hasNotification = false;
+      }
+    }
+
+    /**
+     * Retrieves all available Zen workspaces from gZenWorkspaces or DOM fallback.
+     * @returns {Array<{id: string, name: string}>}
+     */
+    getZenWorkspacesList() {
+      const list = [];
+      const seen = new Set();
+      try {
+        const raw = (typeof window.gZenWorkspaces?.getWorkspaces === "function")
+          ? window.gZenWorkspaces.getWorkspaces()
+          : window.gZenWorkspaces?.workspaces;
+        if (Array.isArray(raw)) {
+          for (const w of raw) {
+            if (w && w.id && !seen.has(w.id)) {
+              seen.add(w.id);
+              list.push({ id: w.id, name: w.name || w.label || w.id });
+            }
+          }
+        }
+      } catch (_) {}
+
+      if (list.length === 0) {
+        try {
+          const els = document.querySelectorAll("zen-workspace, .zen-workspace-strip-item, [zen-workspace-id]");
+          for (const el of els) {
+            const id = el.getAttribute("zen-workspace-id") || el.id;
+            if (id && !seen.has(id)) {
+              seen.add(id);
+              const name = el.getAttribute("name") || el.getAttribute("label") || el.getAttribute("tooltiptext") || id;
+              list.push({ id, name });
+            }
+          }
+        } catch (_) {}
+      }
+      return list;
+    }
+
+    /**
      * Extracts notification badge presence and count from a document title string.
      * Covers all major web services that embed unread counts in the title:
      *   - Gmail: "Inbox (118) - user@gmail.com", "Posta in arrivo (12) - ..."
@@ -3937,7 +4004,7 @@
      */
 
     /**
-     * Constructs and initializes context menu for app tiles (Space selection, Preload, Remove).
+     * Constructs and initializes context menu for app tiles (Refresh, Load at Startup, Close App, Pin App to, Autohide, Settings, Remove).
      */
     setupContextMenu() {
       let oldPopup = document.getElementById("zen-apps-sidebar-tile-context");
@@ -3946,32 +4013,53 @@
       let popup = null;
       if (window.MozXULElement?.parseXULToFragment) {
         const frag = window.MozXULElement.parseXULToFragment(`<menupopup id="zen-apps-sidebar-tile-context">
+          <!-- Section 1 -->
           <menuitem id="zen-apps-sidebar-refresh-item" label="Refresh App"/>
-          <menuseparator id="zen-apps-sidebar-refresh-sep"/>
-          <menuitem id="zen-apps-sidebar-remove-item" label="Remove from Apps Section"/>
-          <menuitem id="zen-apps-sidebar-preload-item" type="checkbox" label="Preload at Startup"/>
-          <menuseparator id="zen-apps-sidebar-space-sep"/>
-          <menuitem id="zen-apps-sidebar-space-current-item" type="checkbox" label="Current Space"/>
-          <menuitem id="zen-apps-sidebar-space-all-item" type="checkbox" label="All Spaces"/>
-          <menuseparator id="zen-apps-sidebar-settings-sep"/>
-          <menuitem id="zen-apps-sidebar-autohide-item" type="checkbox" label="Autohide Apps Grid"/>
+          <menuitem id="zen-apps-sidebar-preload-item" type="checkbox" label="Load at Startup"/>
+          <menuitem id="zen-apps-sidebar-close-app-item" label="Close App"/>
+          <menuseparator id="zen-apps-sidebar-sec1-sep"/>
+          <!-- Section 2 -->
+          <menu id="zen-apps-sidebar-pin-to-menu" label="Pin App to">
+            <menupopup id="zen-apps-sidebar-pin-to-popup"></menupopup>
+          </menu>
+          <menuseparator id="zen-apps-sidebar-sec2-sep"/>
+          <!-- Section 3 -->
+          <menuitem id="zen-apps-sidebar-autohide-item" type="checkbox" label="Autohide Apps"/>
           <menuitem id="zen-apps-sidebar-settings-item" label="Zentral Settings"/>
+          <menuseparator id="zen-apps-sidebar-sec3-sep"/>
+          <!-- Section 4 (Last) -->
+          <menuitem id="zen-apps-sidebar-remove-item" label="Remove App"/>
         </menupopup>`);
         (document.getElementById("mainPopupSet") || document.body).appendChild(frag);
         popup = document.getElementById("zen-apps-sidebar-tile-context");
       } else {
         popup = document.createXULElement("menupopup"); popup.id = "zen-apps-sidebar-tile-context";
         const refreshItem = document.createXULElement("menuitem"); refreshItem.id = "zen-apps-sidebar-refresh-item"; refreshItem.setAttribute("label", "Refresh App");
-        const refreshSep = document.createXULElement("menuseparator"); refreshSep.id = "zen-apps-sidebar-refresh-sep";
-        const removeMenuItem = document.createXULElement("menuitem"); removeMenuItem.id = "zen-apps-sidebar-remove-item"; removeMenuItem.setAttribute("label", "Remove from Apps Section");
-        const preloadItem = document.createXULElement("menuitem"); preloadItem.id = "zen-apps-sidebar-preload-item"; preloadItem.setAttribute("label", "Preload at Startup"); preloadItem.setAttribute("type", "checkbox");
-        const spaceSep = document.createXULElement("menuseparator"); spaceSep.id = "zen-apps-sidebar-space-sep";
-        const currentSpaceItem = document.createXULElement("menuitem"); currentSpaceItem.id = "zen-apps-sidebar-space-current-item"; currentSpaceItem.setAttribute("label", "Current Space"); currentSpaceItem.setAttribute("type", "checkbox");
-        const allSpacesItem = document.createXULElement("menuitem"); allSpacesItem.id = "zen-apps-sidebar-space-all-item"; allSpacesItem.setAttribute("label", "All Spaces"); allSpacesItem.setAttribute("type", "checkbox");
-        const settingsSep = document.createXULElement("menuseparator"); settingsSep.id = "zen-apps-sidebar-settings-sep";
-        const autohideItem = document.createXULElement("menuitem"); autohideItem.id = "zen-apps-sidebar-autohide-item"; autohideItem.setAttribute("label", "Autohide Apps Grid"); autohideItem.setAttribute("type", "checkbox");
+        const preloadItem = document.createXULElement("menuitem"); preloadItem.id = "zen-apps-sidebar-preload-item"; preloadItem.setAttribute("label", "Load at Startup"); preloadItem.setAttribute("type", "checkbox");
+        const closeAppItem = document.createXULElement("menuitem"); closeAppItem.id = "zen-apps-sidebar-close-app-item"; closeAppItem.setAttribute("label", "Close App");
+        const sec1Sep = document.createXULElement("menuseparator"); sec1Sep.id = "zen-apps-sidebar-sec1-sep";
+
+        const pinToMenu = document.createXULElement("menu"); pinToMenu.id = "zen-apps-sidebar-pin-to-menu"; pinToMenu.setAttribute("label", "Pin App to");
+        const pinToPopup = document.createXULElement("menupopup"); pinToPopup.id = "zen-apps-sidebar-pin-to-popup";
+        pinToMenu.appendChild(pinToPopup);
+        const sec2Sep = document.createXULElement("menuseparator"); sec2Sep.id = "zen-apps-sidebar-sec2-sep";
+
+        const autohideItem = document.createXULElement("menuitem"); autohideItem.id = "zen-apps-sidebar-autohide-item"; autohideItem.setAttribute("label", "Autohide Apps"); autohideItem.setAttribute("type", "checkbox");
         const settingsItem = document.createXULElement("menuitem"); settingsItem.id = "zen-apps-sidebar-settings-item"; settingsItem.setAttribute("label", "Zentral Settings");
-        popup.appendChild(refreshItem); popup.appendChild(refreshSep); popup.appendChild(removeMenuItem); popup.appendChild(preloadItem); popup.appendChild(spaceSep); popup.appendChild(currentSpaceItem); popup.appendChild(allSpacesItem); popup.appendChild(settingsSep); popup.appendChild(autohideItem); popup.appendChild(settingsItem);
+        const sec3Sep = document.createXULElement("menuseparator"); sec3Sep.id = "zen-apps-sidebar-sec3-sep";
+
+        const removeMenuItem = document.createXULElement("menuitem"); removeMenuItem.id = "zen-apps-sidebar-remove-item"; removeMenuItem.setAttribute("label", "Remove App");
+
+        popup.appendChild(refreshItem);
+        popup.appendChild(preloadItem);
+        popup.appendChild(closeAppItem);
+        popup.appendChild(sec1Sep);
+        popup.appendChild(pinToMenu);
+        popup.appendChild(sec2Sep);
+        popup.appendChild(autohideItem);
+        popup.appendChild(settingsItem);
+        popup.appendChild(sec3Sep);
+        popup.appendChild(removeMenuItem);
         (document.getElementById("mainPopupSet") || document.body).appendChild(popup);
       }
       
@@ -3980,24 +4068,25 @@
       popup.addEventListener("popupshowing", () => {
         const hasApp = !!popup.dataset.activeAppId;
         const refreshBtn = popup.querySelector("#zen-apps-sidebar-refresh-item");
-        const refreshSep = popup.querySelector("#zen-apps-sidebar-refresh-sep");
-        const removeBtn = popup.querySelector("#zen-apps-sidebar-remove-item");
         const preloadBtn = popup.querySelector("#zen-apps-sidebar-preload-item");
-        const currentSpaceBtn = popup.querySelector("#zen-apps-sidebar-space-current-item");
-        const allSpacesBtn = popup.querySelector("#zen-apps-sidebar-space-all-item");
-        const spaceSep = popup.querySelector("#zen-apps-sidebar-space-sep");
-        const settingsSep = popup.querySelector("#zen-apps-sidebar-settings-sep");
+        const closeAppBtn = popup.querySelector("#zen-apps-sidebar-close-app-item");
+        const sec1Sep = popup.querySelector("#zen-apps-sidebar-sec1-sep");
+        const pinToMenu = popup.querySelector("#zen-apps-sidebar-pin-to-menu");
+        const sec2Sep = popup.querySelector("#zen-apps-sidebar-sec2-sep");
+        const autohideBtn = popup.querySelector("#zen-apps-sidebar-autohide-item");
+        const settingsBtn = popup.querySelector("#zen-apps-sidebar-settings-item");
+        const sec3Sep = popup.querySelector("#zen-apps-sidebar-sec3-sep");
+        const removeBtn = popup.querySelector("#zen-apps-sidebar-remove-item");
         
         if (refreshBtn) refreshBtn.hidden = !hasApp;
-        if (refreshSep) refreshSep.hidden = !hasApp;
-        if (removeBtn) removeBtn.hidden = !hasApp;
         if (preloadBtn) preloadBtn.hidden = !hasApp;
-        if (currentSpaceBtn) currentSpaceBtn.hidden = !hasApp;
-        if (allSpacesBtn) allSpacesBtn.hidden = !hasApp;
-        if (spaceSep) spaceSep.hidden = !hasApp;
-        if (settingsSep) settingsSep.hidden = !hasApp;
+        if (closeAppBtn) closeAppBtn.hidden = !hasApp;
+        if (sec1Sep) sec1Sep.hidden = !hasApp;
+        if (pinToMenu) pinToMenu.hidden = !hasApp;
+        if (sec2Sep) sec2Sep.hidden = !hasApp;
+        if (sec3Sep) sec3Sep.hidden = !hasApp;
+        if (removeBtn) removeBtn.hidden = !hasApp;
 
-        const autohideBtn = popup.querySelector("#zen-apps-sidebar-autohide-item");
         if (autohideBtn) {
           const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
           if (isAutohide) autohideBtn.setAttribute("checked", "true");
@@ -4005,20 +4094,70 @@
         }
 
         if (hasApp) {
-          const app = this.#state.apps.find(a => a.id === popup.dataset.activeAppId);
+          const appId = popup.dataset.activeAppId;
+          const app = this.#state.apps.find(a => a.id === appId);
+          const isLoaded = this.#state.appBrowsers.has(appId);
+          if (closeAppBtn) {
+            closeAppBtn.disabled = !isLoaded;
+          }
+
           if (app) {
             if (preloadBtn) {
               if (app.preload) preloadBtn.setAttribute("checked", "true");
               else preloadBtn.removeAttribute("checked");
             }
             
-            const isCurrentOnly = !!app.workspaceId && app.workspaceId !== "all";
-            if (isCurrentOnly) {
-              if (currentSpaceBtn) currentSpaceBtn.setAttribute("checked", "true");
-              if (allSpacesBtn) allSpacesBtn.removeAttribute("checked");
-            } else {
-              if (allSpacesBtn) allSpacesBtn.setAttribute("checked", "true");
-              if (currentSpaceBtn) currentSpaceBtn.removeAttribute("checked");
+            // Populate "Pin App to" submenu
+            const pinPopup = popup.querySelector("#zen-apps-sidebar-pin-to-popup");
+            if (pinPopup) {
+              pinPopup.replaceChildren();
+              const currentWsId = window.gZenWorkspaces?.activeWorkspace || "default";
+
+              // 1. "All Spaces" (Default when adding new app)
+              const allSpacesItem = document.createXULElement ? document.createXULElement("menuitem") : document.createElement("menuitem");
+              allSpacesItem.setAttribute("label", "All Spaces");
+              allSpacesItem.setAttribute("type", "checkbox");
+              if (!app.workspaceId || app.workspaceId === "all") {
+                allSpacesItem.setAttribute("checked", "true");
+              }
+              allSpacesItem.addEventListener("command", () => {
+                app.workspaceId = "all";
+                this.saveApps();
+                this.renderGrid();
+              });
+              pinPopup.appendChild(allSpacesItem);
+
+              // 2. "this Space" (Current Space)
+              const thisSpaceItem = document.createXULElement ? document.createXULElement("menuitem") : document.createElement("menuitem");
+              thisSpaceItem.setAttribute("label", "this Space");
+              thisSpaceItem.setAttribute("type", "checkbox");
+              if (app.workspaceId === currentWsId) {
+                thisSpaceItem.setAttribute("checked", "true");
+              }
+              thisSpaceItem.addEventListener("command", () => {
+                app.workspaceId = currentWsId;
+                this.saveApps();
+                this.renderGrid();
+              });
+              pinPopup.appendChild(thisSpaceItem);
+
+              // 3. Other Spaces below with their respective names
+              const allWorkspaces = this.getZenWorkspacesList();
+              for (const ws of allWorkspaces) {
+                if (ws.id === currentWsId) continue;
+                const wsItem = document.createXULElement ? document.createXULElement("menuitem") : document.createElement("menuitem");
+                wsItem.setAttribute("label", ws.name || ws.id);
+                wsItem.setAttribute("type", "checkbox");
+                if (app.workspaceId === ws.id) {
+                  wsItem.setAttribute("checked", "true");
+                }
+                wsItem.addEventListener("command", () => {
+                  app.workspaceId = ws.id;
+                  this.saveApps();
+                  this.renderGrid();
+                });
+                pinPopup.appendChild(wsItem);
+              }
             }
           }
         }
@@ -4026,6 +4165,10 @@
 
       popup.querySelector("#zen-apps-sidebar-refresh-item")?.addEventListener("command", () => {
         if (popup.dataset.activeAppId) this.refreshApp(popup.dataset.activeAppId);
+      });
+
+      popup.querySelector("#zen-apps-sidebar-close-app-item")?.addEventListener("command", () => {
+        if (popup.dataset.activeAppId) this.closeApp(popup.dataset.activeAppId);
       });
 
       popup.querySelector("#zen-apps-sidebar-remove-item")?.addEventListener("command", () => {
@@ -4043,29 +4186,6 @@
             } else {
               e.target.removeAttribute("checked");
             }
-          }
-        }
-      });
-
-      popup.querySelector("#zen-apps-sidebar-space-current-item")?.addEventListener("command", () => {
-        if (popup.dataset.activeAppId) {
-          const app = this.#state.apps.find(a => a.id === popup.dataset.activeAppId);
-          if (app) {
-            const activeWs = window.gZenWorkspaces?.activeWorkspace || "default";
-            app.workspaceId = activeWs;
-            this.saveApps();
-            this.renderGrid();
-          }
-        }
-      });
-
-      popup.querySelector("#zen-apps-sidebar-space-all-item")?.addEventListener("command", () => {
-        if (popup.dataset.activeAppId) {
-          const app = this.#state.apps.find(a => a.id === popup.dataset.activeAppId);
-          if (app) {
-            app.workspaceId = "all";
-            this.saveApps();
-            this.renderGrid();
           }
         }
       });
@@ -4159,7 +4279,7 @@
      * @param {KeyboardEvent} e - Keydown event.
      */
     handleInstaPeekKeyDown(e) {
-      const shortcut = Core.getPref(Constants.Apps.PREF_INSTA_PEEK_SHORTCUT, "Alt+P");
+      const shortcut = Core.getPref(Constants.Apps.PREF_INSTA_PEEK_SHORTCUT, "Alt+Q");
       if (!shortcut || shortcut === "None") return;
 
       if (!this.#state.activeAppId || !this.#dom.root?.hasAttribute("open")) return;
@@ -4184,7 +4304,7 @@
     handleInstaPeekKeyUp(e) {
       if (!this.#state.isInstaPeeking) return;
 
-      const shortcut = Core.getPref(Constants.Apps.PREF_INSTA_PEEK_SHORTCUT, "Alt+P");
+      const shortcut = Core.getPref(Constants.Apps.PREF_INSTA_PEEK_SHORTCUT, "Alt+Q");
       if (!shortcut || shortcut === "None") {
         this.endInstaPeek();
         return;
@@ -8379,7 +8499,7 @@
       if (get("zs-anim-speed-badge")) get("zs-anim-speed-badge").textContent = `${animSpeed} ms`;
       get("zs-max-apps").value = maxApps;
 
-      const instaPeekShortcut = Core.getPref(Constants.Apps.PREF_INSTA_PEEK_SHORTCUT, "Alt+P") || "Alt+P";
+      const instaPeekShortcut = Core.getPref(Constants.Apps.PREF_INSTA_PEEK_SHORTCUT, "Alt+Q") || "Alt+Q";
       const instaPeekBtn = this.modal.querySelector("#zs-insta-peek-btn");
       if (instaPeekBtn && instaPeekBtn.syncValue) {
         instaPeekBtn.syncValue(instaPeekShortcut);
@@ -8547,7 +8667,7 @@
       Core.setPref(Constants.Apps.PREF_APPS_PER_ROW, parseInt(get("zs-apps-row").value) || 7);
       Core.setPref(Constants.Apps.PREF_MAX_ROWS, parseInt(get("zs-max-rows").value) || 3);
       if (get("zs-insta-peek-shortcut")) {
-        Core.setPref(Constants.Apps.PREF_INSTA_PEEK_SHORTCUT, get("zs-insta-peek-shortcut").value || "Alt+P");
+        Core.setPref(Constants.Apps.PREF_INSTA_PEEK_SHORTCUT, get("zs-insta-peek-shortcut").value || "Alt+Q");
       }
 
       Core.setPref(Constants.TabGroups.PREF_ENABLED, get("zs-tg-enabled").checked);
@@ -10158,9 +10278,9 @@
                     </div>
                     <div class="zs-shortcut-recorder" id="zs-insta-peek-recorder">
                       <button type="button" class="zs-shortcut-btn" id="zs-insta-peek-btn" title="Click to record shortcut, Backspace to clear, Escape to cancel">
-                        <span class="zs-shortcut-label" id="zs-insta-peek-label">Alt+P</span>
+                        <span class="zs-shortcut-label" id="zs-insta-peek-label">Alt+Q</span>
                       </button>
-                      <input type="hidden" id="zs-insta-peek-shortcut" value="Alt+P" />
+                      <input type="hidden" id="zs-insta-peek-shortcut" value="Alt+Q" />
                     </div>
                   </div>
 
@@ -11104,8 +11224,8 @@
         if (get("zs-anim-speed-badge")) get("zs-anim-speed-badge").textContent = "450 ms";
         get("zs-max-apps").value = 21;
         const instaPeekBtn = this.modal.querySelector("#zs-insta-peek-btn");
-        if (instaPeekBtn && instaPeekBtn.syncValue) instaPeekBtn.syncValue("Alt+P");
-        else if (get("zs-insta-peek-shortcut")) get("zs-insta-peek-shortcut").value = "Alt+P";
+        if (instaPeekBtn && instaPeekBtn.syncValue) instaPeekBtn.syncValue("Alt+Q");
+        else if (get("zs-insta-peek-shortcut")) get("zs-insta-peek-shortcut").value = "Alt+Q";
         this.updatePreviewDemo("slide", 450);
       });
 

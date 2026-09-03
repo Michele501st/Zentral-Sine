@@ -1068,17 +1068,45 @@ panel[id*="tabgroup-editor"] {
   border-radius: 4px !important;
 }
 
-/* Hide separator line in Apps Grid context menu when only Settings is shown */
-#zen-apps-sidebar-tile-context #zen-apps-sidebar-settings-sep[hidden="true"],
-#zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-settings-sep,
-#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-settings-sep,
-#zen-apps-sidebar-tile-context #zen-apps-sidebar-refresh-sep[hidden="true"],
-#zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-refresh-sep,
-#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-refresh-sep,
+/* Hide app-specific items and separators in Apps Grid context menu when right-clicking empty space */
+#zen-apps-sidebar-tile-context #zen-apps-sidebar-sec1-sep[hidden="true"],
+#zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-sec1-sep,
+#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-sec1-sep,
+#zen-apps-sidebar-tile-context #zen-apps-sidebar-sec2-sep[hidden="true"],
+#zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-sec2-sep,
+#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-sec2-sep,
+#zen-apps-sidebar-tile-context #zen-apps-sidebar-sec3-sep[hidden="true"],
+#zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-sec3-sep,
+#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-sec3-sep,
 #zen-apps-sidebar-tile-context #zen-apps-sidebar-refresh-item[hidden="true"],
 #zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-refresh-item,
-#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-refresh-item {
+#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-refresh-item,
+#zen-apps-sidebar-tile-context #zen-apps-sidebar-preload-item[hidden="true"],
+#zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-preload-item,
+#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-preload-item,
+#zen-apps-sidebar-tile-context #zen-apps-sidebar-close-app-item[hidden="true"],
+#zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-close-app-item,
+#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-close-app-item,
+#zen-apps-sidebar-tile-context #zen-apps-sidebar-pin-to-menu[hidden="true"],
+#zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-pin-to-menu,
+#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-pin-to-menu,
+#zen-apps-sidebar-tile-context #zen-apps-sidebar-remove-item[hidden="true"],
+#zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-remove-item,
+#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-remove-item {
   display: none !important;
+}
+
+/* Red styling for "Remove App" button to emphasize its destructive action */
+#zen-apps-sidebar-tile-context #zen-apps-sidebar-remove-item {
+  color: #ff5555 !important;
+  font-weight: 500 !important;
+}
+
+#zen-apps-sidebar-tile-context #zen-apps-sidebar-remove-item:hover,
+#zen-apps-sidebar-tile-context #zen-apps-sidebar-remove-item[_moz-menuactive="true"] {
+  background-color: rgba(255, 68, 68, 0.2) !important;
+  color: #ff6b6b !important;
+  border-radius: var(--arrowpanel-menuitem-border-radius, 4px) !important;
 }
 
 /* --------------------------------------------------------------------------
