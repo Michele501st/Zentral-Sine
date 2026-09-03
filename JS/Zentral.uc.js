@@ -2978,6 +2978,19 @@
      */
 
     /**
+     * Checks whether any app panel is currently open and active.
+     * @returns {boolean}
+     */
+    isPanelOpen() {
+      return !!(
+        this.#state.activeAppId !== null ||
+        document.documentElement.getAttribute("zentral-app-panel-open") === "true" ||
+        this.#dom.root?.hasAttribute("open") ||
+        document.getElementById("zen-app-panel-root")?.hasAttribute("open")
+      );
+    }
+
+    /**
      * Opens the floating app panel for a selected web app with smooth sliding transitions.
      * @param {Object} app - The target app configuration object.
      */
@@ -4311,6 +4324,8 @@
     #workspaceSwitchListener = null;
     /** @private TabOpen event listener for smart grouping */
     #tabOpenListener = null;
+    /** @private Original gBrowser.addTab reference */
+    #origAddTab = null;
 
     /**
      * Safely retrieves Firefox SessionStore service for persistent tab metadata across restarts.
@@ -4439,6 +4454,13 @@
             }
           } catch (_) {}
           this.#tabOpenListener = null;
+        }
+        if (this.#origAddTab && window.gBrowser) {
+          try {
+            window.gBrowser.addTab = this.#origAddTab;
+            delete window.gBrowser._zentralAddTabHooked;
+          } catch (_) {}
+          this.#origAddTab = null;
         }
         if (this.#groupContextMenuHandler) {
           try { window.removeEventListener("contextmenu", this.#groupContextMenuHandler, true); } catch (_) {}
@@ -5194,6 +5216,7 @@
       this.initTabDragSelectionGuard();
       this.processExistingGroups();
       this.setupTabOpenHandler();
+      this.hookAddTab();
 
       // SessionStore Settlement Guard:
       // When the browser launches or caches are cleared, SessionStore injects tabs/groups asynchronously.
@@ -5673,21 +5696,19 @@
         if (!tab || tab.tagName?.toLowerCase() !== "tab") return;
 
         // 1. App Panel Isolation: If link was opened while an App panel is open, keep outside any group
-        const isAppPanelOpen = document.documentElement.getAttribute("zentral-app-panel-open") === "true" ||
+        const isAppPanelOpen = (typeof window.Zentral?.Apps?.isPanelOpen === "function" && window.Zentral.Apps.isPanelOpen()) ||
+                               document.documentElement.getAttribute("zentral-app-panel-open") === "true" ||
                                document.getElementById("zen-app-panel-root")?.hasAttribute("open") ||
                                !!document.activeElement?.closest?.("#zen-app-panel-root, #zen-app-panel-slider, .zen-app-panel-wrapper");
         if (isAppPanelOpen) {
-          const currentGroup = tab.closest?.("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])") || tab.group;
-          if (currentGroup) {
+          const forceUngroup = () => {
             try {
-              // Move tab out of the group, placing it immediately after the group in the tab strip
-              currentGroup.after(tab);
-            } catch (_) {
-              try {
-                currentGroup.parentElement?.insertBefore(tab, currentGroup.nextSibling);
-              } catch (_) {}
-            }
+              if (typeof window.gBrowser?.moveTabToEnd === "function") {
+                window.gBrowser.moveTabToEnd(tab);
+              }
+            } catch (_) {}
             tab.removeAttribute("group");
+            tab.removeAttribute("zen-group");
             ["data-zentral-group-id", "data-zentral-group-label", "data-zentral-group-color", "data-zentral-group-collapsed", "data-zentral-group-ws"].forEach(attr => tab.removeAttribute(attr));
             
             const ss = this.#getSessionStore();
@@ -5704,7 +5725,10 @@
               window.gBrowser?.tabContainer?._invalidateCachedTabs?.();
             } catch (_) {}
             this.scheduleStateSave();
-          }
+          };
+
+          forceUngroup();
+          window.setTimeout(forceUngroup, 0);
           return;
         }
 
@@ -5767,6 +5791,50 @@
       if (window.gBrowser?.tabContainer) {
         window.gBrowser.tabContainer.addEventListener("TabOpen", this.#tabOpenListener);
       }
+    }
+
+    /**
+     * Hooks gBrowser.addTab to ensure any tab opened while an App Panel is active
+     * is created outside of any group, bypassing Zen's default selectedTab inheritance.
+     */
+    hookAddTab() {
+      if (!window.gBrowser || window.gBrowser._zentralAddTabHooked) return;
+      window.gBrowser._zentralAddTabHooked = true;
+      this.#origAddTab = window.gBrowser.addTab;
+      const self = this;
+
+      window.gBrowser.addTab = function(aURI, aParams = {}) {
+        const isAppOpen = (typeof window.Zentral?.Apps?.isPanelOpen === "function" && window.Zentral.Apps.isPanelOpen()) ||
+                          document.documentElement.getAttribute("zentral-app-panel-open") === "true" ||
+                          document.getElementById("zen-app-panel-root")?.hasAttribute("open") ||
+                          !!document.activeElement?.closest?.("#zen-app-panel-root, #zen-app-panel-slider, .zen-app-panel-wrapper");
+
+        if (isAppOpen && aParams && typeof aParams === "object") {
+          aParams.tabGroup = null;
+          aParams.relatedToCurrent = false;
+          aParams.insertRelatedAfterCurrent = false;
+        }
+
+        const tab = self.#origAddTab.call(this, aURI, aParams);
+
+        if (isAppOpen && tab) {
+          const forceUngroup = () => {
+            try {
+              if (typeof window.gBrowser?.moveTabToEnd === "function") {
+                window.gBrowser.moveTabToEnd(tab);
+              }
+            } catch (_) {}
+            tab.removeAttribute("group");
+            tab.removeAttribute("zen-group");
+            ["data-zentral-group-id", "data-zentral-group-label", "data-zentral-group-color", "data-zentral-group-collapsed", "data-zentral-group-ws"].forEach(a => tab.removeAttribute(a));
+            try { window.gBrowser?.tabContainer?._invalidateCachedTabs?.(); } catch (_) {}
+          };
+          forceUngroup();
+          window.setTimeout(forceUngroup, 0);
+        }
+
+        return tab;
+      };
     }
 
     /**
