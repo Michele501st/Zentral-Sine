@@ -2585,6 +2585,132 @@
       }
     }
 
+    /**
+     * Formats an app's title into a clean, friendly service/brand name
+     * (e.g. "Discord", "WhatsApp", "Telegram", "Reddit") instead of raw URLs or domains ("discord.com").
+     * @param {string} [title] - Raw title string or page label.
+     * @param {string} [url] - Target app website URL.
+     * @returns {string} Human-friendly service title.
+     */
+    formatAppDisplayName(title, url = "") {
+      const WELL_KNOWN_SERVICES = {
+        "discord.com": "Discord",
+        "web.whatsapp.com": "WhatsApp",
+        "whatsapp.com": "WhatsApp",
+        "web.telegram.org": "Telegram",
+        "telegram.org": "Telegram",
+        "t.me": "Telegram",
+        "reddit.com": "Reddit",
+        "youtube.com": "YouTube",
+        "music.youtube.com": "YouTube Music",
+        "mail.google.com": "Gmail",
+        "gmail.com": "Gmail",
+        "github.com": "GitHub",
+        "twitter.com": "Twitter",
+        "x.com": "X",
+        "chatgpt.com": "ChatGPT",
+        "chat.openai.com": "ChatGPT",
+        "instagram.com": "Instagram",
+        "facebook.com": "Facebook",
+        "linkedin.com": "LinkedIn",
+        "spotify.com": "Spotify",
+        "open.spotify.com": "Spotify",
+        "twitch.tv": "Twitch",
+        "slack.com": "Slack",
+        "notion.so": "Notion",
+        "netflix.com": "Netflix",
+        "google.com": "Google",
+        "drive.google.com": "Google Drive",
+        "calendar.google.com": "Google Calendar",
+        "maps.google.com": "Google Maps",
+        "translate.google.com": "Google Translate",
+        "keep.google.com": "Google Keep",
+        "pinterest.com": "Pinterest",
+        "amazon.com": "Amazon",
+        "wikipedia.org": "Wikipedia",
+        "outlook.live.com": "Outlook",
+        "outlook.com": "Outlook",
+        "messenger.com": "Messenger",
+        "tiktok.com": "TikTok",
+        "soundcloud.com": "SoundCloud",
+        "music.apple.com": "Apple Music",
+        "bsky.app": "Bluesky",
+        "mastodon.social": "Mastodon",
+        "threads.net": "Threads",
+        "medium.com": "Medium",
+        "substack.com": "Substack",
+        "trello.com": "Trello",
+        "asana.com": "Asana",
+        "figma.com": "Figma",
+        "canva.com": "Canva",
+        "dropbox.com": "Dropbox",
+        "steamcommunity.com": "Steam",
+        "store.steampowered.com": "Steam",
+        "mail.proton.me": "ProtonMail",
+        "proton.me": "Proton",
+        "deezer.com": "Deezer",
+        "crunchyroll.com": "Crunchyroll"
+      };
+
+      let host = "";
+      if (url) {
+        try {
+          host = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+        } catch (_) {}
+      }
+
+      if (host) {
+        if (WELL_KNOWN_SERVICES[host]) return WELL_KNOWN_SERVICES[host];
+        for (const [knownHost, knownName] of Object.entries(WELL_KNOWN_SERVICES)) {
+          if (host === knownHost || host.endsWith("." + knownHost)) {
+            return knownName;
+          }
+        }
+      }
+
+      let raw = (title || "").trim();
+      const rawLower = raw.toLowerCase().replace(/^www\./, "");
+      if (WELL_KNOWN_SERVICES[rawLower]) return WELL_KNOWN_SERVICES[rawLower];
+      for (const [knownHost, knownName] of Object.entries(WELL_KNOWN_SERVICES)) {
+        if (rawLower === knownHost || rawLower.endsWith("." + knownHost)) {
+          return knownName;
+        }
+      }
+
+      const isContaminated = !raw ||
+        /^Group\s+Tab\s+\d+$/i.test(raw) ||
+        /^Demo\s+Tab\s+\d+$/i.test(raw) ||
+        /^New\s+Tab$/i.test(raw) ||
+        /^about:blank$/i.test(raw) ||
+        raw.startsWith("http://") ||
+        raw.startsWith("https://");
+
+      if (!isContaminated) {
+        raw = raw.replace(/^[\(\[]\s*\d+\+?\s*[\)\]]\s*/, "");
+        if (/web\b/i.test(raw)) raw = raw.replace(/\s+web\b/i, "");
+        const parts = raw.split(/\s+[-|•—–:]\s+/);
+        if (parts.length > 1) {
+          const first = parts[0].trim();
+          const last = parts[parts.length - 1].trim();
+          if (first && first.length <= 20) raw = first;
+          else if (last && last.length <= 20) raw = last;
+        }
+        if (raw && raw.length <= 30 && !raw.includes(".")) {
+          return raw;
+        }
+      }
+
+      if (host) {
+        const cleanHost = host.replace(/^(app|web|mobile|m|my|auth|login)\./, "");
+        const domainBase = cleanHost.replace(/\.(com|org|net|io|app|dev|tv|co|uk|it|de|fr|me|so|ai|gg|cc|xyz|info|biz|eu)(\.[a-z]{2})?$/, "");
+        if (domainBase) {
+          return domainBase.charAt(0).toUpperCase() + domainBase.slice(1);
+        }
+      }
+
+      return raw || host || "App";
+    }
+
     renderGrid() {
       if (!this.#dom.grid) return;
       const oldAddBtn = document.querySelector("#zentral-apps-vertical-bar .zen-app-add-btn") || this.#dom.grid.querySelector(".zen-app-add-btn");
@@ -2631,16 +2757,7 @@
         btn.className = "zen-app-tile";
         btn.dataset.appId = app.id;
         btn.dataset.active = (this.#state.activeAppId === app.id) ? "true" : "false";
-        // Sanitize stored title: if it looks like a stale tab-group label (e.g. "Group Tab 1"),
-        // fall back to the hostname so the tooltip is always meaningful.
-        let displayTitle = app.title || "";
-        if (!displayTitle || /^Group\s+Tab\s+\d+$/i.test(displayTitle.trim())) {
-          try {
-            const host = new URL(app.url).hostname.replace(/^www\./, "");
-            displayTitle = host || displayTitle;
-          } catch (_) {}
-        }
-        btn.title = displayTitle;
+        btn.title = this.formatAppDisplayName(app.title, app.url);
 
         const img = document.createElement("img");
         img.src = app.icon || `page-icon:${app.url}`;
@@ -2760,8 +2877,9 @@
               title = tab.label || url;
             }
           }
+          const cleanTitle = this.formatAppDisplayName(title, url);
           const icon = (typeof gBrowser.getIcon === "function" ? gBrowser.getIcon(tab) : null) || tab.getAttribute("image") || tab.image || "";
-          if (url !== "about:blank") this.addApp(url, title, icon);
+          if (url !== "about:blank") this.addApp(url, cleanTitle, icon);
         });
 
         addBtn.addEventListener("mousedown", (e) => {
@@ -2816,7 +2934,8 @@
       if (this.#state.apps.length >= Core.getPref(Constants.Apps.PREF_MAX_APPS)) return;
       const id = "app_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
       const crispIcon = url.startsWith("http") ? `page-icon:${url}` : (icon || `page-icon:${url}`);
-      const newApp = { id, url, title, icon: crispIcon };
+      const cleanTitle = this.formatAppDisplayName(title, url);
+      const newApp = { id, url, title: cleanTitle, icon: crispIcon };
       this.#state.apps.push(newApp);
       this.saveApps();
       this.renderGrid();
@@ -4111,6 +4230,46 @@
     #updateSidebarAttr = null;
 
     /**
+     * Determines the Zen workspace UUID for a DOM element (tab or tab-group).
+     * Traverses direct attributes, parent/ancestor workspace sections, and child tabs.
+     * @param {Element} el - Tab or tab-group element.
+     * @returns {string} Workspace UUID string or active workspace fallback.
+     */
+    getWorkspaceForElement(el) {
+      if (!el) return "";
+      try {
+        // 1. Direct workspace ID attribute
+        let ws = el.getAttribute?.("zen-workspace-id") || el.getAttribute?.("data-zentral-group-ws");
+        if (ws && ws !== "undefined" && ws !== "null") return ws;
+
+        // 2. Ancestor <zen-workspace> container (Zen native element)
+        const zenWs = el.closest?.("zen-workspace");
+        if (zenWs?.id) return zenWs.id;
+
+        // 3. Ancestor tabs section within a workspace element
+        const section = el.closest?.(".zen-workspace-tabs-section, .zen-workspace-normal-tabs-section");
+        if (section) {
+          const wsBox = section.closest?.("[id]");
+          if (wsBox?.id && window.gZenWorkspaces?.getWorkspaceFromId?.(wsBox.id)) {
+            return wsBox.id;
+          }
+        }
+
+        // 4. If this is a tab-group, check member tabs inside it
+        if (el.tagName?.toLowerCase() === "tab-group") {
+          const childTabs = el.querySelectorAll?.("tab, tabbrowser-tab, .tabbrowser-tab");
+          if (childTabs) {
+            for (const t of childTabs) {
+              const tWs = this.getWorkspaceForElement(t);
+              if (tWs) return tWs;
+            }
+          }
+        }
+      } catch (_) {}
+      return window.gZenWorkspaces?.activeWorkspace || "";
+    }
+
+    /**
      * Module tear down for Sine hot unloading
      */
     destroy() {
@@ -4215,18 +4374,8 @@
           }
         } catch (_) {}
 
-        const mergedGroups = {};
-        const mergedTabMapping = {};
-
-        // Retain any groups and tab mappings from other workspaces
-        for (const [gId, gMeta] of Object.entries(existingGroups)) {
-          if (gMeta && gMeta.workspaceId && currentWs && gMeta.workspaceId !== currentWs) {
-            mergedGroups[gId] = gMeta;
-            if (existingTabMapping[gId]) {
-              mergedTabMapping[gId] = existingTabMapping[gId];
-            }
-          }
-        }
+        const mergedGroups = { ...existingGroups };
+        const mergedTabMapping = { ...existingTabMapping };
 
         allGroups.forEach(group => {
           if (!group.id) group.id = "zentral-group-" + Math.random().toString(36).substr(2, 9);
@@ -4235,7 +4384,8 @@
           const label = group.label || group.getAttribute("label") || "Group";
           const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || "";
           const isCollapsed = group.hasAttribute("collapsed") && group.getAttribute("collapsed") === "true";
-          const wsId = group.getAttribute("zen-workspace-id") || currentWs || "";
+          const wsId = this.getWorkspaceForElement(group);
+          if (wsId) group.setAttribute("zen-workspace-id", wsId);
 
           const posContainer = parentGroup || group.parentElement;
           const groupSiblings = posContainer
@@ -4270,7 +4420,10 @@
             tab.setAttribute("data-zentral-group-label", label);
             if (color) tab.setAttribute("data-zentral-group-color", color);
             tab.setAttribute("data-zentral-group-collapsed", isCollapsed ? "true" : "false");
-            if (wsId) tab.setAttribute("data-zentral-group-ws", wsId);
+            if (wsId) {
+              tab.setAttribute("data-zentral-group-ws", wsId);
+              tab.setAttribute("zen-workspace-id", wsId);
+            }
             if (parentId) tab.setAttribute("data-zentral-parent-id", parentId);
 
             // Persist into Firefox SessionStore so metadata survives browser restarts & cache clears
@@ -4293,21 +4446,8 @@
           tabMapping: mergedTabMapping
         }));
 
-        // 5. Flatten groups cleanly without leaving gaps in the root strip
-        const rootTabContainer = (typeof gZenWorkspaces !== "undefined" && gZenWorkspaces.activeWorkspaceStrip) ||
-                                 gBrowser?.tabContainer?.arrowscrollbox ||
-                                 gBrowser?.tabContainer ||
-                                 document.getElementById("tabbrowser-tabs");
-
-        const sortedGroups = allGroups.slice().sort((a, b) => {
-          let depthA = 0, currA = a;
-          while ((currA = currA.parentElement?.closest("tab-group"))) depthA++;
-          let depthB = 0, currB = b;
-          while ((currB = currB.parentElement?.closest("tab-group"))) depthB++;
-          return depthB - depthA;
-        });
-
-        sortedGroups.forEach(group => {
+        // 5. Clean up Zentral UI enhancements on tab-group elements without destroying native DOM structure
+        allGroups.forEach(group => {
           try {
             const obs = this.#groupObservers.get(group);
             if (obs) {
@@ -4319,31 +4459,10 @@
               group.shadowRoot.querySelectorAll('.zentral-shadow-style').forEach(s => s.remove());
             }
             group.querySelectorAll('.zentral-chevron, .zentral-group-initials, .zentral-tg-drag-handle, .zentral-close-btn, .zentral-tab-title-wrapper').forEach(el => el.remove());
-
-            const tabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
-
-            // Move tabs directly before the group container
-            tabs.forEach(tab => {
-              if (group.parentNode) {
-                try {
-                  group.parentNode.insertBefore(tab, group);
-                } catch (_) {
-                  try { rootTabContainer.appendChild(tab); } catch (_) {}
-                }
-              } else if (rootTabContainer) {
-                try { rootTabContainer.appendChild(tab); } catch (_) {}
-              }
-              try { if (typeof gBrowser?.addTabToGroup === "function") gBrowser.addTabToGroup(tab, null); } catch (_) {}
-              try { tab.group = null; } catch (_) {}
-              try { tab.removeAttribute("group"); tab.removeAttribute("zen-group"); } catch (_) {}
-            });
-
-            // Cleanly remove the tab-group element directly
-            try {
-              group.remove();
-            } catch (_) {}
+            group.classList.remove("zentral-standard");
+            group.removeAttribute("zentral-group");
           } catch (e) {
-            console.error("[ZentralTabGroups] Error flattening group on destroy:", e);
+            console.error("[ZentralTabGroups] Error cleaning up group on destroy:", e);
           }
         });
 
@@ -4361,8 +4480,8 @@
           this.#state.colorPickerPanel = null;
           this.#state.contextMenuCurrentGroup = null;
         }
-      } catch(e) {
-        console.error("[Zentral] TabGroups destroy error:", e);
+      } catch (err) {
+        console.error("[ZentralTabGroups] Error during destroy:", err);
       }
     }
 
@@ -4586,6 +4705,18 @@
             }
 
             if (!parentEl) {
+              // 1. If group has an explicit workspaceId, find that workspace's normal tabs container
+              const wsId = info.workspaceId;
+              if (wsId && window.gZenWorkspaces) {
+                const wsEl = window.gZenWorkspaces.workspaceElement(wsId);
+                const normalSection = wsEl?.querySelector(".zen-workspace-normal-tabs-section") || wsEl;
+                if (normalSection) {
+                  parentEl = normalSection;
+                }
+              }
+            }
+
+            if (!parentEl) {
               if (info.tabs.length > 0 && info.tabs[0].parentNode) {
                 const candidateParent = info.tabs[0].parentNode;
                 // Guard: if the candidate parent is inside the group itself (e.g. .tab-group-container),
@@ -4640,13 +4771,14 @@
                 } catch (_) {}
               }
 
-              // Cleanup temporary attributes
-              tab.removeAttribute("data-zentral-group-id");
-              tab.removeAttribute("data-zentral-group-label");
-              tab.removeAttribute("data-zentral-group-color");
-              tab.removeAttribute("data-zentral-group-collapsed");
-              tab.removeAttribute("data-zentral-group-ws");
-              tab.removeAttribute("data-zentral-parent-id");
+              // Preserve tracking attributes on tabs for resilience
+              tab.setAttribute("data-zentral-group-id", group.id);
+              if (info.label) tab.setAttribute("data-zentral-group-label", info.label);
+              if (info.color) tab.setAttribute("data-zentral-group-color", info.color);
+              if (info.workspaceId) {
+                tab.setAttribute("data-zentral-group-ws", info.workspaceId);
+                tab.setAttribute("zen-workspace-id", info.workspaceId);
+              }
             });
 
             // Restore colors
@@ -7014,9 +7146,9 @@
         const allBrowserTabs = Array.from(gBrowser?.tabs || document.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab"));
         allBrowserTabs.forEach(tab => {
           // Guard: Never strip attributes or SessionStore from tabs belonging to other workspaces
-          const tabWs = tab.getAttribute("zen-workspace-id") || tab.getAttribute("data-zentral-group-ws");
+          const tabWs = this.getWorkspaceForElement(tab);
           if (currentWs && tabWs && tabWs !== currentWs) return;
-          if (tab.hidden && currentWs && tab.getAttribute("zen-workspace-id") && tab.getAttribute("zen-workspace-id") !== currentWs) return;
+          if (tab.hidden && currentWs && tabWs && tabWs !== currentWs) return;
 
           const isSplit = tab.hasAttribute?.("is-zen-split") || tab.hasAttribute?.("zen-split-view") || tab.closest?.("tab-group[split-view-group], tab-group[zen-split-view], tab-group[is-zen-split]");
           const tabGroup = !isSplit ? (tab.closest("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])") || (tab.group && !tab.group.hasAttribute?.("split-view-group") && !tab.group.hasAttribute?.("zen-split-view") && !tab.group.hasAttribute?.("is-zen-split") ? tab.group : null)) : null;
@@ -7045,18 +7177,8 @@
           }
         } catch (_) {}
 
-        const mergedGroups = {};
-        const mergedTabMapping = {};
-
-        // Retain groups and tab mappings from other workspaces
-        for (const [gId, gMeta] of Object.entries(existingGroups)) {
-          if (gMeta && gMeta.workspaceId && currentWs && gMeta.workspaceId !== currentWs) {
-            mergedGroups[gId] = gMeta;
-            if (existingTabMapping[gId]) {
-              mergedTabMapping[gId] = existingTabMapping[gId];
-            }
-          }
-        }
+        const mergedGroups = { ...existingGroups };
+        const mergedTabMapping = { ...existingTabMapping };
 
         document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])").forEach(group => {
           if (!group.id) return;
@@ -7073,7 +7195,8 @@
 
           const label = group.label || group.getAttribute("label") || "Group";
           const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || "";
-          const wsId = group.getAttribute("zen-workspace-id") || currentWs || "";
+          const wsId = this.getWorkspaceForElement(group);
+          if (wsId) group.setAttribute("zen-workspace-id", wsId);
 
           mergedGroups[group.id] = {
             id: group.id,
@@ -7104,8 +7227,12 @@
             
             tab.setAttribute("data-zentral-group-collapsed", group.hasAttribute("collapsed") ? "true" : "false");
             
-            if (wsId) tab.setAttribute("data-zentral-group-ws", wsId);
-            else tab.removeAttribute("data-zentral-group-ws");
+            if (wsId) {
+              tab.setAttribute("data-zentral-group-ws", wsId);
+              tab.setAttribute("zen-workspace-id", wsId);
+            } else {
+              tab.removeAttribute("data-zentral-group-ws");
+            }
             
             if (parent?.id) tab.setAttribute("data-zentral-parent-id", parent.id);
             else tab.removeAttribute("data-zentral-parent-id");
