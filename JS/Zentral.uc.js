@@ -3,7 +3,7 @@
 // @name           Zentral
 // @description    Unified Apps Grid and Tabs Groups
 // @author         Michele Pierini
-// @version        v0.1.6
+// @version        v1.0.0
 // @include        main
 // ==/UserScript==
 
@@ -1328,13 +1328,13 @@
         /* Mode A: Autohide DISABLED (Pinned / Docked into Frame) */
         :root[zentral-apps-placement="vertical-bar"]:not([zentral-apps-autohide="true"]) #zentral-apps-vertical-bar {
           position: relative !important;
-          width: 44px !important;
-          min-width: 44px !important;
-          max-width: 44px !important;
-          height: calc(100% - var(--zen-element-separation, 8px) * 2) !important;
-          max-height: calc(100% - var(--zen-element-separation, 8px) * 2) !important;
+          width: 36px !important;
+          min-width: 36px !important;
+          max-width: 36px !important;
+          height: calc(100% - var(--zen-element-separation, 6px) * 2) !important;
+          max-height: calc(100% - var(--zen-element-separation, 6px) * 2) !important;
           min-height: 0 !important;
-          flex: 0 0 44px !important;
+          flex: 0 0 36px !important;
           flex-shrink: 0 !important;
           z-index: 10 !important;
           background: transparent !important;
@@ -1348,21 +1348,21 @@
           visibility: visible !important;
           box-sizing: border-box !important;
           overflow: visible !important;
-          padding: 8px 4px !important;
-          margin-top: var(--zen-element-separation, 8px) !important;
-          margin-bottom: var(--zen-element-separation, 8px) !important;
+          padding: 6px 3px !important;
+          margin-top: var(--zen-element-separation, 6px) !important;
+          margin-bottom: var(--zen-element-separation, 6px) !important;
           transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease !important;
         }
 
         /* Outer margin matching Zen's element separation for exact visual symmetry */
         :root[zentral-apps-placement="vertical-bar"]:not([zentral-apps-autohide="true"])[zen-right-side="true"] #zentral-apps-vertical-bar,
         :root[zentral-apps-placement="vertical-bar"]:not([zentral-apps-autohide="true"])[zen-sidebar-right="true"] #zentral-apps-vertical-bar {
-          margin-left: var(--zen-element-separation, 8px) !important;
+          margin-left: var(--zen-element-separation, 6px) !important;
           margin-right: 0 !important;
         }
 
         :root[zentral-apps-placement="vertical-bar"]:not([zentral-apps-autohide="true"]):not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar {
-          margin-right: var(--zen-element-separation, 8px) !important;
+          margin-right: var(--zen-element-separation, 6px) !important;
           margin-left: 0 !important;
         }
 
@@ -1640,13 +1640,13 @@
 
         /* Default / Non-autohide Vertical Bar (Clean standard tile styling) */
         :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile {
-          width: 36px !important;
-          height: 36px !important;
-          min-width: 36px !important;
-          min-height: 36px !important;
-          max-width: 36px !important;
-          max-height: 36px !important;
-          border-radius: var(--zen-border-radius, 8px) !important;
+          width: 30px !important;
+          height: 30px !important;
+          min-width: 30px !important;
+          min-height: 30px !important;
+          max-width: 30px !important;
+          max-height: 30px !important;
+          border-radius: var(--zen-border-radius, 6px) !important;
           background-color: transparent !important;
           border: none !important;
           box-shadow: none !important;
@@ -1659,6 +1659,13 @@
           margin: 0 auto !important;
         }
 
+        :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile img,
+        :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile svg {
+          width: 16px !important;
+          height: 16px !important;
+          object-fit: contain !important;
+        }
+
         :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:hover {
           background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, currentColor 10%, transparent)) !important;
         }
@@ -1668,23 +1675,22 @@
         }
 
         :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn {
-          width: 36px !important;
-          height: 36px !important;
-          min-width: 36px !important;
-          min-height: 36px !important;
-          max-width: 36px !important;
-          max-height: 36px !important;
-          border-radius: var(--zen-border-radius, 8px) !important;
+          width: 30px !important;
+          height: 30px !important;
+          min-width: 30px !important;
+          min-height: 30px !important;
+          max-width: 30px !important;
+          max-height: 30px !important;
+          border-radius: var(--zen-border-radius, 6px) !important;
           background-color: transparent !important;
           border: 1px dashed color-mix(in srgb, currentColor 30%, transparent) !important;
           opacity: 0.7 !important;
           transform: none !important;
           pointer-events: auto !important;
           visibility: visible !important;
-          box-shadow: none !important;
-          flex-shrink: 0 !important;
           color: inherit !important;
           margin: 0 auto !important;
+          flex-shrink: 0 !important;
           transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease !important;
         }
 
@@ -1693,6 +1699,21 @@
           border-style: solid !important;
           background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, currentColor 10%, transparent)) !important;
           box-shadow: none !important;
+        }
+
+        :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-vb-footer-btn {
+          width: 30px !important;
+          height: 30px !important;
+          min-width: 30px !important;
+          min-height: 30px !important;
+          max-width: 30px !important;
+          max-height: 30px !important;
+          margin: 0 auto !important;
+        }
+
+        :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-vb-footer-btn svg {
+          width: 15px !important;
+          height: 15px !important;
         }
 
         #zentral-apps-vertical-bar .zen-apps-autohide-dots {
@@ -7042,6 +7063,29 @@
             e.stopPropagation();
             const grp = this.#state.contextMenuCurrentGroup;
             if (grp) {
+              const labelElement = grp.querySelector('.tab-group-label');
+              const groupName = (grp.label || labelElement?.textContent || "").trim() || "this group";
+
+              let confirmed = false;
+              try {
+                const promptService = Services.prompt || (typeof Cc !== "undefined" && Cc["@mozilla.org/embedcomp/prompt-service;1"]?.getService(Ci.nsIPromptService));
+                if (promptService && typeof promptService.confirm === "function") {
+                  confirmed = promptService.confirm(
+                    window,
+                    "Close Tab Group",
+                    `Are you sure you want to close "${groupName}" and all of its tabs?`
+                  );
+                } else if (typeof window.confirm === "function") {
+                  confirmed = window.confirm(`Are you sure you want to close "${groupName}" and all of its tabs?`);
+                } else {
+                  confirmed = true;
+                }
+              } catch (_) {
+                confirmed = true;
+              }
+
+              if (!confirmed) return;
+
               try {
                 this.removeSavedColor(grp.id);
                 if (typeof gBrowser?.removeTabGroup === "function") {
@@ -10179,7 +10223,7 @@
         <div class="zs-header">
           <div class="zs-title-group">
             <h2 class="zs-title">Zentral Settings</h2>
-            <span class="zs-version-badge">v0.1.6</span>
+            <span class="zs-version-badge">v1.0.0</span>
           </div>
           <button id="zs-close" class="zs-close-btn" title="Close Settings">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l12 12M13 1L1 13"/></svg>
@@ -11101,7 +11145,7 @@
           }
 
           const systemInfo = {
-            zentralVersion: "v0.1.6",
+            zentralVersion: "v1.0.0",
             zenVersion: navigator.userAgent,
             platform: navigator.platform || "Desktop",
             windowSize: `${window.innerWidth}x${window.innerHeight}`,
@@ -11272,7 +11316,7 @@
     TabGroups,
     Settings,
     Init: () => {
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[Zentral] Booting Master Script (v0.1.6)...");
+      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[Zentral] Booting Master Script (v1.0.0)...");
       Apps.init();
       TabGroups.init();
       Settings.init();

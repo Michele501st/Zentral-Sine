@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="theme.json"><img src="https://img.shields.io/badge/Version-v0.1.6-4A72FF.svg?style=flat-square" alt="Version"></a>
+  <a href="theme.json"><img src="https://img.shields.io/badge/Version-v1.0.0-4A72FF.svg?style=flat-square" alt="Version"></a>
   <a href="https://zen-browser.app/"><img src="https://img.shields.io/badge/Zen_Browser-Compatible-9B51E0.svg?style=flat-square" alt="Zen Browser"></a>
   <a href="theme.json"><img src="https://img.shields.io/badge/Sine_Engine-Native_Mod-00C853.svg?style=flat-square" alt="Sine Engine"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-CC_BY--NC--SA_4.0-FF9800.svg?style=flat-square" alt="License"></a>
@@ -21,19 +21,23 @@
 ## 📖 Overview
 
 **Zentral** unifies your favorite communication tools, web applications, and tabs into a cohesive, fluidly animated sidebar experience.
-
+<p align="center">
+  <img src="assets/Zentral.png" alt="Zentral" />
+</p>
 Designed natively for the **Sine Mod Engine**, Zentral features hot-reloading support (`supportsUnload: true`), declarative settings UI, session persistence, automatic high-contrast color calculations, and lightweight Gecko performance with zero external dependencies.
 
 ---
 
 ## ✨ Key Features & Deep Dive
 
-<details open>
+<details>
 <summary><b>🗂️ 1. Tab Groups & Organization</b></summary>
 <br>
 
 Zentral significantly expands Zen Browser's native tab group capabilities with styling, smooth interactions, and rich color customization:
-
+<p align="center">
+  <img src="assets/Groups.png" alt="Groups" />
+</p>
 - **🎨 Multi-Mode Color Picker Panel**:
   - **Quick Swatches**: 25 color presets.
   - **2D Spectrum Canvas**: Interactive Saturation-Value box with a 360° Hue slider.
@@ -59,12 +63,14 @@ Zentral significantly expands Zen Browser's native tab group capabilities with s
 
 <br>
 
-<details open>
+<details>
 <summary><b>📱 2. App Box and App Bar & Multi-Instance Web Panels</b></summary>
 <br>
 
 Keep your essential web apps (Discord, WhatsApp, Reddit, Spotify, Notion, YouTube, etc.) one click away without cluttering your tab strip:
-
+<p align="center">
+  <img src="assets/Apps.png" alt="Apps" />
+</p>
 - **📍 Flexible Placement Modes**:
   - **Sidebar**: Embeds directly into Zen's sidebar with customizable grid in Zetral Settings.
   - **Vertical Edge Bar**: Standalone vertical dock positioned on the opposite screen edge from Zen's sidebar (left or right).
@@ -95,7 +101,9 @@ Keep your essential web apps (Discord, WhatsApp, Reddit, Spotify, Notion, YouTub
 <details>
 <summary><b>⚙️ 3. Sine Preferences & Customization Options</b></summary>
 <br>
-
+<p align="center">
+  <img src="assets/Settings.png" alt="Settings" />
+</p>
 All preferences are declaratively registered via [`preferences.json`](preferences.json) and customizable live inside **Zen Settings -> Mods -> Zentral**:
 
 | Setting Property | UI Label | Type | Default | Description |
