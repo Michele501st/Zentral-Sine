@@ -5199,6 +5199,10 @@
      * Initializes Tab Groups module observers, styles, color palettes, and tooltip containers.
      */
     init() {
+      if (typeof PrivateBrowsingUtils !== "undefined" && PrivateBrowsingUtils.isWindowPrivate(window)) {
+        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralTabGroups] Tab Groups disabled in private window.");
+        return;
+      }
       if (!Core.getPref(Constants.TabGroups.PREF_ENABLED)) {
         if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralTabGroups] Tab Groups feature is disabled.");
         return;
@@ -5699,7 +5703,8 @@
         const isAppPanelOpen = (typeof window.Zentral?.Apps?.isPanelOpen === "function" && window.Zentral.Apps.isPanelOpen()) ||
                                document.documentElement.getAttribute("zentral-app-panel-open") === "true" ||
                                document.getElementById("zen-app-panel-root")?.hasAttribute("open") ||
-                               !!document.activeElement?.closest?.("#zen-app-panel-root, #zen-app-panel-slider, .zen-app-panel-wrapper");
+                               !!document.activeElement?.closest?.("#zen-app-panel-root, #zen-app-panel-slider, .zen-app-panel-wrapper") ||
+                               tab._zentralForceUngroup === true;
         if (isAppPanelOpen) {
           const forceUngroup = () => {
             try {
@@ -5729,6 +5734,8 @@
 
           forceUngroup();
           window.setTimeout(forceUngroup, 0);
+          window.setTimeout(forceUngroup, 50);
+          window.setTimeout(forceUngroup, 150);
           return;
         }
 
@@ -5818,6 +5825,7 @@
         const tab = self.#origAddTab.call(this, aURI, aParams);
 
         if (isAppOpen && tab) {
+          tab._zentralForceUngroup = true;
           const forceUngroup = () => {
             try {
               if (typeof window.gBrowser?.moveTabToEnd === "function") {
@@ -5831,6 +5839,8 @@
           };
           forceUngroup();
           window.setTimeout(forceUngroup, 0);
+          window.setTimeout(forceUngroup, 50);
+          window.setTimeout(forceUngroup, 150);
         }
 
         return tab;
