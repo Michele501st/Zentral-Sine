@@ -781,7 +781,7 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   :root[zen-compact-mode="true"],
   :root[zen-sidebar-collapsed="true"],
   :root[zentral-sidebar-collapsed="true"]
-) #zen-apps-sidebar-grid .zen-app-tile:hover,
+) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-tile:hover,
 :is(
   :root[zen-compact-mode="true"],
   :root[zen-sidebar-collapsed="true"],
@@ -796,18 +796,42 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   :root[zen-compact-mode="true"],
   :root[zen-sidebar-collapsed="true"],
   :root[zentral-sidebar-collapsed="true"]
-) #zen-apps-sidebar-grid .zen-app-tile:hover img,
+) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-tile:hover img,
 :is(
   :root[zen-compact-mode="true"],
   :root[zen-sidebar-collapsed="true"],
   :root[zentral-sidebar-collapsed="true"]
-) #zen-apps-sidebar-grid .zen-app-tile:hover svg,
+) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-tile:hover svg,
 :is(
   :root[zen-compact-mode="true"],
   :root[zen-sidebar-collapsed="true"],
   :root[zentral-sidebar-collapsed="true"]
 ) #zentral-apps-utility-section .zentral-utility-btn:hover svg {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
+}
+
+/* Horizontal Top Toolbar Mode (Collapsed Sidebar): Clean native highlight, NO pop-out */
+#zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile:hover,
+:is(
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile:hover {
+  background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, currentColor 10%, transparent)) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+#zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile:hover img,
+#zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile:hover svg,
+:is(
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile:hover img,
+:is(
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile:hover svg {
+  filter: none !important;
 }
 
 :is(
@@ -833,8 +857,9 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   :root[zen-sidebar-collapsed="true"],
   :root[zentral-sidebar-collapsed="true"]
 ) #zen-apps-sidebar-grid .zen-app-tile[data-active="true"] {
-  background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 32%, var(--zen-colors-base, #131313)) !important;
-  box-shadow: 0 0 0 1px var(--zen-primary-color, #707ac2), 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 18%, var(--toolbarbutton-active-background, rgba(255, 255, 255, 0.12))) !important;
+  border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 25%, transparent) !important;
+  box-shadow: none !important;
 }
 
 :is(
@@ -2396,7 +2421,7 @@ panel[id*="tabgroup-editor"] {
   width: 100% !important;
   height: 0 !important;
   flex: 1 1 0px !important;
-  padding: 0 !important;
+  padding: 4px 0 2px 0 !important;
   max-height: 100% !important;
   min-height: 0 !important;
   gap: 6px !important;
@@ -2426,7 +2451,7 @@ panel[id*="tabgroup-editor"] {
   pointer-events: auto !important;
   visibility: visible !important;
   box-sizing: border-box !important;
-  padding: 0 !important;
+  padding: 4px 0 2px 0 !important;
   margin: 0 !important;
 }
 
@@ -2542,7 +2567,8 @@ panel[id*="tabgroup-editor"] {
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:hover {
   background-color: var(--toolbarbutton-hover-background, color-mix(in srgb, currentColor 14%, transparent)) !important;
   border: none !important;
-  transform: translateY(-1px) scale(1.04) !important;
+  transform: scale(1.04) !important;
+  transform-origin: center center !important;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
@@ -2556,9 +2582,9 @@ panel[id*="tabgroup-editor"] {
 }
 
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-active="true"] {
-  background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 32%, var(--zen-colors-base, #131313)) !important;
-  border: none !important;
-  box-shadow: 0 0 0 1px var(--zen-primary-color, #707ac2), 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 18%, var(--toolbarbutton-active-background, rgba(255, 255, 255, 0.12))) !important;
+  border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 25%, transparent) !important;
+  box-shadow: none !important;
 }
 
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn {
@@ -2619,7 +2645,9 @@ panel[id*="tabgroup-editor"] {
 }
 
 :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-active="true"] {
-  background-color: var(--toolbarbutton-active-background, color-mix(in srgb, currentColor 15%, transparent)) !important;
+  background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 18%, var(--toolbarbutton-active-background, rgba(255, 255, 255, 0.12))) !important;
+  border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 25%, transparent) !important;
+  box-shadow: none !important;
 }
 
 :root:not([zentral-apps-autohide="true"])[zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn {
