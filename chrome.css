@@ -2319,12 +2319,20 @@ panel[id*="tabgroup-editor"] {
   inset: 0 !important;
   z-index: -2 !important;
   border-radius: inherit !important;
-  background-image: var(--zen-theme-gradient-override, radial-gradient(circle at top, color-mix(in srgb, var(--zen-primary-color, transparent) 30%, transparent) 0%, transparent 85%)) !important;
+  background-image: radial-gradient(circle at var(--zentral-vb-gradient-side, center) top, color-mix(in srgb, var(--zen-primary-color, transparent) 30%, transparent) 0%, transparent 85%) !important;
   background-size: 100% 100% !important;
   background-repeat: no-repeat !important;
-  background-position: center top !important;
   pointer-events: none !important;
-  transition: background-image 0.25s ease !important;
+}
+
+/* When Vertical Bar is on Left (Sidebar on Right): gradient from left edge */
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar::before {
+  --zentral-vb-gradient-side: left;
+}
+
+/* When Vertical Bar is on Right (Sidebar on Left): gradient from right edge */
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar::before {
+  --zentral-vb-gradient-side: right;
 }
 
 /* Zen Film Grain Texture Layer */

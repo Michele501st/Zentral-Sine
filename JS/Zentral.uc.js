@@ -2631,7 +2631,16 @@
         btn.className = "zen-app-tile";
         btn.dataset.appId = app.id;
         btn.dataset.active = (this.#state.activeAppId === app.id) ? "true" : "false";
-        btn.title = app.title || "";
+        // Sanitize stored title: if it looks like a stale tab-group label (e.g. "Group Tab 1"),
+        // fall back to the hostname so the tooltip is always meaningful.
+        let displayTitle = app.title || "";
+        if (!displayTitle || /^Group\s+Tab\s+\d+$/i.test(displayTitle.trim())) {
+          try {
+            const host = new URL(app.url).hostname.replace(/^www\./, "");
+            displayTitle = host || displayTitle;
+          } catch (_) {}
+        }
+        btn.title = displayTitle;
 
         const img = document.createElement("img");
         img.src = app.icon || `page-icon:${app.url}`;
@@ -2737,7 +2746,20 @@
         addBtn.addEventListener("click", (e) => {
           const tab = gBrowser.selectedTab; if (!tab) return;
           const url = tab.linkedBrowser?.currentURI?.spec || "about:blank";
-          const title = tab.label || url;
+          // Prefer the actual document title over tab.label, which can be contaminated by
+          // tab group labels, loading states, or truncation. Fall back to hostname → URL.
+          let title = "";
+          try {
+            title = tab.linkedBrowser?.contentDocument?.title || "";
+          } catch (_) {}
+          if (!title) {
+            try {
+              const host = tab.linkedBrowser?.currentURI?.host || "";
+              title = host.replace(/^www\./, "") || tab.label || url;
+            } catch (_) {
+              title = tab.label || url;
+            }
+          }
           const icon = (typeof gBrowser.getIcon === "function" ? gBrowser.getIcon(tab) : null) || tab.getAttribute("image") || tab.image || "";
           if (url !== "about:blank") this.addApp(url, title, icon);
         });
@@ -3482,29 +3504,9 @@
         return;
       }
 
-      // 1. Anchoring gradient position to left or right based on Vertical Bar side
-      const isVbRight = this.isVerticalBarOnRight();
-      vb.style.setProperty("--zen-vb-gradient-pos", isVbRight ? "right top" : "left top");
-
-      // 2. Check if Zen toolbar background exists and capture its computed gradient
-      const zenToolbarBg = document.getElementById("zen-toolbar-background") || document.querySelector(".zen-toolbar-background");
-      if (zenToolbarBg) {
-        const csBefore = window.getComputedStyle(zenToolbarBg, "::before");
-        if (csBefore && csBefore.backgroundImage && csBefore.backgroundImage !== "none") {
-          vb.style.setProperty("--zen-theme-gradient-override", csBefore.backgroundImage);
-          return;
-        }
-        const cs = window.getComputedStyle(zenToolbarBg);
-        if (cs && cs.backgroundImage && cs.backgroundImage !== "none") {
-          vb.style.setProperty("--zen-theme-gradient-override", cs.backgroundImage);
-          return;
-        }
-        const csAfter = window.getComputedStyle(zenToolbarBg, "::after");
-        if (csAfter && csAfter.backgroundImage && csAfter.backgroundImage !== "none") {
-          vb.style.setProperty("--zen-theme-gradient-override", csAfter.backgroundImage);
-          return;
-        }
-      }
+      // In autohide mode, the ::before gradient is 100% CSS-driven via --zen-primary-color
+      // which Zen updates synchronously on workspace switch. Never sample zen-toolbar-background
+      // as it retains the previous Space's gradient until the crossfade completes.
       vb.style.removeProperty("--zen-theme-gradient-override");
     }
 
@@ -4585,7 +4587,14 @@
 
             if (!parentEl) {
               if (info.tabs.length > 0 && info.tabs[0].parentNode) {
-                parentEl = info.tabs[0].parentNode;
+                const candidateParent = info.tabs[0].parentNode;
+                // Guard: if the candidate parent is inside the group itself (e.g. .tab-group-container),
+                // using it as parentEl would cause HierarchyRequestError on insertBefore.
+                if (candidateParent && candidateParent !== group && !group.contains(candidateParent)) {
+                  parentEl = candidateParent;
+                } else {
+                  parentEl = rootTabContainer;
+                }
               } else {
                 parentEl = rootTabContainer;
               }
