@@ -731,6 +731,8 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   100% {
     transform: translateX(-50%);
   }
+}
+
 /* ===========================================================================
    Zentral - Tab Group Thumbnail Popup Styles
    =========================================================================== */
