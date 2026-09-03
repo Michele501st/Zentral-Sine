@@ -903,7 +903,8 @@
     const tile = t.closest(".zen-app-tile");
     if (tile) {
       const appId = tile.getAttribute("data-app-id");
-      ZentralLogger.log("UI:Apps", `Clicked App Tile [id="${appId}"]`);
+      const idLabel = appId ? `[id="${appId}"]` : `[action="${tile.id || tile.className}"]`;
+      ZentralLogger.log("UI:Apps", `Clicked App Tile ${idLabel}`);
       return;
     }
 

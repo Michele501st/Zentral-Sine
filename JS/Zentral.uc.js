@@ -446,6 +446,18 @@
         }
         document.removeEventListener("mousemove", this.onDrag);
         document.removeEventListener("mouseup", this.onStopDrag);
+        if (this._autohideMouseMoveHandler) {
+          window.removeEventListener("mousemove", this._autohideMouseMoveHandler);
+          this._autohideMouseMoveHandler = null;
+        }
+        if (this._refreshGridRectListener) {
+          window.removeEventListener("resize", this._refreshGridRectListener);
+          this._refreshGridRectListener = null;
+        }
+        if (this._autohideBlurListener) {
+          window.removeEventListener("blur", this._autohideBlurListener);
+          this._autohideBlurListener = null;
+        }
 
         // 4. Remove injected DOM elements
         const idsToRemove = [
@@ -472,13 +484,14 @@
           this.#state.appBrowsers.forEach(b => { if (b && b.remove) b.remove(); });
           this.#state.appBrowsers.clear();
         }
-        // CRIT-01: Remove event-driven badge sync handlers (replaced polling interval)
+        // CRIT-01: Remove event-driven badge sync handlers
         if (this._badgeSyncHandler) {
           window.removeEventListener("TabSelect", this._badgeSyncHandler);
           window.removeEventListener("TabAttrModified", this._badgeSyncHandler);
           this._badgeSyncHandler = null;
         }
         this._badgeSyncInitialized = false;
+        this.stopBadgeSyncLoop();
         // HIGH-04: Cancel any pending debounced theme sync timer
         if (this._syncThemeTimer) {
           clearTimeout(this._syncThemeTimer);
@@ -640,7 +653,14 @@
         const str = Core.getPref(Constants.Apps.PREF_APPS);
         const parsed = JSON.parse(str);
         if (Array.isArray(parsed)) {
-          this.#state.apps = parsed.filter(a => a && typeof a.id === "string" && typeof a.url === "string");
+          this.#state.apps = parsed
+            .filter(a => a && typeof a.id === "string" && typeof a.url === "string")
+            .map(a => {
+              if (!a.workspaceId || a.workspaceId === "current") {
+                a.workspaceId = "all";
+              }
+              return a;
+            });
         }
       } catch (e) {
         console.warn("[ZentralApps] Failed to load apps pref:", e);
@@ -722,6 +742,9 @@
         }
         // Stagger preloads by 1.5 seconds to minimize main thread blocking
         await new Promise(r => setTimeout(r, 1500));
+      }
+      if (this.#state.appBrowsers && this.#state.appBrowsers.size > 0) {
+        this.ensureBadgeSyncLoop();
       }
     }
 
@@ -2126,7 +2149,8 @@
           }
         };
 
-        window.addEventListener("resize", refreshGridRect, { passive: true });
+        this._refreshGridRectListener = refreshGridRect;
+        window.addEventListener("resize", this._refreshGridRectListener, { passive: true });
         if (typeof ResizeObserver !== "undefined" && this.#dom.grid) {
           try {
             new ResizeObserver(refreshGridRect).observe(this.#dom.grid);
@@ -2154,15 +2178,51 @@
           }
         });
 
-        // CRIT-03: Throttled to max once per 16ms (one animation frame) to avoid
-        // firing the hit-test on every pixel of mouse movement at 60fps.
+        // Unified Autohide Mousemove Listener: Throttled to max once per 16ms (one animation frame)
+        // to avoid firing hit-tests and pref queries on every single mouse pixel movement at 60fps+.
         let _gridMoveThrottleLast = 0;
-        window.addEventListener("mousemove", (e) => {
+        this._autohideMouseMoveHandler = (e) => {
           const now = performance.now();
           if (now - _gridMoveThrottleLast < 16) return;
           _gridMoveThrottleLast = now;
 
-          if (this.isPlacementVerticalBar()) return;
+          if (this.isPlacementVerticalBar()) {
+            if (Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) !== true) return;
+            if (this.#state.activeAppId) return; // Keep revealed while panel is open
+
+            const isRight = this.isVerticalBarOnRight();
+            const triggerDist = 1; // Screen edge proximity (within 1px of bezel)
+            const cancelDist = 14;  // Cancel reveal only if cursor departs beyond 14px from edge
+            const barWidth = 48 + 8 + 20; // 8px outer margin + 48px bar + 20px inner buffer = 76px
+
+            const isNearEdge = isRight ? (e.clientX >= window.innerWidth - triggerDist) : (e.clientX <= triggerDist);
+            const isDeparting = isRight ? (e.clientX < window.innerWidth - cancelDist) : (e.clientX > cancelDist);
+            const isInsideBar = isRight ? (e.clientX >= window.innerWidth - barWidth) : (e.clientX <= barWidth);
+
+            const isCurrentlyRevealed = this.#dom.verticalBar?.hasAttribute("data-revealed");
+
+            if (!isCurrentlyRevealed) {
+              // When hidden: schedule reveal when touching the edge
+              if (isNearEdge) {
+                this.scheduleAutohideReveal(320);
+              } else if (isDeparting) {
+                this.cancelAutohideReveal();
+              }
+            } else {
+              // When already revealed: keep open while cursor is inside the bar or near edge
+              if (isInsideBar || isNearEdge) {
+                if (this.#state.autohideCollapseTimer) {
+                  clearTimeout(this.#state.autohideCollapseTimer);
+                  this.#state.autohideCollapseTimer = null;
+                }
+              } else {
+                this.scheduleAutohideCollapse(250);
+              }
+            }
+            return;
+          }
+
+          // Sidebar Grid Autohide:
           const grid = this.#dom.grid;
           if (!grid) return;
           if (grid.classList.contains("zen-apps-horizontal")) return;
@@ -2208,13 +2268,15 @@
               this.scheduleUtilityCollapse(260);
             }
           }
-        }, { passive: true });
+        };
+        window.addEventListener("mousemove", this._autohideMouseMoveHandler, { passive: true });
 
-        window.addEventListener("blur", () => {
+        this._autohideBlurListener = () => {
           if (this.isPlacementVerticalBar() || this.#state.activeAppId) return;
           this.setAutohideHovered(false);
           this.setUtilityHovered(false);
-        });
+        };
+        window.addEventListener("blur", this._autohideBlurListener);
 
         scrollBox.addEventListener("wheel", (e) => {
           if (!this.#dom.grid.classList.contains("zen-apps-horizontal")) return;
@@ -2374,40 +2436,7 @@
         });
         this.#dom.verticalBarTrigger = trigger;
 
-        window.addEventListener("mousemove", (e) => {
-          if (!this.isPlacementVerticalBar() || Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) !== true) return;
-          if (this.#state.activeAppId) return; // Keep revealed while panel is open
 
-          const isRight = this.isVerticalBarOnRight();
-          const triggerDist = 1; // Screen edge proximity (within 1px of bezel)
-          const cancelDist = 14;  // Cancel reveal only if cursor departs beyond 14px from edge
-          const barWidth = 48 + 8 + 20; // 8px outer margin + 48px bar + 20px inner buffer = 76px
-
-          const isNearEdge = isRight ? (e.clientX >= window.innerWidth - triggerDist) : (e.clientX <= triggerDist);
-          const isDeparting = isRight ? (e.clientX < window.innerWidth - cancelDist) : (e.clientX > cancelDist);
-          const isInsideBar = isRight ? (e.clientX >= window.innerWidth - barWidth) : (e.clientX <= barWidth);
-
-          const isCurrentlyRevealed = this.#dom.verticalBar?.hasAttribute("data-revealed");
-
-          if (!isCurrentlyRevealed) {
-            // When hidden: schedule reveal when touching the edge
-            if (isNearEdge) {
-              this.scheduleAutohideReveal(320);
-            } else if (isDeparting) {
-              this.cancelAutohideReveal();
-            }
-          } else {
-            // When already revealed: keep open while cursor is inside the bar or near edge
-            if (isInsideBar || isNearEdge) {
-              if (this.#state.autohideCollapseTimer) {
-                clearTimeout(this.#state.autohideCollapseTimer);
-                this.#state.autohideCollapseTimer = null;
-              }
-            } else {
-              this.scheduleAutohideCollapse(250);
-            }
-          }
-        }, { passive: true });
       }
 
       if (!this.#dom.root) {
@@ -2494,6 +2523,9 @@
         this._badgeSyncHandler = () => this.syncAllAppBadges();
         window.addEventListener("TabSelect", this._badgeSyncHandler, { passive: true });
         window.addEventListener("TabAttrModified", this._badgeSyncHandler, { passive: true });
+      }
+      if (this.#state.appBrowsers && this.#state.appBrowsers.size > 0) {
+        this.ensureBadgeSyncLoop();
       }
     }
 
@@ -3036,7 +3068,7 @@
       const id = "app_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
       const crispIcon = url.startsWith("http") ? `page-icon:${url}` : (icon || `page-icon:${url}`);
       const cleanTitle = this.formatAppDisplayName(title, url);
-      const newApp = { id, url, title: cleanTitle, icon: crispIcon };
+      const newApp = { id, url, title: cleanTitle, icon: crispIcon, workspaceId: "all" };
       this.#state.apps.push(newApp);
       this.saveApps();
       this.renderGrid();
@@ -3053,6 +3085,9 @@
       const b = this.#state.appBrowsers.get(id);
       if (b && b.isConnected) b.parentNode.removeChild(b);
       this.#state.appBrowsers.delete(id);
+      if (!this.#state.appBrowsers || this.#state.appBrowsers.size === 0) {
+        this.stopBadgeSyncLoop();
+      }
       
       this.renderGrid();
     }
@@ -3271,6 +3306,9 @@
         browser.remove();
         this.#state.appBrowsers.delete(appId);
       }
+      if (!this.#state.appBrowsers || this.#state.appBrowsers.size === 0) {
+        this.stopBadgeSyncLoop();
+      }
       const tile = this.#dom.grid?.querySelector(`.zen-app-tile[data-app-id="${appId}"]`);
       tile?.querySelector(".zen-app-badge")?.remove();
       const app = this.#state.apps.find(a => a.id === appId);
@@ -3385,6 +3423,32 @@
       }
     }
 
+    /**
+     * Starts a lightweight polling timer for active background app browsers.
+     * Only runs when at least one app browser is loaded (size > 0),
+     * ensuring zero idle CPU usage when no apps are open.
+     */
+    ensureBadgeSyncLoop() {
+      if (this._badgeSyncLoopTimer) return;
+      this._badgeSyncLoopTimer = setInterval(() => {
+        if (!this.#state.appBrowsers || this.#state.appBrowsers.size === 0) {
+          this.stopBadgeSyncLoop();
+          return;
+        }
+        this.syncAllAppBadges();
+      }, 1500);
+    }
+
+    /**
+     * Stops the background app badge polling timer.
+     */
+    stopBadgeSyncLoop() {
+      if (this._badgeSyncLoopTimer) {
+        clearInterval(this._badgeSyncLoopTimer);
+        this._badgeSyncLoopTimer = null;
+      }
+    }
+
     getOrCreateAppBrowser(app) {
       let b = this.#state.appBrowsers.get(app.id);
       if (b && b.isConnected) return { browser: b, isNew: false };
@@ -3400,11 +3464,11 @@
       const checkAndUpdateBadge = () => {
         let title = "";
         try {
-          title = browser.browsingContext?.currentWindowGlobal?.documentTitle ||
-                  browser.contentTitle ||
-                  browser.getAttribute("label") || "";
+          title = b.browsingContext?.currentWindowGlobal?.documentTitle ||
+                  b.contentTitle ||
+                  b.getAttribute("label") || "";
         } catch (_) {
-          title = browser.contentTitle || browser.getAttribute("label") || "";
+          title = b.contentTitle || b.getAttribute("label") || "";
         }
         const { hasNotification, notifCount } = this.extractBadgeFromTitle(title);
         if (app.hasNotification !== hasNotification || app.notificationCount !== notifCount) {
@@ -3421,6 +3485,7 @@
 
       this.#dom.panel.appendChild(b);
       this.#state.appBrowsers.set(app.id, b);
+      this.ensureBadgeSyncLoop();
       return { browser: b, isNew: true };
     }
 
@@ -8143,6 +8208,14 @@
           if (this.modal.parentNode) this.modal.remove();
           this.modal = null;
         }
+        if (this._matrixMouseUpHandler) {
+          window.removeEventListener("mouseup", this._matrixMouseUpHandler);
+          this._matrixMouseUpHandler = null;
+        }
+        if (this._escapeKeyHandler) {
+          window.removeEventListener("keydown", this._escapeKeyHandler);
+          this._escapeKeyHandler = null;
+        }
         const modalEl = document.getElementById("zentral-settings-modal");
         if (modalEl) modalEl.remove();
         const stylesEl = document.getElementById("zentral-settings-styles");
@@ -8216,6 +8289,15 @@
       this.populate();
       this.updatePosition();
 
+      if (!this._escapeKeyHandler) {
+        this._escapeKeyHandler = (e) => {
+          if (e.key === "Escape" && this.modal && this.modal.getAttribute("data-open") === "true") {
+            this.close();
+          }
+        };
+        window.addEventListener("keydown", this._escapeKeyHandler);
+      }
+
       if (!this._resizeHandler) {
         this._resizeHandler = () => this.updatePosition();
         window.addEventListener("resize", this._resizeHandler, { passive: true });
@@ -8229,6 +8311,10 @@
       if (this.modal) {
         this.modal.setAttribute("data-open", "false");
         this.modal.style.setProperty("display", "none", "important");
+      }
+      if (this._escapeKeyHandler) {
+        window.removeEventListener("keydown", this._escapeKeyHandler);
+        this._escapeKeyHandler = null;
       }
       if (this._resizeHandler) {
         window.removeEventListener("resize", this._resizeHandler);
@@ -9967,28 +10053,22 @@
       const label = btn.querySelector(".zs-shortcut-label") || btn;
       let isRecording = false;
 
+      const stopRecording = () => {
+        if (!isRecording) return;
+        isRecording = false;
+        window.removeEventListener("keydown", onKeyDown, true);
+        btn.removeAttribute("data-recording");
+      };
+
       const syncUI = (val) => {
+        stopRecording();
         const displayVal = (!val || val === "None") ? "None" : val;
         input.value = displayVal;
         label.textContent = displayVal;
         btn.setAttribute("data-value", displayVal);
-        btn.removeAttribute("data-recording");
-        isRecording = false;
       };
 
       btn.syncValue = syncUI;
-
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (isRecording) {
-          syncUI(input.value);
-          return;
-        }
-        isRecording = true;
-        btn.setAttribute("data-recording", "true");
-        label.textContent = "Press keys...";
-      });
 
       const onKeyDown = (e) => {
         if (!isRecording) return;
@@ -10028,7 +10108,18 @@
         if (typeof onChangeCallback === "function") onChangeCallback(combo);
       };
 
-      window.addEventListener("keydown", onKeyDown, true);
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isRecording) {
+          syncUI(input.value);
+          return;
+        }
+        isRecording = true;
+        btn.setAttribute("data-recording", "true");
+        label.textContent = "Press keys...";
+        window.addEventListener("keydown", onKeyDown, true);
+      });
 
       this.modal.addEventListener("mousedown", (e) => {
         if (isRecording && !e.target.closest("#" + buttonId)) {
@@ -10655,9 +10746,10 @@
         });
       }
 
-      window.addEventListener("mouseup", () => {
+      this._matrixMouseUpHandler = () => {
         if (isDraggingMatrix) isDraggingMatrix = false;
-      });
+      };
+      window.addEventListener("mouseup", this._matrixMouseUpHandler);
 
       // Animation Type and Speed Sync + Preview Demo
       const animSpeedSlider = this.modal.querySelector("#zs-anim-speed-slider");
@@ -11073,11 +11165,7 @@
         if (e.target === this.modal) this.close();
       });
 
-      window.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && this.modal && this.modal.getAttribute("data-open") === "true") {
-          this.close();
-        }
-      });
+
 
       this.modal.querySelector("#zs-ag-reset").addEventListener("click", () => {
         const get = (id) => this.modal.querySelector("#" + id);
