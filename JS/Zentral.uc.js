@@ -1273,6 +1273,9 @@
         .zen-app-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; display: block; }
         .zen-app-btn[data-pinned="true"] { background-color: color-mix(in srgb, currentColor 20%, transparent); }
         .zen-app-btn[data-pinned="true"] svg { fill: currentColor; stroke: currentColor; stroke-width: 0.5; }
+        .zen-app-refresh-btn svg { transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1); }
+        .zen-app-refresh-btn:active svg { transform: scale(0.9); }
+        .zen-app-refresh-btn.zen-app-refresh-spinning svg { transform: rotate(360deg); }
         .zen-app-close-btn { color: #ff4d4d !important; }
         .zen-app-close-btn:hover { background-color: rgba(255, 77, 77, 0.22) !important; color: #ff6666 !important; }
         .zen-app-close-btn svg { stroke: #ff4d4d !important; stroke-width: 2 !important; }
@@ -2284,11 +2287,22 @@
         grabberBtn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 14"><circle cx="3" cy="2.5" r="1.2"/><circle cx="7" cy="2.5" r="1.2"/><circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="3" cy="11.5" r="1.2"/><circle cx="7" cy="11.5" r="1.2"/></svg>`));
         grabberBtn.addEventListener("mousedown", this.startResize);
 
+        const refreshBtn = document.createElement("button"); refreshBtn.className = "zen-app-btn zen-app-refresh-btn"; refreshBtn.title = "Refresh app";
+        refreshBtn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M13.8 6.5A5.5 5.5 0 1 0 8 13.5a5.5 5.5 0 0 0 5.2-3.7M14 2v4.5H9.5"/></svg>`));
+        refreshBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          refreshBtn.classList.remove("zen-app-refresh-spinning");
+          void refreshBtn.offsetWidth;
+          refreshBtn.classList.add("zen-app-refresh-spinning");
+          setTimeout(() => refreshBtn.classList.remove("zen-app-refresh-spinning"), 450);
+          this.refreshActiveApp();
+        });
+
         const closeBtn = document.createElement("button"); closeBtn.className = "zen-app-btn zen-app-close-btn"; closeBtn.title = "Close panel";
         closeBtn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>`));
         closeBtn.addEventListener("click", (e) => { e.stopPropagation(); this.closePanel(); });
 
-        pill.append(pinBtn, expandBtn, grabberBtn, closeBtn);
+        pill.append(pinBtn, expandBtn, grabberBtn, refreshBtn, closeBtn);
 
         const strip = document.createElement("div"); strip.className = "zen-app-resize-strip";
         strip.addEventListener("mousedown", this.startResize);
@@ -2302,6 +2316,7 @@
         this.#dom.pill = pill; 
         this.#dom.pinBtn = pinBtn;
         this.#dom.expandBtn = expandBtn;
+        this.#dom.refreshBtn = refreshBtn;
       }
     }
 
@@ -3799,6 +3814,60 @@
       }
     }
 
+    /**
+     * Refreshes the currently active floating app panel's browser.
+     */
+    refreshActiveApp() {
+      if (this.#state.activeAppId) {
+        this.refreshApp(this.#state.activeAppId);
+      }
+    }
+
+    /**
+     * Refreshes the specified app's browser instance.
+     * If the app is open or loaded in background, reloads it.
+     * If not loaded yet, creates and loads the browser in the background without changing panel visibility.
+     * @param {string} appId - The ID of the target app.
+     */
+    refreshApp(appId) {
+      if (!appId) return;
+      const app = this.#state.apps.find(a => a.id === appId);
+      if (!app) return;
+
+      const browser = this.#state.appBrowsers.get(appId);
+      if (browser && browser.isConnected) {
+        try {
+          if (typeof browser.reload === "function") {
+            browser.reload();
+          } else if (browser.webNavigation?.reload) {
+            browser.webNavigation.reload(0);
+          } else {
+            const uri = Services.io.newURI(app.url);
+            browser.loadURI(uri, { triggeringPrincipal: Services.scriptSecurityManager.createContentPrincipal(uri, {}) });
+          }
+          if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] Refreshed loaded app browser:", appId);
+        } catch (err) {
+          console.error("[ZentralApps] Failed to refresh browser:", err);
+        }
+      } else {
+        // App browser not yet instantiated: load silently in background
+        const { browser: newBrowser } = this.getOrCreateAppBrowser(app);
+        if (newBrowser) {
+          try {
+            const uri = Services.io.newURI(app.url);
+            if (typeof newBrowser.fixupAndLoadURIString === "function") {
+              newBrowser.fixupAndLoadURIString(app.url, { triggeringPrincipal: Services.scriptSecurityManager.createContentPrincipal(uri, {}) });
+            } else {
+              newBrowser.loadURI(uri, { triggeringPrincipal: Services.scriptSecurityManager.createContentPrincipal(uri, {}) });
+            }
+            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] Background preloaded/refreshed app browser:", appId);
+          } catch (err) {
+            console.error("[ZentralApps] Failed to load app in background:", err);
+          }
+        }
+      }
+    }
+
     /* --------------------------------------------------------------------------
      * 3.6 Drag & Drop / Grid Reordering
      * --------------------------------------------------------------------------
@@ -3862,28 +3931,32 @@
       let popup = null;
       if (window.MozXULElement?.parseXULToFragment) {
         const frag = window.MozXULElement.parseXULToFragment(`<menupopup id="zen-apps-sidebar-tile-context">
-          <menuitem id="zen-apps-sidebar-remove-item" label="Remove from Apps Section"/>
-          <menuitem id="zen-apps-sidebar-preload-item" type="checkbox" label="Preload at Startup"/>
+          <menuitem id="zen-apps-sidebar-refresh-item" class="menuitem-iconic" label="Refresh App"/>
+          <menuseparator id="zen-apps-sidebar-refresh-sep"/>
+          <menuitem id="zen-apps-sidebar-remove-item" class="menuitem-iconic" label="Remove from Apps Section"/>
+          <menuitem id="zen-apps-sidebar-preload-item" class="menuitem-iconic" type="checkbox" label="Preload at Startup"/>
           <menuseparator id="zen-apps-sidebar-space-sep"/>
-          <menuitem id="zen-apps-sidebar-space-current-item" type="checkbox" label="Current Space"/>
-          <menuitem id="zen-apps-sidebar-space-all-item" type="checkbox" label="All Spaces"/>
+          <menuitem id="zen-apps-sidebar-space-current-item" class="menuitem-iconic" type="checkbox" label="Current Space"/>
+          <menuitem id="zen-apps-sidebar-space-all-item" class="menuitem-iconic" type="checkbox" label="All Spaces"/>
           <menuseparator id="zen-apps-sidebar-settings-sep"/>
-          <menuitem id="zen-apps-sidebar-autohide-item" type="checkbox" label="Autohide Apps Grid"/>
-          <menuitem id="zen-apps-sidebar-settings-item" label="Zentral Settings"/>
+          <menuitem id="zen-apps-sidebar-autohide-item" class="menuitem-iconic" type="checkbox" label="Autohide Apps Grid"/>
+          <menuitem id="zen-apps-sidebar-settings-item" class="menuitem-iconic" label="Zentral Settings"/>
         </menupopup>`);
         (document.getElementById("mainPopupSet") || document.body).appendChild(frag);
         popup = document.getElementById("zen-apps-sidebar-tile-context");
       } else {
         popup = document.createXULElement("menupopup"); popup.id = "zen-apps-sidebar-tile-context";
-        const removeMenuItem = document.createXULElement("menuitem"); removeMenuItem.id = "zen-apps-sidebar-remove-item"; removeMenuItem.setAttribute("label", "Remove from Apps Section");
-        const preloadItem = document.createXULElement("menuitem"); preloadItem.id = "zen-apps-sidebar-preload-item"; preloadItem.setAttribute("label", "Preload at Startup"); preloadItem.setAttribute("type", "checkbox");
+        const refreshItem = document.createXULElement("menuitem"); refreshItem.id = "zen-apps-sidebar-refresh-item"; refreshItem.setAttribute("class", "menuitem-iconic"); refreshItem.setAttribute("label", "Refresh App");
+        const refreshSep = document.createXULElement("menuseparator"); refreshSep.id = "zen-apps-sidebar-refresh-sep";
+        const removeMenuItem = document.createXULElement("menuitem"); removeMenuItem.id = "zen-apps-sidebar-remove-item"; removeMenuItem.setAttribute("class", "menuitem-iconic"); removeMenuItem.setAttribute("label", "Remove from Apps Section");
+        const preloadItem = document.createXULElement("menuitem"); preloadItem.id = "zen-apps-sidebar-preload-item"; preloadItem.setAttribute("class", "menuitem-iconic"); preloadItem.setAttribute("label", "Preload at Startup"); preloadItem.setAttribute("type", "checkbox");
         const spaceSep = document.createXULElement("menuseparator"); spaceSep.id = "zen-apps-sidebar-space-sep";
-        const currentSpaceItem = document.createXULElement("menuitem"); currentSpaceItem.id = "zen-apps-sidebar-space-current-item"; currentSpaceItem.setAttribute("label", "Current Space"); currentSpaceItem.setAttribute("type", "checkbox");
-        const allSpacesItem = document.createXULElement("menuitem"); allSpacesItem.id = "zen-apps-sidebar-space-all-item"; allSpacesItem.setAttribute("label", "All Spaces"); allSpacesItem.setAttribute("type", "checkbox");
+        const currentSpaceItem = document.createXULElement("menuitem"); currentSpaceItem.id = "zen-apps-sidebar-space-current-item"; currentSpaceItem.setAttribute("class", "menuitem-iconic"); currentSpaceItem.setAttribute("label", "Current Space"); currentSpaceItem.setAttribute("type", "checkbox");
+        const allSpacesItem = document.createXULElement("menuitem"); allSpacesItem.id = "zen-apps-sidebar-space-all-item"; allSpacesItem.setAttribute("class", "menuitem-iconic"); allSpacesItem.setAttribute("label", "All Spaces"); allSpacesItem.setAttribute("type", "checkbox");
         const settingsSep = document.createXULElement("menuseparator"); settingsSep.id = "zen-apps-sidebar-settings-sep";
-        const autohideItem = document.createXULElement("menuitem"); autohideItem.id = "zen-apps-sidebar-autohide-item"; autohideItem.setAttribute("label", "Autohide Apps Grid"); autohideItem.setAttribute("type", "checkbox");
-        const settingsItem = document.createXULElement("menuitem"); settingsItem.id = "zen-apps-sidebar-settings-item"; settingsItem.setAttribute("label", "Zentral Settings");
-        popup.appendChild(removeMenuItem); popup.appendChild(preloadItem); popup.appendChild(spaceSep); popup.appendChild(currentSpaceItem); popup.appendChild(allSpacesItem); popup.appendChild(settingsSep); popup.appendChild(autohideItem); popup.appendChild(settingsItem);
+        const autohideItem = document.createXULElement("menuitem"); autohideItem.id = "zen-apps-sidebar-autohide-item"; autohideItem.setAttribute("class", "menuitem-iconic"); autohideItem.setAttribute("label", "Autohide Apps Grid"); autohideItem.setAttribute("type", "checkbox");
+        const settingsItem = document.createXULElement("menuitem"); settingsItem.id = "zen-apps-sidebar-settings-item"; settingsItem.setAttribute("class", "menuitem-iconic"); settingsItem.setAttribute("label", "Zentral Settings");
+        popup.appendChild(refreshItem); popup.appendChild(refreshSep); popup.appendChild(removeMenuItem); popup.appendChild(preloadItem); popup.appendChild(spaceSep); popup.appendChild(currentSpaceItem); popup.appendChild(allSpacesItem); popup.appendChild(settingsSep); popup.appendChild(autohideItem); popup.appendChild(settingsItem);
         (document.getElementById("mainPopupSet") || document.body).appendChild(popup);
       }
       
@@ -3891,6 +3964,8 @@
 
       popup.addEventListener("popupshowing", () => {
         const hasApp = !!popup.dataset.activeAppId;
+        const refreshBtn = popup.querySelector("#zen-apps-sidebar-refresh-item");
+        const refreshSep = popup.querySelector("#zen-apps-sidebar-refresh-sep");
         const removeBtn = popup.querySelector("#zen-apps-sidebar-remove-item");
         const preloadBtn = popup.querySelector("#zen-apps-sidebar-preload-item");
         const currentSpaceBtn = popup.querySelector("#zen-apps-sidebar-space-current-item");
@@ -3898,6 +3973,8 @@
         const spaceSep = popup.querySelector("#zen-apps-sidebar-space-sep");
         const settingsSep = popup.querySelector("#zen-apps-sidebar-settings-sep");
         
+        if (refreshBtn) refreshBtn.hidden = !hasApp;
+        if (refreshSep) refreshSep.hidden = !hasApp;
         if (removeBtn) removeBtn.hidden = !hasApp;
         if (preloadBtn) preloadBtn.hidden = !hasApp;
         if (currentSpaceBtn) currentSpaceBtn.hidden = !hasApp;
@@ -3930,6 +4007,10 @@
             }
           }
         }
+      });
+
+      popup.querySelector("#zen-apps-sidebar-refresh-item")?.addEventListener("command", () => {
+        if (popup.dataset.activeAppId) this.refreshApp(popup.dataset.activeAppId);
       });
 
       popup.querySelector("#zen-apps-sidebar-remove-item")?.addEventListener("command", () => {
