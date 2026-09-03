@@ -35,6 +35,12 @@
     ]
   },
   {
+    "property": "zen.workspace.apps.insta_peek.shortcut",
+    "label": "Insta-Peek Shortcut",
+    "type": "string",
+    "defaultValue": "Alt+P"
+  },
+  {
     "property": "zen.workspace.apps.sidebar.animation_type",
     "label": "Panel Animation Easing Curve",
     "type": "dropdown",

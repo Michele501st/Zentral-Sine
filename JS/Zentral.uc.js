@@ -78,6 +78,7 @@
       PREF_APPS_PER_ROW: "zen.workspace.apps.sidebar.apps_per_row",
       PREF_MAX_ROWS: "zen.workspace.apps.sidebar.max_rows",
       PREF_AUTOHIDE: "zen.workspace.apps.sidebar.autohide",
+      PREF_INSTA_PEEK_SHORTCUT: "zen.workspace.apps.insta_peek.shortcut",
       PREF_PLACEMENT: "zen.workspace.apps.sidebar.placement",
       PREF_UTILITY_ORDER: "zen.workspace.apps.sidebar.utility_order",
       MIN_WIDTH_PX: 280,
@@ -149,6 +150,7 @@
         [Constants.Apps.PREF_APPS_PER_ROW]: Constants.Apps.DEFAULT_APPS_PER_ROW,
         [Constants.Apps.PREF_MAX_ROWS]: Constants.Apps.DEFAULT_MAX_ROWS,
         [Constants.Apps.PREF_AUTOHIDE]: false,
+        [Constants.Apps.PREF_INSTA_PEEK_SHORTCUT]: "Alt+P",
         [Constants.Apps.PREF_PLACEMENT]: "sidebar",
         [Constants.Apps.PREF_UTILITY_ORDER]: '["autohide",null,null,"settings"]',
         [Constants.TabGroups.PREF_COLORS]: "{}",
@@ -328,6 +330,9 @@
 
         // 3. Remove window / document event listeners
         window.removeEventListener("mousedown", this.handleOutsideClick);
+        window.removeEventListener("keydown", this.handleInstaPeekKeyDown, true);
+        window.removeEventListener("keyup", this.handleInstaPeekKeyUp, true);
+        window.removeEventListener("blur", this.handleInstaPeekBlur);
         if (this.#tabSelectListener) {
           window.removeEventListener("TabSelect", this.#tabSelectListener);
           this.#tabSelectListener = null;
@@ -428,7 +433,8 @@
       utilityCollapseTimer: null,
       autohideCollapseTimer: null,
       autohideRevealTimer: null,
-      badgeSyncTimer: null
+      badgeSyncTimer: null,
+      isInstaPeeking: false
     };
 
     /**
@@ -468,6 +474,9 @@
       // Binding methods to maintain 'this' context across event callbacks
       this.handleTabContextMenuCommand = this.handleTabContextMenuCommand.bind(this);
       this.handleOutsideClick = this.handleOutsideClick.bind(this);
+      this.handleInstaPeekKeyDown = this.handleInstaPeekKeyDown.bind(this);
+      this.handleInstaPeekKeyUp = this.handleInstaPeekKeyUp.bind(this);
+      this.handleInstaPeekBlur = this.handleInstaPeekBlur.bind(this);
       this.toggleExpand = this.toggleExpand.bind(this);
       this.startResize = this.startResize.bind(this);
       this.onDrag = this.onDrag.bind(this);
@@ -1252,6 +1261,7 @@
 
         #zen-app-panel-root { position: fixed; display: none; pointer-events: none; overflow: visible; z-index: 2147483600 !important; }
         #zen-app-panel-root[open] { display: block; }
+        #zen-app-panel-root[data-insta-peek="true"] { opacity: 0 !important; pointer-events: none !important; visibility: hidden !important; transition: none !important; }
         #zen-app-panel-root:not([open]) #zen-app-panel-slider, #zen-app-panel-root[closing] #zen-app-panel-slider { box-shadow: none !important; }
         #zen-app-panel-clip { position: absolute; inset: 0; overflow: hidden; border-radius: var(--zen-border-radius, 8px); pointer-events: none; }
         #zen-app-panel-slider { position: absolute; inset: 0; display: flex; flex-direction: column; border-radius: inherit; overflow: hidden; background: var(--tabpanels-background-color, #1e1e24); border: 1px solid color-mix(in srgb, var(--zen-primary-color, currentColor) 25%, rgba(255, 255, 255, 0.14)); box-sizing: border-box; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), 0 2px 10px rgba(0, 0, 0, 0.30); pointer-events: auto; will-change: transform; }
@@ -3103,6 +3113,8 @@
         this.#dom.root.style.pointerEvents = "none";
       }
 
+      this.endInstaPeek();
+
       if (this.#state.isExpanded) {
         this.#state.isExpanded = false;
         if (this.#state.preExpandWidth) {
@@ -4090,7 +4102,7 @@
      * @param {MouseEvent} e - Global mouse click event.
      */
     handleOutsideClick(e) {
-      if (!this.#state.activeAppId || this.#state.isPinned) {
+      if (!this.#state.activeAppId || this.#state.isPinned || this.#state.isInstaPeeking) {
         return;
       }
       
@@ -4104,6 +4116,122 @@
       
       if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] handleOutsideClick closing panel due to click target:", e.target?.tagName, e.target?.id, e.target?.className);
       this.closePanel();
+    }
+
+    /**
+     * Checks if a keyboard event matches the configured shortcut string.
+     * @param {KeyboardEvent} e - Key event.
+     * @param {string} shortcutStr - Canonical shortcut string (e.g. "Alt+P").
+     * @returns {boolean} True if matching.
+     */
+    isShortcutMatch(e, shortcutStr) {
+      if (!shortcutStr || shortcutStr === "None") return false;
+      const parts = shortcutStr.split("+").map(p => p.trim());
+      if (parts.length === 0) return false;
+
+      const primaryKey = parts[parts.length - 1].toUpperCase();
+      const needsCtrl = parts.includes("Ctrl");
+      const needsAlt = parts.includes("Alt");
+      const needsShift = parts.includes("Shift");
+      const needsMeta = parts.includes("Meta") || parts.includes("Cmd") || parts.includes("Win");
+
+      if (e.ctrlKey !== needsCtrl) return false;
+      if (e.altKey !== needsAlt) return false;
+      if (e.shiftKey !== needsShift) return false;
+      if (e.metaKey !== needsMeta) return false;
+
+      const eventKey = (e.key || "").toUpperCase();
+      const eventCode = (e.code || "").toUpperCase();
+
+      if (primaryKey === "SPACE") {
+        return eventKey === " " || eventKey === "SPACEBAR" || eventCode === "SPACE";
+      }
+
+      if (eventKey === primaryKey || eventCode === "KEY" + primaryKey || eventCode === primaryKey) {
+        return true;
+      }
+
+      return false;
+    }
+
+    /**
+     * Handles keydown on window to trigger Insta-Peek mode if the shortcut is pressed.
+     * @param {KeyboardEvent} e - Keydown event.
+     */
+    handleInstaPeekKeyDown(e) {
+      const shortcut = Core.getPref(Constants.Apps.PREF_INSTA_PEEK_SHORTCUT, "Alt+P");
+      if (!shortcut || shortcut === "None") return;
+
+      if (!this.#state.activeAppId || !this.#dom.root?.hasAttribute("open")) return;
+
+      if (this.isShortcutMatch(e, shortcut)) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!this.#state.isInstaPeeking) {
+          this.#state.isInstaPeeking = true;
+          if (this.#dom.root) {
+            this.#dom.root.setAttribute("data-insta-peek", "true");
+          }
+        }
+      }
+    }
+
+    /**
+     * Handles keyup on window to end Insta-Peek mode when any key of the shortcut combo is released.
+     * @param {KeyboardEvent} e - Keyup event.
+     */
+    handleInstaPeekKeyUp(e) {
+      if (!this.#state.isInstaPeeking) return;
+
+      const shortcut = Core.getPref(Constants.Apps.PREF_INSTA_PEEK_SHORTCUT, "Alt+P");
+      if (!shortcut || shortcut === "None") {
+        this.endInstaPeek();
+        return;
+      }
+
+      const parts = shortcut.split("+").map(p => p.trim());
+      const primaryKey = parts[parts.length - 1].toUpperCase();
+      const needsCtrl = parts.includes("Ctrl");
+      const needsAlt = parts.includes("Alt");
+      const needsShift = parts.includes("Shift");
+      const needsMeta = parts.includes("Meta") || parts.includes("Cmd") || parts.includes("Win");
+
+      const eventKey = (e.key || "").toUpperCase();
+      const eventCode = (e.code || "").toUpperCase();
+
+      const isPrimaryKeyReleased = (primaryKey === "SPACE" && (eventKey === " " || eventKey === "SPACEBAR" || eventCode === "SPACE")) ||
+                                   (eventKey === primaryKey || eventCode === "KEY" + primaryKey || eventCode === primaryKey);
+
+      const isModifierReleased = (needsCtrl && (e.key === "Control" || !e.ctrlKey)) ||
+                                 (needsAlt && (e.key === "Alt" || !e.altKey)) ||
+                                 (needsShift && (e.key === "Shift" || !e.shiftKey)) ||
+                                 (needsMeta && (e.key === "Meta" || !e.metaKey));
+
+      if (isPrimaryKeyReleased || isModifierReleased) {
+        this.endInstaPeek();
+      }
+    }
+
+    /**
+     * Handles window blur to ensure Insta-Peek cleanly resets if the browser window loses focus.
+     */
+    handleInstaPeekBlur() {
+      if (this.#state.isInstaPeeking) {
+        this.endInstaPeek();
+      }
+    }
+
+    /**
+     * Ends Insta-Peek mode, removing data-insta-peek and restoring full panel visibility.
+     */
+    endInstaPeek() {
+      if (this.#state.isInstaPeeking) {
+        this.#state.isInstaPeeking = false;
+        if (this.#dom.root) {
+          this.#dom.root.removeAttribute("data-insta-peek");
+        }
+      }
     }
 
     /**
@@ -4253,6 +4381,9 @@
       }
 
       window.addEventListener("mousedown", this.handleOutsideClick);
+      window.addEventListener("keydown", this.handleInstaPeekKeyDown, true);
+      window.addEventListener("keyup", this.handleInstaPeekKeyUp, true);
+      window.addEventListener("blur", this.handleInstaPeekBlur);
 
       this.#tabSelectListener = () => {
         const currentWs = window.gZenWorkspaces?.activeWorkspace;
@@ -8248,6 +8379,14 @@
       if (get("zs-anim-speed-badge")) get("zs-anim-speed-badge").textContent = `${animSpeed} ms`;
       get("zs-max-apps").value = maxApps;
 
+      const instaPeekShortcut = Core.getPref(Constants.Apps.PREF_INSTA_PEEK_SHORTCUT, "Alt+P") || "Alt+P";
+      const instaPeekBtn = this.modal.querySelector("#zs-insta-peek-btn");
+      if (instaPeekBtn && instaPeekBtn.syncValue) {
+        instaPeekBtn.syncValue(instaPeekShortcut);
+      } else if (get("zs-insta-peek-shortcut")) {
+        get("zs-insta-peek-shortcut").value = instaPeekShortcut;
+      }
+
       this.updatePreviewDemo(animType, animSpeed);
 
       const tgEnabled = Core.getPref(Constants.TabGroups.PREF_ENABLED, true) !== false;
@@ -8407,6 +8546,9 @@
       Core.setPref(Constants.Apps.PREF_MAX_APPS, parseInt(get("zs-max-apps").value) || 21);
       Core.setPref(Constants.Apps.PREF_APPS_PER_ROW, parseInt(get("zs-apps-row").value) || 7);
       Core.setPref(Constants.Apps.PREF_MAX_ROWS, parseInt(get("zs-max-rows").value) || 3);
+      if (get("zs-insta-peek-shortcut")) {
+        Core.setPref(Constants.Apps.PREF_INSTA_PEEK_SHORTCUT, get("zs-insta-peek-shortcut").value || "Alt+P");
+      }
 
       Core.setPref(Constants.TabGroups.PREF_ENABLED, get("zs-tg-enabled").checked);
       Core.setPref(Constants.TabGroups.PREF_COLLAPSE_ON_LAUNCH, get("zs-tg-collapse").checked);
@@ -9373,6 +9515,53 @@
           border-color: var(--zen-primary-color, #6366f1);
         }
 
+        .zs-shortcut-recorder {
+          display: inline-flex;
+          align-items: center;
+          position: relative;
+        }
+
+        .zs-shortcut-btn {
+          -moz-appearance: none;
+          appearance: none;
+          outline: none;
+          height: 32px;
+          min-height: 32px;
+          background: #18181b;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          color: #ffffff;
+          padding: 0 14px;
+          font-size: 12px;
+          font-weight: 600;
+          letter-spacing: 0.03em;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          cursor: pointer;
+          transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+          box-sizing: border-box;
+          user-select: none;
+        }
+
+        .zs-shortcut-btn:hover {
+          background: #27272a;
+          border-color: rgba(255, 255, 255, 0.22);
+        }
+
+        .zs-shortcut-btn[data-recording="true"] {
+          background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 22%, #18181b);
+          border-color: var(--zen-primary-color, #6366f1);
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--zen-primary-color, #6366f1) 35%, transparent);
+          color: #ffffff;
+        }
+
+        .zs-shortcut-label {
+          letter-spacing: 0.03em;
+        }
+
         .zs-custom-select-arrow {
           width: 14px !important;
           height: 14px !important;
@@ -9763,6 +9952,92 @@
       dropdown.syncValue = syncUI;
     }
 
+    /**
+     * Configures an interactive shortcut recorder button.
+     * Click to record, press key combination, Escape to cancel, Backspace/Delete to clear to "None".
+     * @param {string} buttonId - Button ID (e.g. "zs-insta-peek-btn")
+     * @param {string} hiddenInputId - Hidden input ID (e.g. "zs-insta-peek-shortcut")
+     * @param {Function} [onChangeCallback] - Optional callback
+     */
+    setupShortcutRecorder(buttonId, hiddenInputId, onChangeCallback) {
+      if (!this.modal) return;
+      const btn = this.modal.querySelector("#" + buttonId);
+      const input = this.modal.querySelector("#" + hiddenInputId);
+      if (!btn || !input) return;
+
+      const label = btn.querySelector(".zs-shortcut-label") || btn;
+      let isRecording = false;
+
+      const syncUI = (val) => {
+        const displayVal = (!val || val === "None") ? "None" : val;
+        input.value = displayVal;
+        label.textContent = displayVal;
+        btn.setAttribute("data-value", displayVal);
+        btn.removeAttribute("data-recording");
+        isRecording = false;
+      };
+
+      btn.syncValue = syncUI;
+
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isRecording) {
+          syncUI(input.value);
+          return;
+        }
+        isRecording = true;
+        btn.setAttribute("data-recording", "true");
+        label.textContent = "Press keys...";
+      });
+
+      const onKeyDown = (e) => {
+        if (!isRecording) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (e.key === "Escape") {
+          syncUI(input.value);
+          return;
+        }
+
+        if (e.key === "Backspace" || e.key === "Delete") {
+          syncUI("None");
+          if (typeof onChangeCallback === "function") onChangeCallback("None");
+          return;
+        }
+
+        if (["Control", "Alt", "Shift", "Meta"].includes(e.key)) {
+          return;
+        }
+
+        const parts = [];
+        if (e.ctrlKey) parts.push("Ctrl");
+        if (e.altKey) parts.push("Alt");
+        if (e.shiftKey) parts.push("Shift");
+        if (e.metaKey) parts.push("Meta");
+
+        let key = e.key;
+        if (key === " " || key === "Spacebar") key = "Space";
+        else if (key.length === 1) key = key.toUpperCase();
+        else if (key.startsWith("Arrow")) key = key.replace("Arrow", "");
+
+        parts.push(key);
+        const combo = parts.join("+");
+
+        syncUI(combo);
+        if (typeof onChangeCallback === "function") onChangeCallback(combo);
+      };
+
+      window.addEventListener("keydown", onKeyDown, true);
+
+      this.modal.addEventListener("mousedown", (e) => {
+        if (isRecording && !e.target.closest("#" + buttonId)) {
+          syncUI(input.value);
+        }
+      });
+    }
+
     createModal() {
       this.injectStyles();
       this.modal = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
@@ -9872,6 +10147,20 @@
                       <button type="button" class="zs-h-btn zs-h-dec" data-target="zs-max-apps" data-step="-1">−</button>
                       <input type="number" id="zs-max-apps" class="zs-h-val" min="1" max="100" step="1" />
                       <button type="button" class="zs-h-btn zs-h-inc" data-target="zs-max-apps" data-step="1">+</button>
+                    </div>
+                  </div>
+
+                  <!-- Insta-Peek Shortcut -->
+                  <div class="zs-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Insta-Peek</span>
+                      <span class="zs-sublabel">Hold shortcut to temporarily hide open panel and peek underneath</span>
+                    </div>
+                    <div class="zs-shortcut-recorder" id="zs-insta-peek-recorder">
+                      <button type="button" class="zs-shortcut-btn" id="zs-insta-peek-btn" title="Click to record shortcut, Backspace to clear, Escape to cancel">
+                        <span class="zs-shortcut-label" id="zs-insta-peek-label">Alt+P</span>
+                      </button>
+                      <input type="hidden" id="zs-insta-peek-shortcut" value="Alt+P" />
                     </div>
                   </div>
 
@@ -10417,6 +10706,7 @@
         onAnimChange(selectedType);
       });
 
+      this.setupShortcutRecorder("zs-insta-peek-btn", "zs-insta-peek-shortcut");
       this.setupCustomSelect("zs-tg-indicator-type-dropdown", "zs-tg-indicator-type");
 
       if (animSpeedSlider) {
@@ -10813,6 +11103,9 @@
         if (get("zs-anim-speed-slider")) get("zs-anim-speed-slider").value = 450;
         if (get("zs-anim-speed-badge")) get("zs-anim-speed-badge").textContent = "450 ms";
         get("zs-max-apps").value = 21;
+        const instaPeekBtn = this.modal.querySelector("#zs-insta-peek-btn");
+        if (instaPeekBtn && instaPeekBtn.syncValue) instaPeekBtn.syncValue("Alt+P");
+        else if (get("zs-insta-peek-shortcut")) get("zs-insta-peek-shortcut").value = "Alt+P";
         this.updatePreviewDemo("slide", 450);
       });
 

@@ -1656,6 +1656,50 @@ panel[id*="tabgroup-editor"] {
   margin: 0 !important;
 }
 
+/* Insta-Peek Shortcut Recorder Button */
+#zentral-settings-modal .zs-shortcut-recorder {
+  display: inline-flex !important;
+  align-items: center !important;
+  position: relative !important;
+}
+
+#zentral-settings-modal .zs-shortcut-btn {
+  -moz-appearance: none !important;
+  appearance: none !important;
+  outline: none !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  background: #18181b !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  color: #ffffff !important;
+  padding: 0 14px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.03em !important;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease !important;
+  box-sizing: border-box !important;
+  user-select: none !important;
+}
+
+#zentral-settings-modal .zs-shortcut-btn:hover {
+  background: #27272a !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+#zentral-settings-modal .zs-shortcut-btn[data-recording="true"] {
+  background: color-mix(in srgb, var(--zen-primary-color, #6366f1) 22%, #18181b) !important;
+  border-color: var(--zen-primary-color, #6366f1) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--zen-primary-color, #6366f1) 35%, transparent) !important;
+  color: #ffffff !important;
+}
+
 /* Stacked Sliders with Monospace Badge */
 #zentral-settings-modal .zs-stacked-slider {
   display: flex !important;
@@ -2516,6 +2560,7 @@ panel[id*="tabgroup-editor"] {
 
 #zen-app-panel-root { position: fixed; display: none; pointer-events: none; overflow: visible; z-index: 2147483600 !important; }
 #zen-app-panel-root[open] { display: block; }
+#zen-app-panel-root[data-insta-peek="true"] { opacity: 0 !important; pointer-events: none !important; visibility: hidden !important; transition: none !important; }
 
 /* Floating App Panel Frame & Soft 1px Border (Softens boundary against webpage) */
 #zen-app-panel-root #zen-app-panel-clip {
