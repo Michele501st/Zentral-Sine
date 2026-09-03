@@ -38,6 +38,7 @@ Zentral significantly expands Zen Browser's native tab group capabilities with s
 <p align="center">
   <img src="assets/Groups.png" alt="Groups" />
 </p>
+
 - **🎨 Multi-Mode Color Picker Panel**:
   - **Quick Swatches**: 25 color presets.
   - **2D Spectrum Canvas**: Interactive Saturation-Value box with a 360° Hue slider.
@@ -71,6 +72,7 @@ Keep your essential web apps (Discord, WhatsApp, Reddit, Spotify, Notion, YouTub
 <p align="center">
   <img src="assets/Apps.png" alt="Apps" />
 </p>
+
 - **📍 Flexible Placement Modes**:
   - **Sidebar**: Embeds directly into Zen's sidebar with customizable grid in Zetral Settings.
   - **Vertical Edge Bar**: Standalone vertical dock positioned on the opposite screen edge from Zen's sidebar (left or right).
@@ -104,6 +106,7 @@ Keep your essential web apps (Discord, WhatsApp, Reddit, Spotify, Notion, YouTub
 <p align="center">
   <img src="assets/Settings.png" alt="Settings" />
 </p>
+
 All preferences are declaratively registered via [`preferences.json`](preferences.json) and customizable live inside **Zen Settings -> Mods -> Zentral**:
 
 | Setting Property | UI Label | Type | Default | Description |
