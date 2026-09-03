@@ -3609,7 +3609,7 @@
     }
 
     /**
-     * Synchronizes theme background gradient from the native sidebar background (#zen-toolbar-background)
+     * Synchronizes theme background gradient from the native background elements
      * to the Vertical Bar in autohide (compact) mode so it matches the Compact Sidebar.
      */
     syncVerticalBarTheme() {
@@ -3619,14 +3619,65 @@
       const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
       if (!isAutohide) {
         vb.style.removeProperty("--zen-theme-gradient-override");
-        vb.style.removeProperty("--zen-vb-gradient-pos");
         return;
       }
 
-      // In autohide mode, the ::before gradient is 100% CSS-driven via --zen-primary-color
-      // which Zen updates synchronously on workspace switch. Never sample zen-toolbar-background
-      // as it retains the previous Space's gradient until the crossfade completes.
-      vb.style.removeProperty("--zen-theme-gradient-override");
+      let gradient = "";
+
+      // 1. Check live gradient variables on Zen background elements
+      const zenBrowserBg = document.getElementById("zen-browser-background");
+      const zenToolbarBg = document.getElementById("zen-toolbar-background") || document.querySelector(".zen-toolbar-background");
+
+      const browserGrad = zenBrowserBg?.style?.getPropertyValue("--zen-main-browser-background")?.trim();
+      const toolbarGrad = zenToolbarBg?.style?.getPropertyValue("--zen-main-browser-background-toolbar")?.trim();
+
+      if (browserGrad && browserGrad !== "none") {
+        gradient = browserGrad;
+      } else if (toolbarGrad && toolbarGrad !== "none") {
+        gradient = toolbarGrad;
+      }
+
+      // 2. If not found in inline styles, check computed styles on ::after
+      if (!gradient) {
+        if (zenToolbarBg) {
+          try {
+            const cs = window.getComputedStyle(zenToolbarBg, "::after");
+            if (cs?.backgroundImage && cs.backgroundImage !== "none") {
+              gradient = cs.backgroundImage;
+            }
+          } catch (_) {}
+        }
+        if (!gradient && zenBrowserBg) {
+          try {
+            const cs = window.getComputedStyle(zenBrowserBg, "::after");
+            if (cs?.backgroundImage && cs.backgroundImage !== "none") {
+              gradient = cs.backgroundImage;
+            }
+          } catch (_) {}
+        }
+      }
+
+      // 3. Fallback: generate via gZenThemePicker if available
+      if (!gradient && window.gZenThemePicker && typeof window.gZenThemePicker.getGradient === "function") {
+        try {
+          const ws = window.gZenWorkspaces?.getActiveWorkspace?.();
+          const theme = ws?.theme;
+          if (theme?.gradientColors?.length) {
+            gradient = window.gZenThemePicker.getGradient(theme.gradientColors, false);
+          }
+        } catch (_) {}
+      }
+
+      // 4. Ensure valid CSS gradient for background-image
+      if (gradient) {
+        if (gradient.startsWith("rgb") || gradient.startsWith("#")) {
+          const side = this.isVerticalBarOnRight() ? "right" : "left";
+          gradient = `radial-gradient(circle at ${side} top, ${gradient} 0%, transparent 85%)`;
+        }
+        vb.style.setProperty("--zen-theme-gradient-override", gradient);
+      } else {
+        vb.style.removeProperty("--zen-theme-gradient-override");
+      }
     }
 
     /**
@@ -4120,20 +4171,24 @@
         });
       }
 
-      // Observer 1c: Direct theme transition observer on #zen-toolbar-background
+      // Observer 1c: Direct theme transition observer on #zen-toolbar-background and #zen-browser-background
       const zenToolbarBg = document.getElementById("zen-toolbar-background") || document.querySelector(".zen-toolbar-background");
-      if (zenToolbarBg) {
+      const zenBrowserBg = document.getElementById("zen-browser-background");
+      const bgElements = [zenToolbarBg, zenBrowserBg].filter(Boolean);
+      if (bgElements.length > 0) {
         this.#toolbarBgObserver = new window.MutationObserver(() => {
           this.syncVerticalBarTheme();
           setTimeout(() => this.syncVerticalBarTheme(), 80);
         });
-        this.#toolbarBgObserver.observe(zenToolbarBg, {
-          attributes: true,
-          attributeFilter: ["style", "class"],
-          childList: true
+        bgElements.forEach(el => {
+          this.#toolbarBgObserver.observe(el, {
+            attributes: true,
+            attributeFilter: ["style", "class"],
+            childList: true
+          });
+          el.addEventListener("transitionend", () => this.syncVerticalBarTheme(), { passive: true });
+          el.addEventListener("animationend", () => this.syncVerticalBarTheme(), { passive: true });
         });
-        zenToolbarBg.addEventListener("transitionend", () => this.syncVerticalBarTheme(), { passive: true });
-        zenToolbarBg.addEventListener("animationend", () => this.syncVerticalBarTheme(), { passive: true });
       }
 
       // Observer 2: Preference changes for toolbar/sidebar mode
