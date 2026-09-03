@@ -731,6 +731,89 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   100% {
     transform: translateX(-50%);
   }
+/* ===========================================================================
+   Zentral - Tab Group Thumbnail Popup Styles
+   =========================================================================== */
+.zentral-tooltip-row {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 6px 10px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  max-width: 320px !important;
+  border: 1px solid transparent !important;
+  box-sizing: border-box !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease !important;
+}
+
+.zentral-tooltip-row:hover {
+  background-color: color-mix(in srgb, currentColor 10%, transparent) !important;
+}
+
+/* Active Tab in Thumbnail Preview */
+.zentral-tooltip-row[data-active="true"] {
+  background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 24%, rgba(255, 255, 255, 0.12)) !important;
+  border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 45%, transparent) !important;
+  opacity: 1 !important;
+}
+
+.zentral-tooltip-row[data-active="true"] .zentral-tooltip-title {
+  color: var(--zen-primary-color, currentColor) !important;
+  font-weight: 600 !important;
+}
+
+/* Unloaded / Dormant Tab in Thumbnail Preview */
+.zentral-tooltip-row[data-unloaded="true"]:not([data-active="true"]) {
+  opacity: 0.55 !important;
+}
+
+.zentral-tooltip-row[data-unloaded="true"]:not([data-active="true"]):hover {
+  opacity: 0.88 !important;
+}
+
+/* Close Tab ("X") Button on Thumbnail Hover */
+.zentral-tooltip-close-btn {
+  appearance: none !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: inherit !important;
+  padding: 3px !important;
+  width: 22px !important;
+  height: 22px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease !important;
+  flex-shrink: 0 !important;
+  margin-left: auto !important;
+}
+
+.zentral-tooltip-row:hover .zentral-tooltip-close-btn {
+  opacity: 0.65 !important;
+  pointer-events: auto !important;
+}
+
+.zentral-tooltip-close-btn:hover {
+  opacity: 1 !important;
+  background-color: rgba(255, 77, 77, 0.22) !important;
+  color: #ff5555 !important;
+}
+
+.zentral-tooltip-close-btn svg {
+  width: 12px !important;
+  height: 12px !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 2 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  display: block !important;
 }
 
 /* ===========================================================================
@@ -2443,7 +2526,7 @@ panel[id*="tabgroup-editor"] {
   border-radius: inherit !important;
   overflow: hidden !important;
   background: var(--tabpanels-background-color, #1e1e24) !important;
-  border: 1px solid color-mix(in srgb, var(--zen-primary-color, currentColor) 25%, rgba(255, 255, 255, 0.14)) !important;
+  border: 2px solid color-mix(in srgb, var(--zen-primary-color, currentColor) 25%, rgba(255, 255, 255, 0.14)) !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), 0 2px 10px rgba(0, 0, 0, 0.3) !important;
   box-sizing: border-box !important;
   pointer-events: auto !important;

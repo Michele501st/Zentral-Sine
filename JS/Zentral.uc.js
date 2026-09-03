@@ -4309,6 +4309,8 @@
     #restoreSettleTimer = null;
     /** @private Workspace switch listener for multi-space reconstruction */
     #workspaceSwitchListener = null;
+    /** @private TabOpen event listener for smart grouping */
+    #tabOpenListener = null;
 
     /**
      * Safely retrieves Firefox SessionStore service for persistent tab metadata across restarts.
@@ -4373,6 +4375,18 @@
     }
 
     /**
+     * Creates an SVG element from an XML string.
+     * @private
+     * @param {string} xmlString - SVG XML markup string.
+     * @returns {Element} Parsed SVG DOM element.
+     */
+    #createSVG(xmlString) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlString, "image/svg+xml");
+      return doc.documentElement;
+    }
+
+    /**
      * Module tear down for Sine hot unloading
      */
     destroy() {
@@ -4417,6 +4431,14 @@
         if (this.#popupShowingListener) {
           try { window.removeEventListener("popupshowing", this.#popupShowingListener, true); } catch (_) {}
           this.#popupShowingListener = null;
+        }
+        if (this.#tabOpenListener) {
+          try {
+            if (window.gBrowser?.tabContainer) {
+              window.gBrowser.tabContainer.removeEventListener("TabOpen", this.#tabOpenListener);
+            }
+          } catch (_) {}
+          this.#tabOpenListener = null;
         }
         if (this.#groupContextMenuHandler) {
           try { window.removeEventListener("contextmenu", this.#groupContextMenuHandler, true); } catch (_) {}
@@ -5171,6 +5193,7 @@
       this.enhanceTabContextMenu();
       this.initTabDragSelectionGuard();
       this.processExistingGroups();
+      this.setupTabOpenHandler();
 
       // SessionStore Settlement Guard:
       // When the browser launches or caches are cleared, SessionStore injects tabs/groups asynchronously.
@@ -5383,10 +5406,13 @@
           -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
         }
         .zentral-tooltip-row {
+          position: relative !important;
           padding: 6px 10px !important;
           border-radius: 8px !important;
           cursor: pointer !important;
-          transition: background-color 0.15s ease !important;
+          border: 1px solid transparent !important;
+          box-sizing: border-box !important;
+          transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease !important;
           display: flex !important;
           align-items: center !important;
           gap: 10px !important;
@@ -5412,6 +5438,59 @@
         }
         .zentral-tooltip-row:hover {
           background-color: color-mix(in srgb, currentColor 10%, transparent) !important;
+        }
+        .zentral-tooltip-row[data-active="true"] {
+          background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 24%, rgba(255, 255, 255, 0.12)) !important;
+          border: 1px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 45%, transparent) !important;
+          opacity: 1 !important;
+        }
+        .zentral-tooltip-row[data-active="true"] .zentral-tooltip-title {
+          color: var(--zen-primary-color, currentColor) !important;
+          font-weight: 600 !important;
+        }
+        .zentral-tooltip-row[data-unloaded="true"]:not([data-active="true"]) {
+          opacity: 0.55 !important;
+        }
+        .zentral-tooltip-row[data-unloaded="true"]:not([data-active="true"]):hover {
+          opacity: 0.88 !important;
+        }
+        .zentral-tooltip-close-btn {
+          appearance: none !important;
+          background: transparent !important;
+          border: none !important;
+          border-radius: 6px !important;
+          color: inherit !important;
+          padding: 3px !important;
+          width: 22px !important;
+          height: 22px !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease !important;
+          flex-shrink: 0 !important;
+          margin-left: auto !important;
+        }
+        .zentral-tooltip-row:hover .zentral-tooltip-close-btn {
+          opacity: 0.65 !important;
+          pointer-events: auto !important;
+        }
+        .zentral-tooltip-close-btn:hover {
+          opacity: 1 !important;
+          background-color: rgba(255, 77, 77, 0.22) !important;
+          color: #ff5555 !important;
+        }
+        .zentral-tooltip-close-btn svg {
+          width: 12px !important;
+          height: 12px !important;
+          fill: none !important;
+          stroke: currentColor !important;
+          stroke-width: 2 !important;
+          stroke-linecap: round !important;
+          stroke-linejoin: round !important;
+          display: block !important;
         }
         .zentral-tooltip-text-col {
           display: flex !important;
@@ -5581,6 +5660,84 @@
      * 4.1 Initialization & Observers
      * --------------------------------------------------------------------------
      */
+
+    /**
+     * Registers a TabOpen event listener on the tabstrip to ensure new tabs opened from within
+     * a grouped tab (via link click or middle-click) are placed directly below the originating tab
+     * inside the same group. Tabs opened from an App Panel are kept outside of any group.
+     */
+    setupTabOpenHandler() {
+      if (this.#tabOpenListener) return;
+      this.#tabOpenListener = (e) => {
+        const tab = e.target;
+        if (!tab || tab.tagName?.toLowerCase() !== "tab") return;
+
+        // 1. App Panel Isolation: If link was opened while an App panel is open, keep outside any group
+        const isAppPanelOpen = document.documentElement.getAttribute("zentral-app-panel-open") === "true";
+        if (isAppPanelOpen) {
+          if (tab.group) {
+            tab.group = null;
+            tab.removeAttribute("group");
+            try { if (typeof window.gBrowser?.addTabToGroup === "function") window.gBrowser.addTabToGroup(tab, null); } catch (_) {}
+          }
+          return;
+        }
+
+        // 2. Resolve origin tab: check ownerTab first (standard Firefox link-click property), fallback to selectedTab
+        const originTab = tab.ownerTab || window.gBrowser?.selectedTab;
+        if (!originTab || originTab === tab) return;
+
+        // 3. Check if originTab is inside a tab group
+        const originGroup = originTab.closest?.("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])") ||
+                            (originTab.group && !originTab.group.hasAttribute?.("split-view-group") && !originTab.group.hasAttribute?.("zen-split-view") && !originTab.group.hasAttribute?.("is-zen-split") ? originTab.group : null);
+        if (!originGroup) return;
+
+        // 4. Place new tab inside the same container directly below the original tab
+        const targetContainer = originTab.parentNode;
+        if (!targetContainer) return;
+
+        try {
+          if (tab.parentNode !== targetContainer || tab.previousElementSibling !== originTab) {
+            targetContainer.insertBefore(tab, originTab.nextSibling);
+          }
+        } catch (_) {
+          try { targetContainer.appendChild(tab); } catch (_) {}
+        }
+
+        // 5. Associate tab with group
+        try { tab.group = originGroup; } catch (_) {}
+        try { tab.setAttribute("group", originGroup.id); } catch (_) {}
+        if (originGroup.tabs && typeof originGroup.tabs.add === "function") {
+          try { originGroup.tabs.add(tab); } catch (_) {}
+        }
+        try {
+          if (typeof window.gBrowser?.addTabToGroup === "function") {
+            window.gBrowser.addTabToGroup(tab, originGroup);
+          }
+        } catch (_) {}
+
+        const label = originGroup.label || originGroup.getAttribute?.("label") || "Group";
+        const color = originGroup.style.getPropertyValue("--tab-group-color") || originGroup.style.getPropertyValue("--zentral-custom-color") || "";
+        tab.setAttribute("data-zentral-group-id", originGroup.id);
+        tab.setAttribute("data-zentral-group-label", label);
+        if (color) tab.setAttribute("data-zentral-group-color", color);
+        tab.setAttribute("data-zentral-group-collapsed", originGroup.hasAttribute("collapsed") ? "true" : "false");
+
+        // 6. Context-Aware Expansion:
+        // If the new tab is selected/focused in foreground, ensure the group expands so it's visible.
+        // If opened in background, maintain the group's current collapsed state.
+        if (tab.selected && originGroup.hasAttribute("collapsed")) {
+          originGroup.removeAttribute("collapsed");
+          originGroup.collapsed = false;
+        }
+
+        this.scheduleStateSave();
+      };
+
+      if (window.gBrowser?.tabContainer) {
+        window.gBrowser.tabContainer.addEventListener("TabOpen", this.#tabOpenListener);
+      }
+    }
 
     /**
      * Registers a MutationObserver on the tab strip to track added, removed, or collapsed tab groups.
@@ -6117,10 +6274,23 @@
                 tabs.forEach(tab => {
                   const row = document.createElement("div");
                   row.className = "zentral-tooltip-row";
+
+                  // Active Tab State
+                  const isActive = tab.selected || (window.gBrowser && window.gBrowser.selectedTab === tab);
+                  if (isActive) {
+                    row.setAttribute("data-active", "true");
+                  }
+
+                  // Loaded vs. Unloaded (dormant/pending/discarded) State
+                  const isUnloaded = tab.hasAttribute("pending") || tab.getAttribute("pending") === "true" || tab.discarded;
+                  if (isUnloaded) {
+                    row.setAttribute("data-unloaded", "true");
+                  }
                   
                   row.addEventListener("click", (e) => {
+                    if (e.target.closest(".zentral-tooltip-close-btn")) return;
                     e.preventDefault();
-                    if (gBrowser && tab) gBrowser.selectedTab = tab;
+                    if (window.gBrowser && tab) window.gBrowser.selectedTab = tab;
                     if (panel.hidePopup) panel.hidePopup();
                   });
                   
@@ -6163,9 +6333,50 @@
                     domainEl.textContent = domain;
                     textCol.appendChild(domainEl);
                   }
+
+                  // In-Thumbnail Tab Close ("X") Button
+                  const closeBtn = document.createElement("button");
+                  closeBtn.className = "zentral-tooltip-close-btn";
+                  closeBtn.title = "Close tab";
+                  closeBtn.type = "button";
+                  closeBtn.appendChild(this.#createSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>`));
+                  closeBtn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (window.gBrowser && tab) {
+                      try {
+                        window.gBrowser.removeTab(tab);
+                      } catch (err) {
+                        console.warn("[ZentralTabGroups] Failed to close tab:", err);
+                      }
+                    }
+                    // Smoothly animate removal of row
+                    row.style.height = row.offsetHeight + "px";
+                    row.style.overflow = "hidden";
+                    row.style.boxSizing = "border-box";
+                    row.style.transition = "height 0.18s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.15s ease, padding 0.18s ease, margin 0.18s ease";
+                    requestAnimationFrame(() => {
+                      row.style.height = "0";
+                      row.style.opacity = "0";
+                      row.style.paddingTop = "0";
+                      row.style.paddingBottom = "0";
+                      row.style.marginTop = "0";
+                      row.style.marginBottom = "0";
+                    });
+                    setTimeout(() => {
+                      row.remove();
+                      if (container.querySelectorAll(".zentral-tooltip-row").length === 0) {
+                        const div = document.createElement("div");
+                        div.textContent = "No tabs";
+                        div.style.color = "var(--text-color, inherit)";
+                        container.appendChild(div);
+                      }
+                    }, 190);
+                  });
                   
                   row.appendChild(icon);
                   row.appendChild(textCol);
+                  row.appendChild(closeBtn);
                   container.appendChild(row);
                 });
               }
