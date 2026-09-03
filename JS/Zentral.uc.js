@@ -4446,8 +4446,21 @@
           tabMapping: mergedTabMapping
         }));
 
-        // 5. Clean up Zentral UI enhancements on tab-group elements without destroying native DOM structure
-        allGroups.forEach(group => {
+        // 5. Flatten groups cleanly into regular top-level tabs across their respective workspaces
+        const rootTabContainer = (typeof gZenWorkspaces !== "undefined" && gZenWorkspaces.activeWorkspaceStrip) ||
+                                 gBrowser?.tabContainer?.arrowscrollbox ||
+                                 gBrowser?.tabContainer ||
+                                 document.getElementById("tabbrowser-tabs");
+
+        const sortedGroups = allGroups.slice().sort((a, b) => {
+          let depthA = 0, currA = a;
+          while ((currA = currA.parentElement?.closest("tab-group"))) depthA++;
+          let depthB = 0, currB = b;
+          while ((currB = currB.parentElement?.closest("tab-group"))) depthB++;
+          return depthB - depthA;
+        });
+
+        sortedGroups.forEach(group => {
           try {
             const obs = this.#groupObservers.get(group);
             if (obs) {
@@ -4458,11 +4471,38 @@
             if (group.shadowRoot) {
               group.shadowRoot.querySelectorAll('.zentral-shadow-style').forEach(s => s.remove());
             }
-            group.querySelectorAll('.zentral-chevron, .zentral-group-initials, .zentral-tg-drag-handle, .zentral-close-btn, .zentral-tab-title-wrapper').forEach(el => el.remove());
-            group.classList.remove("zentral-standard");
-            group.removeAttribute("zentral-group");
+
+            const wsId = this.getWorkspaceForElement(group);
+            const wsNormalSection = wsId && window.gZenWorkspaces?.workspaceElement(wsId)?.querySelector(".zen-workspace-normal-tabs-section");
+            const parentContainer = (group.parentNode && group.parentNode.isConnected) ? group.parentNode : (wsNormalSection || rootTabContainer);
+
+            const tabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
+
+            // Move tabs directly before the group container in its workspace
+            tabs.forEach(tab => {
+              if (group.parentNode && group.parentNode === parentContainer) {
+                try {
+                  parentContainer.insertBefore(tab, group);
+                } catch (_) {
+                  try { parentContainer.appendChild(tab); } catch (_) {}
+                }
+              } else if (parentContainer) {
+                try { parentContainer.appendChild(tab); } catch (_) {}
+              }
+
+              // Clear native grouping pointers so tabs display as regular flat tabs without indentations
+              try { if (typeof gBrowser?.addTabToGroup === "function") gBrowser.addTabToGroup(tab, null); } catch (_) {}
+              try { tab.group = null; } catch (_) {}
+              try { tab.removeAttribute("group"); tab.removeAttribute("zen-group"); } catch (_) {}
+              // Retain data-zentral-group-id, data-zentral-group-ws, and SessionStore for seamless restore on re-enable
+            });
+
+            // Cleanly remove the tab-group element so there are no empty gaps in the strip
+            try {
+              group.remove();
+            } catch (_) {}
           } catch (e) {
-            console.error("[ZentralTabGroups] Error cleaning up group on destroy:", e);
+            console.error("[ZentralTabGroups] Error flattening group on destroy:", e);
           }
         });
 
@@ -4596,8 +4636,23 @@
           }
         });
 
-        // Also add missing parent groups needed for nested structures
+        // Also add missing parent groups and any groups from savedGroupsMap
         if (savedGroupsMap) {
+          for (const [gId, meta] of Object.entries(savedGroupsMap)) {
+            if (meta && !groupsToReconstruct.has(gId)) {
+              groupsToReconstruct.set(gId, {
+                id: meta.id || gId,
+                label: meta.label || "Group",
+                color: meta.color || "",
+                parentId: meta.parentId || null,
+                collapsed: meta.collapsed === true,
+                workspaceId: meta.workspaceId || "",
+                index: meta.index ?? 0,
+                tabs: []
+              });
+            }
+          }
+
           let addedParent = true;
           while (addedParent) {
             addedParent = false;
@@ -4618,6 +4673,23 @@
                 addedParent = true;
               }
             }
+          }
+        }
+
+        // Ensure all groups in groupsToReconstruct have their matching tabs populated
+        for (const [gId, info] of groupsToReconstruct.entries()) {
+          if (info.tabs.length === 0) {
+            const memberTabs = allTabs.filter(t => {
+              const tabGId = t.getAttribute("data-zentral-group-id") || (ss?.getCustomTabValue?.(t, "zentral-group-id"));
+              if (tabGId === gId) return true;
+              if (savedTabMapping && Array.isArray(savedTabMapping[gId])) {
+                const zenTabId = t.getAttribute("zen-tab-id") || t.id;
+                const tabUrl = t.linkedBrowser?.currentURI?.spec;
+                return savedTabMapping[gId].some(item => (zenTabId && item.zenTabId === zenTabId) || (tabUrl && tabUrl !== "about:blank" && item.url === tabUrl));
+              }
+              return false;
+            });
+            info.tabs.push(...memberTabs);
           }
         }
 
@@ -4661,9 +4733,9 @@
           } else {
             group = document.createXULElement ? document.createXULElement("tab-group") : document.createElement("tab-group");
             group.id = info.id;
-            group.setAttribute("label", info.label);
           }
-          group.label = info.label;
+          group.setAttribute("label", info.label || "Group");
+          group.label = info.label || "Group";
           if (info.workspaceId) group.setAttribute("zen-workspace-id", info.workspaceId);
 
           // Guarantee full internal structure exists
@@ -4671,12 +4743,15 @@
           if (!labelContainer) {
             labelContainer = document.createElement("div");
             labelContainer.className = "tab-group-label-container";
-            const innerLabel = document.createElement("label");
-            innerLabel.className = "tab-group-label";
-            innerLabel.textContent = info.label || "Group";
-            labelContainer.appendChild(innerLabel);
             group.insertBefore(labelContainer, group.firstChild);
           }
+          let innerLabel = labelContainer.querySelector(".tab-group-label");
+          if (!innerLabel) {
+            innerLabel = document.createElement("label");
+            innerLabel.className = "tab-group-label";
+            labelContainer.appendChild(innerLabel);
+          }
+          innerLabel.textContent = info.label || "Group";
 
           let groupTabContainer = group.querySelector(".tab-group-container");
           if (!groupTabContainer) {
@@ -5757,12 +5832,16 @@
       if (!labelContainer) {
         labelContainer = document.createElement("div");
         labelContainer.className = "tab-group-label-container";
-        const innerLabel = document.createElement("label");
-        innerLabel.className = "tab-group-label";
-        innerLabel.textContent = group.label || group.getAttribute("label") || "Group";
-        labelContainer.appendChild(innerLabel);
         group.insertBefore(labelContainer, group.firstChild);
       }
+      let innerLabel = labelContainer.querySelector(".tab-group-label");
+      if (!innerLabel) {
+        innerLabel = document.createElement("label");
+        innerLabel.className = "tab-group-label";
+        labelContainer.appendChild(innerLabel);
+      }
+      const groupTitle = group.label || group.getAttribute("label") || innerLabel.textContent || "Group";
+      innerLabel.textContent = groupTitle;
 
       let groupTabContainer = group.querySelector(".tab-group-container");
       if (!groupTabContainer) {
@@ -5989,9 +6068,9 @@
         const labelValue = group.label || (innerLabel ? innerLabel.textContent : '');
         this.updateCollapsedLabel(labelContainer, labelValue);
       }
-      if (!labelContainer || labelContainer.querySelector(".tab-close-button")) return;
+      if (!labelContainer) return;
       // Safe DOM injection
-      if (window.MozXULElement?.parseXULToFragment) {
+      if (!labelContainer.querySelector(".tab-close-button") && window.MozXULElement?.parseXULToFragment) {
         const frag = window.MozXULElement.parseXULToFragment(`
           <div class="tab-group-icon-container"><div class="tab-group-icon"><image class="group-marker" role="button" keyNav="false" tooltiptext="Toggle Group"/></div></div>
           <image class="tab-close-button close-icon" role="button" keyNav="false" tooltiptext="Close Group"/>
@@ -6013,20 +6092,21 @@
       }
 
       // Wrap title elements in .zentral-tab-title-wrapper for physical Folder Tab contour
-      if (!labelContainer.querySelector(".zentral-tab-title-wrapper")) {
-        const wrapper = document.createElement("div");
+      let wrapper = labelContainer.querySelector(".zentral-tab-title-wrapper");
+      if (!wrapper) {
+        wrapper = document.createElement("div");
         wrapper.className = "zentral-tab-title-wrapper";
-        const iconContainer = labelContainer.querySelector(".tab-group-icon-container");
-        const innerLabel = labelContainer.querySelector(".tab-group-label");
-        const initialsEl = labelContainer.querySelector(".zentral-group-initials");
         const closeBtn = labelContainer.querySelector(".tab-close-button");
-
-        if (iconContainer) wrapper.appendChild(iconContainer);
-        if (innerLabel) wrapper.appendChild(innerLabel);
-        if (initialsEl) wrapper.appendChild(initialsEl);
-
         labelContainer.insertBefore(wrapper, closeBtn || labelContainer.firstChild);
       }
+
+      const iconContainer = labelContainer.querySelector(".tab-group-icon-container");
+      const currentInnerLabel = labelContainer.querySelector(".tab-group-label");
+      const initialsEl = labelContainer.querySelector(".zentral-group-initials");
+
+      if (iconContainer && iconContainer.parentNode !== wrapper) wrapper.appendChild(iconContainer);
+      if (currentInnerLabel && currentInnerLabel.parentNode !== wrapper) wrapper.appendChild(currentInnerLabel);
+      if (initialsEl && initialsEl.parentNode !== wrapper) wrapper.appendChild(initialsEl);
 
       group.classList.remove('tab-group-editor-mode-create');
       this.#processedGroups.add(group);
