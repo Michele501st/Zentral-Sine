@@ -1071,7 +1071,13 @@ panel[id*="tabgroup-editor"] {
 /* Hide separator line in Apps Grid context menu when only Settings is shown */
 #zen-apps-sidebar-tile-context #zen-apps-sidebar-settings-sep[hidden="true"],
 #zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-settings-sep,
-#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-settings-sep {
+#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-settings-sep,
+#zen-apps-sidebar-tile-context #zen-apps-sidebar-refresh-sep[hidden="true"],
+#zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-refresh-sep,
+#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-refresh-sep,
+#zen-apps-sidebar-tile-context #zen-apps-sidebar-refresh-item[hidden="true"],
+#zen-apps-sidebar-tile-context:not([data-active-app-id]) #zen-apps-sidebar-refresh-item,
+#zen-apps-sidebar-tile-context[data-active-app-id=""] #zen-apps-sidebar-refresh-item {
   display: none !important;
 }
 
@@ -2874,6 +2880,17 @@ panel[id*="tabgroup-editor"] {
 #zen-app-panel-root[data-panel-side="left"] .zen-app-hover-zone { right: -22px !important; left: auto !important; }
 #zen-app-panel-root[data-panel-side="right"] .zen-app-resize-strip { left: -5px !important; right: auto !important; }
 #zen-app-panel-root[data-panel-side="left"] .zen-app-resize-strip { right: -5px !important; left: auto !important; }
+
+/* Floating App Panel Pill: Refresh Button */
+.zen-app-refresh-btn svg {
+  transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1) !important;
+}
+.zen-app-refresh-btn:active svg {
+  transform: scale(0.9) !important;
+}
+.zen-app-refresh-btn.zen-app-refresh-spinning svg {
+  transform: rotate(360deg) !important;
+}
 
 /* When Autohide is active in expanded vertical sidebar */
 :root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) {
