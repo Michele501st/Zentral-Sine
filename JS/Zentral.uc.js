@@ -3646,6 +3646,9 @@
       }
       if (bgEl) bgEl.style.display = "flex";
 
+      const isRight = this.isVerticalBarOnRight();
+      bgEl.style.setProperty("--zentral-vb-side", isRight ? "right" : "left");
+
       // 1. Mirror live properties from Zen's native toolbar & browser background elements
       const zenTb = document.getElementById("zen-toolbar-background");
       const zenBb = document.getElementById("zen-browser-background");
@@ -3660,8 +3663,12 @@
         grainOpacity = zenTb.style.getPropertyValue("--zen-grainy-background-opacity") || "";
         bgOpacity = zenTb.style.getPropertyValue("--zen-background-opacity") || "";
 
-        if (tbGrad && tbGrad !== "none") bgEl.style.setProperty("--zen-main-browser-background-toolbar", tbGrad);
-        if (tbOldGrad) bgEl.style.setProperty("--zen-main-browser-background-toolbar-old", tbOldGrad);
+        if (tbGrad && tbGrad !== "none" && !tbGrad.startsWith("light-dark")) {
+          bgEl.style.setProperty("--zen-main-browser-background-toolbar", tbGrad);
+        }
+        if (tbOldGrad && tbOldGrad !== "none" && !tbOldGrad.startsWith("light-dark")) {
+          bgEl.style.setProperty("--zen-main-browser-background-toolbar-old", tbOldGrad);
+        }
         if (grainOpacity) bgEl.style.setProperty("--zen-grainy-background-opacity", grainOpacity);
         if (bgOpacity) bgEl.style.setProperty("--zen-background-opacity", bgOpacity);
 
@@ -3671,18 +3678,20 @@
         }
       }
 
-      // 2. Check browser background if toolbar background is empty
-      if ((!tbGrad || tbGrad === "none") && zenBb) {
+      // 2. Check browser background if toolbar background is empty or fallback
+      if ((!tbGrad || tbGrad === "none" || tbGrad.startsWith("light-dark")) && zenBb) {
         const bbGrad = zenBb.style.getPropertyValue("--zen-main-browser-background") || "";
         const bbOldGrad = zenBb.style.getPropertyValue("--zen-main-browser-background-old") || "";
         grainOpacity = grainOpacity || zenBb.style.getPropertyValue("--zen-grainy-background-opacity") || "";
         bgOpacity = bgOpacity || zenBb.style.getPropertyValue("--zen-background-opacity") || "";
 
-        if (bbGrad && bbGrad !== "none") {
+        if (bbGrad && bbGrad !== "none" && !bbGrad.startsWith("light-dark")) {
           tbGrad = bbGrad;
           bgEl.style.setProperty("--zen-main-browser-background-toolbar", bbGrad);
         }
-        if (bbOldGrad) bgEl.style.setProperty("--zen-main-browser-background-toolbar-old", bbOldGrad);
+        if (bbOldGrad && bbOldGrad !== "none" && !bbOldGrad.startsWith("light-dark")) {
+          bgEl.style.setProperty("--zen-main-browser-background-toolbar-old", bbOldGrad);
+        }
         if (grainOpacity) bgEl.style.setProperty("--zen-grainy-background-opacity", grainOpacity);
         if (bgOpacity) bgEl.style.setProperty("--zen-background-opacity", bgOpacity);
 
@@ -3699,7 +3708,8 @@
             const ws = window.gZenWorkspaces?.getActiveWorkspace?.();
             const theme = ws?.theme;
             if (theme?.gradientColors?.length) {
-              const grad = window.gZenThemePicker.getGradient(theme.gradientColors, true);
+              const grad = window.gZenThemePicker.getGradient(theme.gradientColors, true) ||
+                           window.gZenThemePicker.getGradient(theme.gradientColors, false);
               if (grad) {
                 tbGrad = grad;
                 bgEl.style.setProperty("--zen-main-browser-background-toolbar", grad);

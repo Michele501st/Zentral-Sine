@@ -2327,6 +2327,25 @@ panel[id*="tabgroup-editor"] {
   border-radius: inherit !important;
 }
 
+/* When Vertical Bar is on Left (Sidebar on Right): anchor gradient to top-left edge */
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar #zentral-apps-vertical-bar-bg::before,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar #zentral-apps-vertical-bar-bg::after,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar #zentral-apps-vertical-bar-bg::before,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar #zentral-apps-vertical-bar-bg::after {
+  background-position: left top !important;
+}
+
+/* When Vertical Bar is on Right (Sidebar on Left): anchor gradient to top-right edge */
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar #zentral-apps-vertical-bar-bg::before,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"]:not([zen-right-side="true"]):not([zen-sidebar-right="true"]) #zentral-apps-vertical-bar #zentral-apps-vertical-bar-bg::after {
+  background-position: right top !important;
+}
+
+/* Soften film grain intensity to match Compact Sidebar visual density */
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar #zentral-apps-vertical-bar-bg .zen-browser-grain {
+  opacity: calc(var(--zen-grainy-background-opacity, 0.4) * 0.35) !important;
+}
+
 /* Autohide Mode B: Position on Left (Sidebar on Right) */
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-right-side="true"] #zentral-apps-vertical-bar,
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"][zen-sidebar-right="true"] #zentral-apps-vertical-bar {
