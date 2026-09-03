@@ -2129,6 +2129,17 @@
         }, { passive: true });
         this.#dom.verticalBar = vb;
 
+        let bgEl = vb.querySelector("#zentral-apps-vertical-bar-bg");
+        if (!bgEl) {
+          bgEl = document.createElement("div");
+          bgEl.id = "zentral-apps-vertical-bar-bg";
+          bgEl.className = "zen-toolbar-background zen-browser-generic-background";
+          const grain = document.createElement("div");
+          grain.className = "zen-browser-grain";
+          bgEl.appendChild(grain);
+          vb.insertBefore(bgEl, vb.firstChild);
+        }
+
         let hoverZone = vb.querySelector(".zen-app-vb-hover-zone");
         if (!hoverZone) {
           hoverZone = document.createElement("div");
@@ -3617,67 +3628,93 @@
       if (!vb) return;
       
       const isAutohide = Core.getPref(Constants.Apps.PREF_AUTOHIDE, false) === true;
+      let bgEl = vb.querySelector("#zentral-apps-vertical-bar-bg");
+      if (!bgEl && isAutohide) {
+        bgEl = document.createElement("div");
+        bgEl.id = "zentral-apps-vertical-bar-bg";
+        bgEl.className = "zen-toolbar-background zen-browser-generic-background";
+        const grain = document.createElement("div");
+        grain.className = "zen-browser-grain";
+        bgEl.appendChild(grain);
+        vb.insertBefore(bgEl, vb.firstChild);
+      }
+
       if (!isAutohide) {
+        if (bgEl) bgEl.style.display = "none";
         vb.style.removeProperty("--zen-theme-gradient-override");
         return;
       }
+      if (bgEl) bgEl.style.display = "flex";
 
-      let gradient = "";
+      // 1. Mirror live properties from Zen's native toolbar & browser background elements
+      const zenTb = document.getElementById("zen-toolbar-background");
+      const zenBb = document.getElementById("zen-browser-background");
 
-      // 1. Check live gradient variables on Zen background elements
-      const zenBrowserBg = document.getElementById("zen-browser-background");
-      const zenToolbarBg = document.getElementById("zen-toolbar-background") || document.querySelector(".zen-toolbar-background");
+      let tbGrad = "";
+      let grainOpacity = "";
+      let bgOpacity = "";
 
-      const browserGrad = zenBrowserBg?.style?.getPropertyValue("--zen-main-browser-background")?.trim();
-      const toolbarGrad = zenToolbarBg?.style?.getPropertyValue("--zen-main-browser-background-toolbar")?.trim();
+      if (zenTb) {
+        tbGrad = zenTb.style.getPropertyValue("--zen-main-browser-background-toolbar") || "";
+        const tbOldGrad = zenTb.style.getPropertyValue("--zen-main-browser-background-toolbar-old") || "";
+        grainOpacity = zenTb.style.getPropertyValue("--zen-grainy-background-opacity") || "";
+        bgOpacity = zenTb.style.getPropertyValue("--zen-background-opacity") || "";
 
-      if (browserGrad && browserGrad !== "none") {
-        gradient = browserGrad;
-      } else if (toolbarGrad && toolbarGrad !== "none") {
-        gradient = toolbarGrad;
+        if (tbGrad && tbGrad !== "none") bgEl.style.setProperty("--zen-main-browser-background-toolbar", tbGrad);
+        if (tbOldGrad) bgEl.style.setProperty("--zen-main-browser-background-toolbar-old", tbOldGrad);
+        if (grainOpacity) bgEl.style.setProperty("--zen-grainy-background-opacity", grainOpacity);
+        if (bgOpacity) bgEl.style.setProperty("--zen-background-opacity", bgOpacity);
+
+        const showGrain = zenTb.getAttribute("zen-show-grainy-background");
+        if (showGrain) {
+          bgEl.setAttribute("zen-show-grainy-background", showGrain);
+        }
       }
 
-      // 2. If not found in inline styles, check computed styles on ::after
-      if (!gradient) {
-        if (zenToolbarBg) {
+      // 2. Check browser background if toolbar background is empty
+      if ((!tbGrad || tbGrad === "none") && zenBb) {
+        const bbGrad = zenBb.style.getPropertyValue("--zen-main-browser-background") || "";
+        const bbOldGrad = zenBb.style.getPropertyValue("--zen-main-browser-background-old") || "";
+        grainOpacity = grainOpacity || zenBb.style.getPropertyValue("--zen-grainy-background-opacity") || "";
+        bgOpacity = bgOpacity || zenBb.style.getPropertyValue("--zen-background-opacity") || "";
+
+        if (bbGrad && bbGrad !== "none") {
+          tbGrad = bbGrad;
+          bgEl.style.setProperty("--zen-main-browser-background-toolbar", bbGrad);
+        }
+        if (bbOldGrad) bgEl.style.setProperty("--zen-main-browser-background-toolbar-old", bbOldGrad);
+        if (grainOpacity) bgEl.style.setProperty("--zen-grainy-background-opacity", grainOpacity);
+        if (bgOpacity) bgEl.style.setProperty("--zen-background-opacity", bgOpacity);
+
+        const showGrain = zenBb.getAttribute("zen-show-grainy-background");
+        if (showGrain) {
+          bgEl.setAttribute("zen-show-grainy-background", showGrain);
+        }
+      }
+
+      // 3. Fallback: generate via gZenThemePicker if not yet populated on native elements
+      if (!tbGrad || tbGrad === "none" || tbGrad.startsWith("light-dark")) {
+        if (window.gZenThemePicker && typeof window.gZenThemePicker.getGradient === "function") {
           try {
-            const cs = window.getComputedStyle(zenToolbarBg, "::after");
-            if (cs?.backgroundImage && cs.backgroundImage !== "none") {
-              gradient = cs.backgroundImage;
+            const ws = window.gZenWorkspaces?.getActiveWorkspace?.();
+            const theme = ws?.theme;
+            if (theme?.gradientColors?.length) {
+              const grad = window.gZenThemePicker.getGradient(theme.gradientColors, true);
+              if (grad) {
+                tbGrad = grad;
+                bgEl.style.setProperty("--zen-main-browser-background-toolbar", grad);
+              }
+              if (theme.texture !== undefined) {
+                bgEl.style.setProperty("--zen-grainy-background-opacity", theme.texture);
+                bgEl.setAttribute("zen-show-grainy-background", theme.texture > 0 ? "true" : "false");
+              }
             }
           } catch (_) {}
         }
-        if (!gradient && zenBrowserBg) {
-          try {
-            const cs = window.getComputedStyle(zenBrowserBg, "::after");
-            if (cs?.backgroundImage && cs.backgroundImage !== "none") {
-              gradient = cs.backgroundImage;
-            }
-          } catch (_) {}
-        }
       }
 
-      // 3. Fallback: generate via gZenThemePicker if available
-      if (!gradient && window.gZenThemePicker && typeof window.gZenThemePicker.getGradient === "function") {
-        try {
-          const ws = window.gZenWorkspaces?.getActiveWorkspace?.();
-          const theme = ws?.theme;
-          if (theme?.gradientColors?.length) {
-            gradient = window.gZenThemePicker.getGradient(theme.gradientColors, false);
-          }
-        } catch (_) {}
-      }
-
-      // 4. Ensure valid CSS gradient for background-image
-      if (gradient) {
-        if (gradient.startsWith("rgb") || gradient.startsWith("#")) {
-          const side = this.isVerticalBarOnRight() ? "right" : "left";
-          gradient = `radial-gradient(circle at ${side} top, ${gradient} 0%, transparent 85%)`;
-        }
-        vb.style.setProperty("--zen-theme-gradient-override", gradient);
-      } else {
-        vb.style.removeProperty("--zen-theme-gradient-override");
-      }
+      // 4. Ensure vb also clears old override to avoid conflict
+      vb.style.removeProperty("--zen-theme-gradient-override");
     }
 
     /**
