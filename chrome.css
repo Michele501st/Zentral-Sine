@@ -3058,9 +3058,9 @@ panel[id*="tabgroup-editor"] {
   pointer-events: none !important;
   transition: opacity 0.12s ease, transform 0.24s cubic-bezier(0.25, 1, 0.5, 1) !important;
 }
-:root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] #zentral-apps-utility-section,
-:root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover #zentral-apps-utility-section,
-:root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) #zentral-apps-utility-section {
+:root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([zentral-apps-hide-utility="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] #zentral-apps-utility-section,
+:root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([zentral-apps-hide-utility="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover #zentral-apps-utility-section,
+:root[zentral-apps-autohide="true"]:not([zentral-apps-placement="vertical-bar"]):not([zentral-sidebar-collapsed="true"]):not([zen-sidebar-collapsed="true"]):not([zentral-apps-hide-utility="true"])[zentral-app-panel-open="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal) #zentral-apps-utility-section {
   display: flex !important;
   opacity: 1 !important;
   max-height: 40px !important;
@@ -3083,19 +3083,20 @@ panel[id*="tabgroup-editor"] {
 }
 
 /* Scoped to expanded / revealed state only in autohide */
-:root[zentral-apps-autohide="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zentral-apps-utility-content,
-:root[zentral-apps-autohide="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zentral-apps-utility-content,
-:root[zentral-apps-autohide="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[zentral-app-panel-open="true"] .zentral-apps-utility-content {
+:root[zentral-apps-autohide="true"]:not([zentral-apps-hide-utility="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zentral-apps-utility-content,
+:root[zentral-apps-autohide="true"]:not([zentral-apps-hide-utility="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zentral-apps-utility-content,
+:root[zentral-apps-autohide="true"]:not([zentral-apps-hide-utility="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[zentral-app-panel-open="true"] .zentral-apps-utility-content {
   max-height: 38px !important;
   opacity: 1 !important;
   transform: none !important;
   pointer-events: auto !important;
+  visibility: visible !important;
   overflow: visible !important;
   margin-bottom: 2px !important;
 }
-:root[zentral-apps-autohide="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zentral-apps-utility-divider,
-:root[zentral-apps-autohide="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zentral-apps-utility-divider,
-:root[zentral-apps-autohide="true"] #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[zentral-app-panel-open="true"] .zentral-apps-utility-divider {
+:root[zentral-apps-autohide="true"]:not([zentral-apps-hide-utility="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[data-revealed="true"] .zentral-apps-utility-divider,
+:root[zentral-apps-autohide="true"]:not([zentral-apps-hide-utility="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal):hover .zentral-apps-utility-divider,
+:root[zentral-apps-autohide="true"]:not([zentral-apps-hide-utility="true"]) #zen-apps-sidebar-grid:not(.zen-apps-horizontal)[zentral-app-panel-open="true"] .zentral-apps-utility-divider {
   display: block !important;
   opacity: 0.5 !important;
   transform: none !important;
@@ -3411,10 +3412,25 @@ panel[id*="tabgroup-editor"] {
 
 /* Permanently hide Utility Section when preference is enabled */
 :root[zentral-apps-hide-utility="true"] #zentral-apps-utility-section,
-:root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid #zentral-apps-utility-section {
+:root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid #zentral-apps-utility-section,
+:root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid:hover #zentral-apps-utility-section,
+:root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid[data-revealed="true"] #zentral-apps-utility-section,
+:root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid[zentral-app-panel-open="true"] #zentral-apps-utility-section,
+:root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid .zentral-apps-utility-content,
+:root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid:hover .zentral-apps-utility-content,
+:root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid[data-revealed="true"] .zentral-apps-utility-content,
+:root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid[zentral-app-panel-open="true"] .zentral-apps-utility-content,
+:root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid .zentral-utility-btn,
+:root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid .zentral-apps-utility-dots,
+:root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid .zentral-apps-utility-dots-vertical,
+:root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid .zentral-apps-utility-divider,
+#zentral-apps-utility-section[data-permanently-hidden="true"],
+#zen-apps-sidebar-grid #zentral-apps-utility-section[data-permanently-hidden="true"],
+#zen-apps-sidebar-grid:hover #zentral-apps-utility-section[data-permanently-hidden="true"] {
   display: none !important;
   max-height: 0 !important;
   height: 0 !important;
+  min-height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
   opacity: 0 !important;
