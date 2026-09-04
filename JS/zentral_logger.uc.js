@@ -2,7 +2,7 @@
 // @name         Zentral-Logger
 // @description  Comprehensive diagnostic logger for Zentral (Apps Grid, Tab Groups, Settings & Layout Renderings).
 // @author       Michele Pierini
-// @version      v1.0.0
+// @version      v1.0.1
 // @include      main
 // ==/UserScript==
 
@@ -1087,6 +1087,6 @@
     }, { once: true });
   }
 
-  ZentralLogger.log("Zentral-Logger", "Zentral-Logger v1.0.0 initialized with clean format & deduplication. Press Alt+L to export logs.");
+  ZentralLogger.log("Zentral-Logger", "Zentral-Logger v1.0.1 initialized with clean format & deduplication. Press Alt+L to export logs.");
 
 })();

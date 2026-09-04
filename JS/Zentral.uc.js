@@ -3,7 +3,7 @@
 // @name           Zentral
 // @description    Unified Apps Grid and Tabs Groups
 // @author         Michele Pierini
-// @version        v1.0.0
+// @version        v1.0.1
 // @include        main
 // ==/UserScript==
 
@@ -81,6 +81,7 @@
       PREF_INSTA_PEEK_SHORTCUT: "zen.workspace.apps.insta_peek.shortcut",
       PREF_PLACEMENT: "zen.workspace.apps.sidebar.placement",
       PREF_UTILITY_ORDER: "zen.workspace.apps.sidebar.utility_order",
+      PREF_HIDE_UTILITY_SECTION: "zen.workspace.apps.sidebar.hide_utility_section",
       MIN_WIDTH_PX: 280,
       MAX_WIDTH_RATIO: 0.80,
       DEFAULT_SLIDE_MS: 450,
@@ -250,6 +251,7 @@
         [Constants.Apps.PREF_INSTA_PEEK_SHORTCUT]: "Alt+Q",
         [Constants.Apps.PREF_PLACEMENT]: "sidebar",
         [Constants.Apps.PREF_UTILITY_ORDER]: '["autohide",null,null,"settings"]',
+        [Constants.Apps.PREF_HIDE_UTILITY_SECTION]: false,
         [Constants.TabGroups.PREF_COLORS]: "{}",
         [Constants.TabGroups.PREF_STATE]: "{}",
         [Constants.TabGroups.PREF_ENABLED]: true,
@@ -627,6 +629,7 @@
       }
       this.injectStyles();
       this.createContainers();
+      this.applyHideUtilitySectionPref();
       this.loadApps();
       this.loadUtilityOrder();
       this.renderGrid();
@@ -1365,6 +1368,20 @@
         /* Hide Utility Section in Vertical Bar placement mode (VB uses its footer) */
         :root[zentral-apps-placement="vertical-bar"] #zentral-apps-utility-section {
           display: none !important;
+        }
+
+        /* Permanently hide Utility Section when preference is enabled */
+        :root[zentral-apps-hide-utility="true"] #zentral-apps-utility-section,
+        :root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid #zentral-apps-utility-section {
+          display: none !important;
+          max-height: 0 !important;
+          height: 0 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          opacity: 0 !important;
+          visibility: hidden !important;
+          pointer-events: none !important;
+          overflow: hidden !important;
         }
 
         #zen-apps-sidebar-grid { display: flex; flex-direction: column; align-items: center; padding: 4px 10px 0px 10px; margin: 0; width: 100%; box-sizing: border-box; position: relative; z-index: 10; overflow: visible; }
@@ -2884,9 +2901,10 @@
       });
       const activeApps = visibleApps.slice(0, maxApps);
 
+      const hideUtility = Core.getPref(Constants.Apps.PREF_HIDE_UTILITY_SECTION, false) === true;
       const appCount = activeApps.length + 1;
       const actualRows = Math.min(Math.ceil(appCount / cols), maxRows);
-      const expandedGridHeight = 44 + (actualRows * 42) + 4;
+      const expandedGridHeight = (hideUtility ? 0 : 44) + (actualRows * 42) + 4;
       this.#dom.grid.style.setProperty("--zentral-apps-grid-expanded-height", `${expandedGridHeight}px`);
       let draggedAppId = null;
       const fragment = document.createDocumentFragment();
@@ -8444,6 +8462,15 @@
         }
       }
 
+      const utilityRow = get("zs-utility-section-row");
+      if (utilityRow) {
+        if (placement === "sidebar") {
+          utilityRow.removeAttribute("data-hidden");
+        } else {
+          utilityRow.setAttribute("data-hidden", "true");
+        }
+      }
+
       const cols = Core.getPref(Constants.Apps.PREF_APPS_PER_ROW, 7) || 7;
       const rows = Core.getPref(Constants.Apps.PREF_MAX_ROWS, 3) || 3;
       this.updateMatrixUI(cols, rows);
@@ -8463,6 +8490,9 @@
       if (get("zs-anim-speed-slider")) get("zs-anim-speed-slider").value = animSpeed;
       if (get("zs-anim-speed-badge")) get("zs-anim-speed-badge").textContent = `${animSpeed} ms`;
       get("zs-max-apps").value = maxApps;
+      if (get("zs-hide-utility-section")) {
+        get("zs-hide-utility-section").checked = Core.getPref(Constants.Apps.PREF_HIDE_UTILITY_SECTION, false) === true;
+      }
 
       const instaPeekShortcut = Core.getPref(Constants.Apps.PREF_INSTA_PEEK_SHORTCUT, "Alt+Q") || "Alt+Q";
       const instaPeekBtn = this.modal.querySelector("#zs-insta-peek-btn");
@@ -8629,6 +8659,9 @@
       Core.setPref(Constants.Apps.PREF_ANIMATION_TYPE, get("zs-anim-type").value);
       Core.setPref(Constants.Apps.PREF_ANIMATION_SPEED, parseInt(get("zs-anim-speed").value) || 0);
       Core.setPref(Constants.Apps.PREF_MAX_APPS, parseInt(get("zs-max-apps").value) || 21);
+      if (get("zs-hide-utility-section")) {
+        Core.setPref(Constants.Apps.PREF_HIDE_UTILITY_SECTION, get("zs-hide-utility-section").checked);
+      }
       Core.setPref(Constants.Apps.PREF_APPS_PER_ROW, parseInt(get("zs-apps-row").value) || 7);
       Core.setPref(Constants.Apps.PREF_MAX_ROWS, parseInt(get("zs-max-rows").value) || 3);
       if (get("zs-insta-peek-shortcut")) {
@@ -8671,6 +8704,7 @@
       
       this.close();
       if (window.Zentral?.Apps) {
+        window.Zentral.Apps.applyHideUtilitySectionPref();
         window.Zentral.Apps.repositionGrid();
         window.Zentral.Apps.updateAutohideState();
         window.Zentral.Apps.renderGrid();
@@ -9800,6 +9834,30 @@
           visibility: hidden !important;
         }
 
+        #zs-utility-section-row {
+          transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                      min-height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                      opacity 0.20s ease,
+                      margin 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                      padding 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                      transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #zs-utility-section-row[data-hidden="true"] {
+          min-height: 0 !important;
+          height: 0 !important;
+          max-height: 0 !important;
+          opacity: 0 !important;
+          overflow: hidden !important;
+          margin-top: -14px !important;
+          margin-bottom: 0 !important;
+          padding-top: 0 !important;
+          padding-bottom: 0 !important;
+          transform: translateY(-6px) !important;
+          pointer-events: none !important;
+          visibility: hidden !important;
+        }
+
         .zs-switch {
           position: relative;
           display: inline-block;
@@ -10190,7 +10248,7 @@
         <div class="zs-header">
           <div class="zs-title-group">
             <h2 class="zs-title">Zentral Settings</h2>
-            <span class="zs-version-badge">v1.0.0</span>
+            <span class="zs-version-badge">v1.0.1</span>
           </div>
           <div class="zs-header-actions">
             <button id="zs-kofi-btn" class="zs-kofi-btn" title="Support Zentral on Ko-fi (ko-fi.com/michele501st)">
@@ -10275,6 +10333,18 @@
                     <div class="zs-matrix-grid" id="zs-matrix-grid">
                       ${matrixCellsHtml}
                     </div>
+                  </div>
+
+                  <!-- Hide Utility Section Toggle -->
+                  <div class="zs-row" id="zs-utility-section-row">
+                    <div class="zs-label-container">
+                      <span class="zs-label">Hide Utility Section</span>
+                      <span class="zs-sublabel">Permanently hide the utility bar from the App Box</span>
+                    </div>
+                    <label class="zs-switch">
+                      <input type="checkbox" id="zs-hide-utility-section" />
+                      <span class="zs-slider"></span>
+                    </label>
                   </div>
 
                   <!-- Apps Number Cap -->
@@ -10754,6 +10824,14 @@
               if (agCol) agCol.scrollTop = 0;
             }
           }
+          const utilityRow = this.modal.querySelector("#zs-utility-section-row");
+          if (utilityRow) {
+            if (placement === "sidebar") {
+              utilityRow.removeAttribute("data-hidden");
+            } else {
+              utilityRow.setAttribute("data-hidden", "true");
+            }
+          }
         });
       });
 
@@ -11140,7 +11218,7 @@
           }
 
           const systemInfo = {
-            zentralVersion: "v1.0.0",
+            zentralVersion: "v1.0.1",
             zenVersion: navigator.userAgent,
             platform: navigator.platform || "Desktop",
             windowSize: `${window.innerWidth}x${window.innerHeight}`,
@@ -11248,6 +11326,9 @@
         placementBtns.forEach(b => b.setAttribute("data-active", b.dataset.placement === "sidebar" ? "true" : "false"));
         if (agCol) agCol.setAttribute("data-placement", "sidebar");
         if (matrixWrapper) matrixWrapper.removeAttribute("data-hidden");
+        if (get("zs-hide-utility-section")) get("zs-hide-utility-section").checked = false;
+        const utilityRow = get("zs-utility-section-row");
+        if (utilityRow) utilityRow.removeAttribute("data-hidden");
         
         this.updateMatrixUI(7, 3);
         const animDropdown = this.modal.querySelector("#zs-anim-type-dropdown");
@@ -11307,7 +11388,7 @@
     TabGroups,
     Settings,
     Init: () => {
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[Zentral] Booting Master Script (v1.0.0)...");
+      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[Zentral] Booting Master Script (v1.0.1)...");
       Apps.init();
       TabGroups.init();
       Settings.init();

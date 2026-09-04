@@ -35,6 +35,12 @@
     ]
   },
   {
+    "property": "zen.workspace.apps.sidebar.hide_utility_section",
+    "label": "Hide Utility Section in App Box",
+    "type": "checkbox",
+    "defaultValue": false
+  },
+  {
     "property": "zen.workspace.apps.insta_peek.shortcut",
     "label": "Insta-Peek Shortcut",
     "type": "string",

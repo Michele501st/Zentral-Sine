@@ -154,6 +154,22 @@ Zentral includes a telemetry and diagnostics subsystem:
 
 ---
 
+<div align="center">
+
+### ☕ Support the Project
+
+</div>
+
+If you enjoy using **Zentral** and would like to support its ongoing development, optimization, and new features, consider buying me a coffee! Every bit of support is deeply appreciated and helps keep the project active and independent.
+
+<p align="center">
+  <a href="https://ko-fi.com/michele501st" target="_blank">
+    <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi" height="36" />
+  </a>
+</p>
+
+---
+
 ### Method 2: Manual Profile Installation
 
 1. Locate your Zen Browser profile directory (`about:support` → **Profile Folder** → *Open Folder*).
@@ -193,18 +209,6 @@ Zentral-Sine/
 │   └── Zentral Logo.svg  # Vector branding asset
 └── serverless/           # Issue reporter worker endpoint definition
 ```
-
----
-
-## ☕ Support the Project
-
-If you enjoy using **Zentral** and would like to support its ongoing development, optimization, and new features, consider buying me a coffee! Every bit of support is deeply appreciated and helps keep the project active and independent.
-
-<p align="center">
-  <a href="https://ko-fi.com/michele501st" target="_blank">
-    <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi" height="36" />
-  </a>
-</p>
 
 ---
 

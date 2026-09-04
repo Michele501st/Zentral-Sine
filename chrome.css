@@ -1,5 +1,5 @@
 /* ============================================================================ */
-/*               ZENTRAL TAB GROUPS & UI STYLESHEET (v1.0.0)                  */
+/*               ZENTRAL TAB GROUPS & UI STYLESHEET (v1.0.1)                  */
 /* ============================================================================ */
 /*  Part of the Zentral userChrome.js suite for Zen Browser.                   */
 /*  License: CC BY-NC-SA 4.0                                                   */
@@ -3407,4 +3407,18 @@ panel[id*="tabgroup-editor"] {
 /* Hide Utility Section in Vertical Bar placement mode (VB uses its footer) */
 :root[zentral-apps-placement="vertical-bar"] #zentral-apps-utility-section {
   display: none !important;
+}
+
+/* Permanently hide Utility Section when preference is enabled */
+:root[zentral-apps-hide-utility="true"] #zentral-apps-utility-section,
+:root[zentral-apps-hide-utility="true"] #zen-apps-sidebar-grid #zentral-apps-utility-section {
+  display: none !important;
+  max-height: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
 }
