@@ -160,7 +160,7 @@ Zentral includes a telemetry and diagnostics subsystem:
 
 </div>
 
-<h5>If you enjoy using **Zentral** and would like to support its ongoing development, optimization, and new features, consider buying me a coffee! Every bit of support is deeply appreciated and helps keep the project active and independent.</h5>
+<h5>If you enjoy using Zentral and would like to support its ongoing development, optimization, and new features, consider buying me a coffee! Every bit of support is deeply appreciated and helps keep the project active and independent.</h5>
 
 <p align="center">
   <a href="https://ko-fi.com/michele501st" target="_blank">

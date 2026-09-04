@@ -8913,7 +8913,7 @@
         .zs-header-actions {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 20px;
         }
 
         .zs-kofi-btn {

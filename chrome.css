@@ -1234,6 +1234,47 @@ panel[id*="tabgroup-editor"] {
   font-weight: 500 !important;
 }
 
+#zentral-settings-modal .zs-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 20px !important;
+}
+
+#zentral-settings-modal .zs-kofi-btn {
+  -moz-appearance: none !important;
+  appearance: none !important;
+  outline: none !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 0 !important;
+  border-radius: 6px !important;
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.18s ease !important;
+  text-decoration: none !important;
+}
+
+#zentral-settings-modal .zs-kofi-btn:hover {
+  transform: translateY(-1px) scale(1.03) !important;
+  filter: brightness(1.0) drop-shadow(0 3px 8px rgba(19, 195, 117, 0.45)) !important;
+}
+
+#zentral-settings-modal .zs-kofi-btn:active {
+  transform: translateY(0) scale(0.97) !important;
+  filter: brightness(0.95) !important;
+}
+
+#zentral-settings-modal .zs-kofi-btn svg {
+  height: 36px !important;
+  width: auto !important;
+  display: block !important;
+  pointer-events: none !important;
+}
+
 /* Clean Close Button "X" (no outside box) */
 #zentral-settings-modal .zs-close-btn {
   -moz-appearance: none !important;
