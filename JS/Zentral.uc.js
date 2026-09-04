@@ -1413,7 +1413,33 @@
         .zen-app-tile:active { transform: scale(0.95); }
         .zen-app-tile[data-active="true"] { background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 36%, rgba(255, 255, 255, 0.18)) !important; border: 1.5px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 75%, rgba(255, 255, 255, 0.4)) !important; box-shadow: 0 0 10px color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent), 0 1px 3px rgba(0, 0, 0, 0.2) !important; }
         .zen-app-tile[data-active="true"] img, .zen-app-tile[data-active="true"] svg { filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 4px color-mix(in srgb, var(--zen-primary-color, #707ac2) 60%, transparent)) !important; }
-        .zen-app-tile img { width: 18px; height: 18px; object-fit: contain; pointer-events: none; border-radius: 4px; image-rendering: -webkit-optimize-contrast; }
+        .zen-app-tile img, .zen-app-tile svg { width: 18px; height: 18px; object-fit: contain; pointer-events: none; border-radius: 4px; image-rendering: -webkit-optimize-contrast; transition: filter 0.2s ease, opacity 0.2s ease; }
+        .zen-app-tile[data-loaded="false"] img, .zen-app-tile[data-loaded="false"] svg,
+        .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) img,
+        .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg {
+          filter: grayscale(100%) opacity(0.55) !important;
+        }
+        .zen-app-tile[data-loaded="false"]:hover img, .zen-app-tile[data-loaded="false"]:hover svg,
+        .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
+        .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg {
+          filter: grayscale(60%) opacity(0.85) !important;
+        }
+        .zen-app-tile[data-loaded="true"] img, .zen-app-tile[data-loaded="true"] svg {
+          filter: none;
+          opacity: 1 !important;
+        }
+        #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"] img,
+        #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"] svg,
+        #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) img,
+        #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg {
+          filter: grayscale(100%) opacity(0.55) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+        }
+        #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"]:hover img,
+        #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"]:hover svg,
+        #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
+        #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg {
+          filter: grayscale(60%) opacity(0.85) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
+        }
         .zen-app-add-btn { background-color: transparent; border: 1px dashed color-mix(in srgb, currentColor 30%, transparent); opacity: 0.7; flex-shrink: 0 !important; }
         .zen-app-add-btn:hover { opacity: 1; border-style: solid; }
         .zen-app-add-btn svg { width: 16px; height: 16px; pointer-events: none; }
@@ -2958,11 +2984,13 @@
       this.renderUtilitySection();
 
       activeApps.forEach((app) => {
+        const isLoaded = this.#state.appBrowsers.has(app.id);
         const btn = document.createElement("button");
         btn.id = "zen-app-btn-" + app.id;
         btn.className = "zen-app-tile";
         btn.dataset.appId = app.id;
         btn.dataset.active = (this.#state.activeAppId === app.id) ? "true" : "false";
+        btn.dataset.loaded = isLoaded ? "true" : "false";
         btn.title = this.formatAppDisplayName(app.title, app.url);
 
         const img = document.createElement("img");
@@ -2993,6 +3021,12 @@
         };
 
         btn.addEventListener("mousedown", (e) => {
+          if (e.button === 1) {
+            // Middle-click: intercept and prevent autoscroll
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
           if (e.button !== 0) return;
           wasDragged = false;
           startX = e.clientX;
@@ -3017,6 +3051,17 @@
             return;
           }
           togglePanel();
+        });
+
+        // Middle-click shortcut to unload a loaded app
+        btn.addEventListener("auxclick", (e) => {
+          if (e.button === 1) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.#state.appBrowsers.has(app.id)) {
+              this.closeApp(app.id);
+            }
+          }
         });
 
         // Context menu and drag/drop logic
@@ -3372,8 +3417,11 @@
       if (!this.#state.appBrowsers || this.#state.appBrowsers.size === 0) {
         this.stopBadgeSyncLoop();
       }
-      const tile = this.#dom.grid?.querySelector(`.zen-app-tile[data-app-id="${appId}"]`);
-      tile?.querySelector(".zen-app-badge")?.remove();
+      const tiles = document.querySelectorAll(`.zen-app-tile[data-app-id="${appId}"]`);
+      tiles.forEach(tile => {
+        tile.dataset.loaded = "false";
+        tile.querySelector(".zen-app-badge")?.remove();
+      });
       const app = this.#state.apps.find(a => a.id === appId);
       if (app) {
         app.badgeCount = 0;
@@ -3548,6 +3596,8 @@
 
       this.#dom.panel.appendChild(b);
       this.#state.appBrowsers.set(app.id, b);
+      const matchingTiles = document.querySelectorAll(`.zen-app-tile[data-app-id="${app.id}"]`);
+      matchingTiles.forEach(t => t.dataset.loaded = "true");
       this.ensureBadgeSyncLoop();
       return { browser: b, isNew: true };
     }
@@ -4067,7 +4117,7 @@
         const frag = window.MozXULElement.parseXULToFragment(`<menupopup id="zen-apps-sidebar-tile-context">
           <menuitem id="zen-apps-sidebar-refresh-item" label="Refresh App"/>
           <menuitem id="zen-apps-sidebar-preload-item" type="checkbox" label="Load at Startup"/>
-          <menuitem id="zen-apps-sidebar-close-app-item" label="Close App"/>
+          <menuitem id="zen-apps-sidebar-close-app-item" label="Unload App"/>
           <menuseparator id="zen-apps-sidebar-sec1-sep"/>
           <menu id="zen-apps-sidebar-pin-to-menu" label="Pin App to">
             <menupopup id="zen-apps-sidebar-pin-to-popup"></menupopup>
@@ -4084,7 +4134,7 @@
         popup = document.createXULElement("menupopup"); popup.id = "zen-apps-sidebar-tile-context";
         const refreshItem = document.createXULElement("menuitem"); refreshItem.id = "zen-apps-sidebar-refresh-item"; refreshItem.setAttribute("label", "Refresh App");
         const preloadItem = document.createXULElement("menuitem"); preloadItem.id = "zen-apps-sidebar-preload-item"; preloadItem.setAttribute("label", "Load at Startup"); preloadItem.setAttribute("type", "checkbox");
-        const closeAppItem = document.createXULElement("menuitem"); closeAppItem.id = "zen-apps-sidebar-close-app-item"; closeAppItem.setAttribute("label", "Close App");
+        const closeAppItem = document.createXULElement("menuitem"); closeAppItem.id = "zen-apps-sidebar-close-app-item"; closeAppItem.setAttribute("label", "Unload App");
         const sec1Sep = document.createXULElement("menuseparator"); sec1Sep.id = "zen-apps-sidebar-sec1-sep";
 
         const pinToMenu = document.createXULElement("menu"); pinToMenu.id = "zen-apps-sidebar-pin-to-menu"; pinToMenu.setAttribute("label", "Pin App to");
@@ -4146,7 +4196,13 @@
           const app = this.#state.apps.find(a => a.id === appId);
           const isLoaded = this.#state.appBrowsers.has(appId);
           if (closeAppBtn) {
-            closeAppBtn.disabled = !isLoaded;
+            if (!isLoaded) {
+              closeAppBtn.setAttribute("disabled", "true");
+              closeAppBtn.disabled = true;
+            } else {
+              closeAppBtn.removeAttribute("disabled");
+              closeAppBtn.disabled = false;
+            }
           }
 
           if (app) {
@@ -4212,7 +4268,9 @@
       });
 
       popup.querySelector("#zen-apps-sidebar-close-app-item")?.addEventListener("command", () => {
-        if (popup.dataset.activeAppId) this.closeApp(popup.dataset.activeAppId);
+        if (popup.dataset.activeAppId && this.#state.appBrowsers.has(popup.dataset.activeAppId)) {
+          this.closeApp(popup.dataset.activeAppId);
+        }
       });
 
       popup.querySelector("#zen-apps-sidebar-remove-item")?.addEventListener("command", () => {
@@ -4824,94 +4882,11 @@
           if (el) el.remove();
         });
 
-        // 4. Secure state persistence across restarts: capture full hierarchy and tab assignments across all workspaces
-        const ss = this.#getSessionStore();
-        const currentWs = window.gZenWorkspaces?.activeWorkspace;
-        const allGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
-
-        // Load existing state to preserve groups from other workspaces
-        let existingGroups = {};
-        let existingTabMapping = {};
+        // 4. Secure state persistence across restarts: prune deleted groups and capture live hierarchy
         try {
-          const stateStr = Core.getPref(Constants.TabGroups.PREF_STATE);
-          if (stateStr && stateStr !== "{}") {
-            const parsed = JSON.parse(stateStr);
-            existingGroups = (parsed && parsed.groups) ? parsed.groups : (parsed || {});
-            existingTabMapping = (parsed && parsed.tabMapping) ? parsed.tabMapping : {};
-          }
+          this.saveTabGroupState();
         } catch (_) {}
-
-        const mergedGroups = { ...existingGroups };
-        const mergedTabMapping = { ...existingTabMapping };
-
-        allGroups.forEach(group => {
-          if (!group.id) group.id = "zentral-group-" + Math.random().toString(36).substr(2, 9);
-          const parentGroup = group.parentElement?.closest("tab-group:not([split-view-group])");
-          const parentId = parentGroup?.id || null;
-          const label = group.label || group.getAttribute("label") || "Group";
-          const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || "";
-          const isCollapsed = group.hasAttribute("collapsed") && group.getAttribute("collapsed") === "true";
-          const wsId = this.getWorkspaceForElement(group);
-          if (wsId) group.setAttribute("zen-workspace-id", wsId);
-
-          const posContainer = parentGroup || group.parentElement;
-          const groupSiblings = posContainer
-            ? Array.from(posContainer.children).filter(el => el.tagName?.toLowerCase() === "tab-group" && !el.hasAttribute("split-view-group"))
-            : [];
-          const index = groupSiblings.indexOf(group);
-
-          mergedGroups[group.id] = {
-            id: group.id,
-            label,
-            color,
-            collapsed: isCollapsed,
-            parentId,
-            workspaceId: wsId,
-            index: index >= 0 ? index : 0
-          };
-
-          // Collect direct tabs of this group
-          let directTabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
-          if (directTabs.length === 0 && group.tabs) {
-            directTabs = Array.from(group.tabs);
-          }
-
-          mergedTabMapping[group.id] = directTabs.map(t => ({
-            zenTabId: t.getAttribute("zen-tab-id") || t.id,
-            url: t.linkedBrowser?.currentURI?.spec || ""
-          }));
-
-          directTabs.forEach(tab => {
-            if (!tab) return;
-            tab.setAttribute("data-zentral-group-id", group.id);
-            tab.setAttribute("data-zentral-group-label", label);
-            if (color) tab.setAttribute("data-zentral-group-color", color);
-            tab.setAttribute("data-zentral-group-collapsed", isCollapsed ? "true" : "false");
-            if (wsId) {
-              tab.setAttribute("data-zentral-group-ws", wsId);
-              tab.setAttribute("zen-workspace-id", wsId);
-            }
-            if (parentId) tab.setAttribute("data-zentral-parent-id", parentId);
-
-            // Persist into Firefox SessionStore so metadata survives browser restarts & cache clears
-            if (ss && typeof ss.setCustomTabValue === "function") {
-              try {
-                ss.setCustomTabValue(tab, "zentral-group-id", group.id);
-                ss.setCustomTabValue(tab, "zentral-group-label", label);
-                if (color) ss.setCustomTabValue(tab, "zentral-group-color", color);
-                if (parentId) ss.setCustomTabValue(tab, "zentral-parent-id", parentId);
-                ss.setCustomTabValue(tab, "zentral-group-collapsed", isCollapsed ? "true" : "false");
-                if (wsId) ss.setCustomTabValue(tab, "zentral-group-ws", wsId);
-              } catch (_) {}
-            }
-          });
-        });
-
-        // Persist full merged state across all workspaces to preferences
-        Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify({
-          groups: mergedGroups,
-          tabMapping: mergedTabMapping
-        }));
+        const allGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
 
         // 5. Flatten groups cleanly into regular top-level tabs across their respective workspaces
         const rootTabContainer = (typeof gZenWorkspaces !== "undefined" && gZenWorkspaces.activeWorkspaceStrip) ||
@@ -5022,16 +4997,62 @@
     }
 
     /**
+     * Sanitizes tab group state by removing empty zombie groups (0 tabs & no children)
+     * and resolving untitled empty entries.
+     * @param {Object} state - { groups, tabMapping }
+     * @returns {Object} Sanitized state
+     */
+    sanitizeState(state) {
+      if (!state || typeof state !== "object") return { groups: {}, tabMapping: {} };
+      const groups = { ...(state.groups || {}) };
+      const tabMapping = { ...(state.tabMapping || {}) };
+
+      // Find all groups that are parents of other groups
+      const parentIds = new Set();
+      for (const g of Object.values(groups)) {
+        if (g && g.parentId) parentIds.add(g.parentId);
+      }
+
+      // Identify zombie groups: 0 tabs and not a parent of any group
+      for (const [id, g] of Object.entries(groups)) {
+        const tabs = tabMapping[id] || [];
+        const isParent = parentIds.has(id);
+        const hasNoTabs = !tabs || tabs.length === 0;
+        const cleanLabel = (g?.label || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+
+        if (hasNoTabs && !isParent) {
+          delete groups[id];
+          delete tabMapping[id];
+        } else if (!cleanLabel && hasNoTabs) {
+          delete groups[id];
+          delete tabMapping[id];
+        }
+      }
+
+      return { groups, tabMapping };
+    }
+
+    /**
      * Reconstructs tab-group containers from tabs tagged with data-zentral-group-* attributes, SessionStore values, or saved state.
      */
     reconstructSavedGroups() {
       try {
         const ss = this.#getSessionStore();
+
+        // 0. Scrub any empty ghost groups lingering in the DOM (0 tabs and 0 child groups)
+        document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])").forEach(g => {
+          const directTabs = g.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab");
+          const childGroups = g.querySelectorAll("tab-group");
+          if (directTabs.length === 0 && childGroups.length === 0 && !this.#state.creatingGroup) {
+            try { g.remove(); } catch (_) {}
+          }
+        });
+
         let savedState = null;
         try {
           const stateStr = Core.getPref(Constants.TabGroups.PREF_STATE);
           if (stateStr && stateStr !== "{}") {
-            savedState = JSON.parse(stateStr);
+            savedState = this.sanitizeState(JSON.parse(stateStr));
           }
         } catch (_) {}
 
@@ -5063,7 +5084,7 @@
         const allTabs = getAllTabs();
         const groupsToReconstruct = new Map();
 
-        // 1. Match tabs to groups using DOM attributes, SessionStore, or URL fallback
+        // 1. Match tabs to groups using DOM attributes, SessionStore, or unique zenTabId fallback
         allTabs.forEach(tab => {
           if (tab.hasAttribute?.("is-zen-split") || tab.hasAttribute?.("zen-split-view") || tab.closest?.("tab-group[split-view-group], tab-group[zen-split-view], tab-group[is-zen-split]")) {
             return;
@@ -5074,14 +5095,15 @@
             groupId = ss.getCustomTabValue(tab, "zentral-group-id");
           }
 
-          // Fallback: match by zenTabId or URL from tabMapping
+          // Fallback: match by unique zenTabId only (never loose URL matching)
           if (!groupId && savedTabMapping) {
-            const tabUrl = tab.linkedBrowser?.currentURI?.spec;
             const zenTabId = tab.getAttribute("zen-tab-id") || tab.id;
-            for (const [gId, tabList] of Object.entries(savedTabMapping)) {
-              if (Array.isArray(tabList) && tabList.some(item => (zenTabId && item.zenTabId === zenTabId) || (tabUrl && tabUrl !== "about:blank" && item.url === tabUrl))) {
-                groupId = gId;
-                break;
+            if (zenTabId) {
+              for (const [gId, tabList] of Object.entries(savedTabMapping)) {
+                if (Array.isArray(tabList) && tabList.some(item => item.zenTabId === zenTabId)) {
+                  groupId = gId;
+                  break;
+                }
               }
             }
           }
@@ -5118,6 +5140,10 @@
                 collapsed,
                 workspaceId: wsId,
                 index,
+                nextTabZenId: savedMeta.nextTabZenId || null,
+                nextGroupId: savedMeta.nextGroupId || null,
+                prevTabZenId: savedMeta.prevTabZenId || null,
+                prevGroupId: savedMeta.prevGroupId || null,
                 tabs: []
               });
             }
@@ -5125,23 +5151,8 @@
           }
         });
 
-        // Also add missing parent groups and any groups from savedGroupsMap
+        // 2. Add missing legitimate parent groups for any matched child groups
         if (savedGroupsMap) {
-          for (const [gId, meta] of Object.entries(savedGroupsMap)) {
-            if (meta && !groupsToReconstruct.has(gId)) {
-              groupsToReconstruct.set(gId, {
-                id: meta.id || gId,
-                label: meta.label || "Group",
-                color: meta.color || "",
-                parentId: meta.parentId || null,
-                collapsed: meta.collapsed === true,
-                workspaceId: meta.workspaceId || "",
-                index: meta.index ?? 0,
-                tabs: []
-              });
-            }
-          }
-
           let addedParent = true;
           while (addedParent) {
             addedParent = false;
@@ -5157,6 +5168,10 @@
                   collapsed: meta.collapsed === true,
                   workspaceId: meta.workspaceId || "",
                   index: meta.index ?? 0,
+                  nextTabZenId: meta.nextTabZenId || null,
+                  nextGroupId: meta.nextGroupId || null,
+                  prevTabZenId: meta.prevTabZenId || null,
+                  prevGroupId: meta.prevGroupId || null,
                   tabs: []
                 });
                 addedParent = true;
@@ -5173,8 +5188,7 @@
               if (tabGId === gId) return true;
               if (savedTabMapping && Array.isArray(savedTabMapping[gId])) {
                 const zenTabId = t.getAttribute("zen-tab-id") || t.id;
-                const tabUrl = t.linkedBrowser?.currentURI?.spec;
-                return savedTabMapping[gId].some(item => (zenTabId && item.zenTabId === zenTabId) || (tabUrl && tabUrl !== "about:blank" && item.url === tabUrl));
+                return zenTabId && savedTabMapping[gId].some(item => item.zenTabId === zenTabId);
               }
               return false;
             });
@@ -5213,6 +5227,12 @@
 
         // Helper to instantiate a fully-structured tab-group DOM element
         const createGroupElement = (info) => {
+          // Guard: Never create an empty group element if it has 0 tabs and no child groups
+          const hasChildren = Array.from(groupsToReconstruct.values()).some(g => g.parentId === info.id);
+          if (info.tabs.length === 0 && !hasChildren) {
+            return null;
+          }
+
           let group = document.getElementById(info.id);
           if (group) {
             // If this group already exists in the DOM as a native Zen split view, skip it entirely.
@@ -5303,9 +5323,27 @@
             if (!group.isConnected || !isInCorrectParent) {
               let targetNode = null;
               
-              if (info.tabs.length > 0 && info.tabs[0].parentNode === parentEl) {
-                targetNode = info.tabs[0];
-              } else if (typeof info.index === "number" && info.index >= 0 && info.index < parentEl.children.length) {
+              if (info.nextTabZenId) {
+                targetNode = Array.from(parentEl.children).find(el => {
+                  const isTab = el.tagName?.toLowerCase() === "tab" || el.classList?.contains("tabbrowser-tab");
+                  return isTab && (el.getAttribute("zen-tab-id") === info.nextTabZenId || el.id === info.nextTabZenId);
+                }) || null;
+              }
+              if (!targetNode && info.nextGroupId) {
+                targetNode = Array.from(parentEl.children).find(el => el.tagName?.toLowerCase() === "tab-group" && el.id === info.nextGroupId) || null;
+              }
+              if (!targetNode && info.prevTabZenId) {
+                const prevEl = Array.from(parentEl.children).find(el => {
+                  const isTab = el.tagName?.toLowerCase() === "tab" || el.classList?.contains("tabbrowser-tab");
+                  return isTab && (el.getAttribute("zen-tab-id") === info.prevTabZenId || el.id === info.prevTabZenId);
+                });
+                if (prevEl) targetNode = prevEl.nextElementSibling;
+              }
+              if (!targetNode && info.prevGroupId) {
+                const prevEl = Array.from(parentEl.children).find(el => el.tagName?.toLowerCase() === "tab-group" && el.id === info.prevGroupId);
+                if (prevEl) targetNode = prevEl.nextElementSibling;
+              }
+              if (!targetNode && typeof info.index === "number" && info.index >= 0 && info.index < parentEl.children.length) {
                 targetNode = parentEl.children[info.index];
               }
 
@@ -5541,6 +5579,16 @@
       this.processExistingGroups();
       this.setupTabOpenHandler();
       this.hookAddTab();
+      document.addEventListener("TabGroupCreate", this.onTabGroupCreate, true);
+      document.addEventListener("tabgroupcreated", this.onTabGroupCreate, true);
+      document.addEventListener("TabGroupCreateByUser", (e) => {
+        const group = e.target?.closest ? (e.target.closest('tab-group:not([split-view-group])') || (e.target.tagName === 'TAB-GROUP' ? e.target : null)) : null;
+        if (group && !this.#isRestoring) this.checkAndApplyFirstTimeGroupColor(group);
+      }, true);
+      document.addEventListener("TabGroupUpdate", (e) => {
+        const group = e.target?.closest ? (e.target.closest('tab-group:not([split-view-group])') || (e.target.tagName === 'TAB-GROUP' ? e.target : null)) : null;
+        if (group && !this.#isRestoring) this.checkAndApplyFirstTimeGroupColor(group);
+      }, true);
 
       // SessionStore Settlement Guard:
       // When the browser launches or caches are cleared, SessionStore injects tabs/groups asynchronously.
@@ -6218,6 +6266,7 @@
                                     node.classList?.contains?.("zen-split-view");
                     if (!isSplit) {
                       this.processGroup(node);
+                      this.checkAndApplyFirstTimeGroupColor(node);
                       this.scheduleStateSave();
                     } else {
                       const lc = node.querySelector(":scope > .tab-group-label-container");
@@ -6239,6 +6288,7 @@
                                      group.classList?.contains?.("zen-split-view");
                       if (!gSplit) {
                         this.processGroup(group);
+                        this.checkAndApplyFirstTimeGroupColor(group);
                         this.scheduleStateSave();
                       } else {
                         const lc = group.querySelector(":scope > .tab-group-label-container");
@@ -6248,6 +6298,13 @@
                   });
                 });
               }
+
+              if (tag === "TAB" || tag === "TABBROWSER-TAB") {
+                const parentGroup = node.closest ? node.closest("tab-group:not([split-view-group])") : null;
+                if (parentGroup && !this.#isRestoring) {
+                  this.checkAndApplyFirstTimeGroupColor(parentGroup);
+                }
+              }
             }
             
             for (const node of mutation.removedNodes) {
@@ -6256,6 +6313,20 @@
                 const obs = this.#groupObservers.get(node);
                 if (obs) { obs.disconnect(); this.#groupObservers.delete(node); }
                 this.#processedGroups.delete(node);
+                if (node.id) {
+                  try { this.removeSavedColor(node.id); } catch (_) {}
+                  try {
+                    const stateStr = Core.getPref(Constants.TabGroups.PREF_STATE);
+                    if (stateStr && stateStr !== "{}") {
+                      const parsed = JSON.parse(stateStr);
+                      const groups = (parsed && parsed.groups) ? parsed.groups : (parsed || {});
+                      const tabMapping = (parsed && parsed.tabMapping) ? parsed.tabMapping : {};
+                      delete groups[node.id];
+                      delete tabMapping[node.id];
+                      Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify({ groups, tabMapping }));
+                    }
+                  } catch (_) {}
+                }
               }
             }
           }
@@ -6887,6 +6958,8 @@
       if (!group.label || group.label === '' || ("defaultGroupName" in group && group.label === group.defaultGroupName)) {
         this.renameGroupStart(group, false);
       }
+
+      this.checkAndApplyFirstTimeGroupColor(group);
     }
 
     /**
@@ -7397,10 +7470,8 @@
 
         if (!group.label || group.label === '' || ("defaultGroupName" in group && group.label === group.defaultGroupName)) {
           if (!this.#state.groupEdited) this.renameGroupStart(group, false);
-          if (typeof group._useFaviconColor === 'function' && !group.style.getPropertyValue("--tab-group-color")) {
-            setTimeout(() => group._useFaviconColor(), 300);
-          }
         }
+        this.checkAndApplyFirstTimeGroupColor(group);
       } catch (e) {
         console.error('[ZentralTabGroups] Error handling TabGroupCreate:', e);
       }
@@ -7437,51 +7508,8 @@
       group.setAttribute("context", "zentral-tabgroup-context-menu");
 
       // Bind group specific actions for external callers
-      // Color picking is now handled natively via ensureColorPickerPanel
       group._useFaviconColor = () => {
-        let favicons = Array.from(group.querySelectorAll(".tab-icon-image"));
-        if (favicons.length === 0) {
-          const tabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab"));
-          favicons = [];
-          tabs.forEach(t => {
-            const icon = t.querySelector(".tab-icon-image");
-            if (icon) favicons.push(icon);
-          });
-        }
-        if (favicons.length === 0) return;
-        const colors = [];
-        
-        favicons.forEach((favicon) => {
-          if (favicon && (favicon.src || favicon.currentSrc)) {
-            try {
-              const canvas = document.createElement("canvas");
-              const ctx = canvas.getContext("2d");
-              const w = favicon.naturalWidth || favicon.width || 16;
-              const h = favicon.naturalHeight || favicon.height || 16;
-              canvas.width = w;
-              canvas.height = h;
-              ctx.drawImage(favicon, 0, 0, w, h);
-              const data = ctx.getImageData(0, 0, w, h).data;
-              let r = 0, g = 0, b = 0, count = 0;
-              for (let i = 0; i < data.length; i += 4) {
-                if (data[i + 3] > 128 && data[i] + data[i + 1] + data[i + 2] > 30) {
-                  r += data[i]; g += data[i + 1]; b += data[i + 2]; count++;
-                }
-              }
-              if (count > 0) colors.push([Math.round(r / count), Math.round(g / count), Math.round(b / count)]);
-            } catch (e) {}
-          }
-        });
-
-        if (colors.length > 0) {
-          const finalColor = this.calculateAverageColor(colors);
-          const colorString = `rgb(${finalColor[0]}, ${finalColor[1]}, ${finalColor[2]})`;
-          group.style.setProperty("--tab-group-color", colorString);
-          group.style.setProperty("--tab-group-color-invert", colorString);
-          group.style.setProperty("--zentral-custom-color", colorString);
-          group.style.setProperty("--zentral-tabgroup-contrast-color", this.getContrastColor(colorString));
-          this.saveTabGroupColors();
-        }
+        this.applyAverageGroupColor(group, true);
       };
 
       group.ungroupTabs = () => {
@@ -7566,15 +7594,267 @@
       };
     }
 
-    _checkFaviconColorsDone(processedCount, total, colors, group) {
-      if (processedCount === total && colors.length > 0) {
-        const finalColor = this.calculateAverageColor(colors);
-        const colorString = `rgb(${finalColor[0]}, ${finalColor[1]}, ${finalColor[2]})`;
-        group.style.setProperty("--tab-group-color", colorString);
-        group.style.setProperty("--tab-group-color-invert", colorString);
-        group.style.setProperty("--zentral-custom-color", colorString);
-        this.saveTabGroupColors();
+    /**
+     * Checks if a tab group ID is already recorded in persistent storage (PREF_STATE or PREF_COLORS).
+     * Used to ensure groups are only auto-colored with the average color when created for the first time ever.
+     * @param {string} groupId - The tab group ID.
+     * @returns {boolean} True if the group was previously saved/known.
+     */
+    isGroupKnownInSavedState(groupId) {
+      if (!groupId) return false;
+      try {
+        const stateStr = Core.getPref(Constants.TabGroups.PREF_STATE);
+        if (stateStr && stateStr !== "{}") {
+          const parsed = JSON.parse(stateStr);
+          const groups = (parsed && parsed.groups) ? parsed.groups : (parsed || {});
+          if (groups && groups[groupId]) return true;
+        }
+      } catch (_) {}
+      try {
+        const rawColors = Core.getPref(Constants.TabGroups.PREF_COLORS);
+        if (rawColors && rawColors !== "{}") {
+          const colors = JSON.parse(rawColors) || {};
+          if (colors && colors[groupId]) return true;
+        }
+      } catch (_) {}
+      return false;
+    }
+
+    /**
+     * Asynchronously extracts the dominant/average RGB color from a tab's favicon image.
+     * Uses HTMLImageElement in chrome privilege without CORS restrictions.
+     * @param {Element} tab - Tab element.
+     * @returns {Promise<Array<number>|null>} [r, g, b] color tuple or null.
+     */
+    extractTabFaviconColor(tab) {
+      return new Promise((resolve) => {
+        if (!tab) return resolve(null);
+
+        let src = tab.getAttribute("image") || tab.image;
+        if (!src) {
+          const iconEl = tab.querySelector(".tab-icon-image, img.tab-icon-image, image.tab-icon-image");
+          src = iconEl?.getAttribute("src") || iconEl?.src || iconEl?.getAttribute("image");
+        }
+
+        if (!src || typeof src !== "string" || src.includes("defaultFavicon.svg") || src.includes("globe.svg")) {
+          return resolve(null);
+        }
+
+        const img = new Image();
+        let done = false;
+
+        const finish = (result) => {
+          if (!done) {
+            done = true;
+            resolve(result);
+          }
+        };
+
+        img.onload = () => {
+          try {
+            const canvas = document.createElement("canvas");
+            const w = img.naturalWidth || img.width || 16;
+            const h = img.naturalHeight || img.height || 16;
+            canvas.width = Math.min(32, Math.max(1, w));
+            canvas.height = Math.min(32, Math.max(1, h));
+            const ctx = canvas.getContext("2d", { willReadFrequently: true });
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let r = 0, g = 0, b = 0, count = 0;
+            for (let i = 0; i < data.length; i += 4) {
+              if (data[i + 3] > 128) {
+                const brightness = data[i] + data[i + 1] + data[i + 2];
+                if (brightness > 40 && brightness < 720) {
+                  r += data[i]; g += data[i + 1]; b += data[i + 2]; count++;
+                }
+              }
+            }
+            if (count > 0) {
+              finish([Math.round(r / count), Math.round(g / count), Math.round(b / count)]);
+            } else {
+              let r2 = 0, g2 = 0, b2 = 0, count2 = 0;
+              for (let i = 0; i < data.length; i += 4) {
+                if (data[i + 3] > 64) {
+                  r2 += data[i]; g2 += data[i + 1]; b2 += data[i + 2]; count2++;
+                }
+              }
+              if (count2 > 0) {
+                finish([Math.round(r2 / count2), Math.round(g2 / count2), Math.round(b2 / count2)]);
+              } else {
+                finish(null);
+              }
+            }
+          } catch (_) {
+            finish(null);
+          }
+        };
+
+        img.onerror = () => finish(null);
+        img.src = src;
+
+        if (img.complete && (img.naturalWidth > 0 || img.width > 0)) {
+          img.onload();
+        }
+
+        setTimeout(() => finish(null), 1000);
+      });
+    }
+
+    /**
+     * Resolves a fallback color for a tab from container identity colors or Zen primary color.
+     * @param {Element} tab - Tab element.
+     * @returns {Array<number>} [r, g, b] color tuple.
+     */
+    getTabFallbackColor(tab) {
+      if (tab) {
+        const identityColors = {
+          blue: [55, 142, 240],
+          turquoise: [0, 195, 218],
+          green: [81, 205, 75],
+          yellow: [255, 203, 47],
+          orange: [255, 148, 43],
+          red: [255, 80, 80],
+          pink: [255, 107, 182],
+          purple: [175, 95, 255]
+        };
+        for (const [name, rgb] of Object.entries(identityColors)) {
+          if (tab.classList?.contains(`identity-color-${name}`)) {
+            return rgb;
+          }
+        }
       }
+      try {
+        const primary = window.getComputedStyle(document.documentElement).getPropertyValue("--zen-primary-color");
+        if (primary) {
+          const match = primary.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+          if (match) return [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])];
+        }
+      } catch (_) {}
+      return [112, 122, 194];
+    }
+
+    /**
+     * Computes the average favicon color from all member tabs and applies it to the tab group.
+     * @param {Element} group - Tab group element.
+     * @param {boolean} [force=false] - Force apply even if already colored.
+     */
+    async applyAverageGroupColor(group, force = false) {
+      if (!group || !group.isConnected) return;
+
+      if (!force) {
+        const customColor = group.style.getPropertyValue("--zentral-custom-color");
+        const tgColor = group.style.getPropertyValue("--tab-group-color");
+        const hasExplicitColor = (customColor && customColor.trim() && customColor !== "transparent") ||
+                                 (tgColor && tgColor.trim() && !tgColor.startsWith("var(--tab-group-") && tgColor !== "transparent");
+        if (hasExplicitColor) return;
+      }
+
+      group._zentralColoringInProgress = true;
+
+      try {
+        let tabs = this.getDirectTabs(group);
+        if (tabs.length === 0) {
+          const contextTabs = window.TabContextMenu?.contextTabs || (window.TabContextMenu?.contextTab ? [window.TabContextMenu.contextTab] : []);
+          if (contextTabs.length > 0) {
+            tabs = contextTabs;
+          } else if (window.gBrowser?.selectedTabs?.length > 0) {
+            tabs = Array.from(window.gBrowser.selectedTabs);
+          } else if (window.gBrowser?.selectedTab) {
+            tabs = [window.gBrowser.selectedTab];
+          }
+        }
+
+        const retryDelays = [60, 150, 300, 500];
+        let attempt = 0;
+        while (tabs.length === 0 && attempt < retryDelays.length) {
+          await new Promise(r => setTimeout(r, retryDelays[attempt++]));
+          if (!group.isConnected) return;
+          tabs = this.getDirectTabs(group);
+        }
+
+        if (tabs.length === 0) return;
+
+        const colors = [];
+        for (const tab of tabs) {
+          const col = await this.extractTabFaviconColor(tab);
+          if (col) colors.push(col);
+        }
+
+        let finalColor = null;
+        if (colors.length > 0) {
+          finalColor = this.calculateAverageColor(colors);
+        } else {
+          finalColor = this.getTabFallbackColor(tabs[0]);
+        }
+
+        if (finalColor && group.isConnected) {
+          const colorString = `rgb(${finalColor[0]}, ${finalColor[1]}, ${finalColor[2]})`;
+          group.style.setProperty("--tab-group-color", colorString);
+          group.style.setProperty("--tab-group-color-invert", colorString);
+          group.style.setProperty("--zentral-custom-color", colorString);
+          group.style.setProperty("--zentral-tabgroup-contrast-color", this.getContrastColor(colorString));
+          this.saveTabGroupColors();
+          this.scheduleStateSave();
+          group._zentralInitialColorChecked = true;
+        }
+
+        // If colors were not ready yet (favicon was still downloading), schedule a retry upgrade after 750ms
+        if (colors.length === 0) {
+          setTimeout(async () => {
+            if (!group.isConnected) return;
+            const retryTabs = this.getDirectTabs(group);
+            if (retryTabs.length === 0) return;
+            const retryColors = [];
+            for (const tab of retryTabs) {
+              const col = await this.extractTabFaviconColor(tab);
+              if (col) retryColors.push(col);
+            }
+            if (retryColors.length > 0) {
+              const fColor = this.calculateAverageColor(retryColors);
+              const cStr = `rgb(${fColor[0]}, ${fColor[1]}, ${fColor[2]})`;
+              group.style.setProperty("--tab-group-color", cStr);
+              group.style.setProperty("--tab-group-color-invert", cStr);
+              group.style.setProperty("--zentral-custom-color", cStr);
+              group.style.setProperty("--zentral-tabgroup-contrast-color", this.getContrastColor(cStr));
+              this.saveTabGroupColors();
+              this.scheduleStateSave();
+            }
+          }, 750);
+        }
+      } finally {
+        group._zentralColoringInProgress = false;
+      }
+    }
+
+    /**
+     * Checks whether a tab group is being created for the first time ever, and if so,
+     * applies the average group color automatically.
+     * NEVER runs on browser restart or reconstructed groups.
+     * @param {Element} group - Tab group DOM element.
+     */
+    checkAndApplyFirstTimeGroupColor(group) {
+      // 1. Never run while the browser is starting up / restoring sessions
+      if (this.#isRestoring) return;
+
+      // 2. Ignore invalid, disconnected, or split view groups
+      if (!group || !group.isConnected || !group.id) return;
+      if (group.hasAttribute("split-view-group") || group.hasAttribute("zen-split-view") || group.hasAttribute("is-zen-split") || group.classList?.contains("zen-split-view")) return;
+
+      // 3. Prevent duplicate evaluation on the same group instance if already checked or in progress
+      if (group._zentralInitialColorChecked || group._zentralColoringInProgress) return;
+
+      // 4. If group already has an explicit custom color assigned, don't overwrite it
+      const customColor = group.style.getPropertyValue("--zentral-custom-color");
+      const tgColor = group.style.getPropertyValue("--tab-group-color");
+      const hasExplicitColor = (customColor && customColor.trim() && customColor !== "transparent") ||
+                               (tgColor && tgColor.trim() && !tgColor.startsWith("var(--tab-group-") && tgColor !== "transparent");
+      if (hasExplicitColor) return;
+
+      // 5. If group was previously saved/known in persistent storage, NEVER default to auto color on reconstruction
+      if (this.isGroupKnownInSavedState(group.id)) return;
+
+      // This is a brand new group created for the FIRST TIME EVER:
+      this.applyAverageGroupColor(group, false);
     }
 
     /**
@@ -7979,7 +8259,11 @@
       } catch (_) {}
       document.querySelectorAll("tab-group:not([split-view-group])").forEach(group => {
         if (group.id) {
-          const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color");
+          const customColor = group.style.getPropertyValue("--zentral-custom-color");
+          const tgColor = group.style.getPropertyValue("--tab-group-color");
+          const color = (customColor && customColor.trim() && customColor !== "transparent")
+            ? customColor
+            : (tgColor && !tgColor.startsWith("var(--tab-group-") && tgColor !== "transparent" ? tgColor : null);
           if (color) colors[group.id] = color;
         }
       });
@@ -8079,38 +8363,86 @@
         const mergedGroups = { ...existingGroups };
         const mergedTabMapping = { ...existingTabMapping };
 
-        document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])").forEach(group => {
+        // Identify live groups currently present in the DOM
+        const liveGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])"));
+        const liveGroupIds = new Set(liveGroups.map(g => g.id).filter(Boolean));
+
+        // 1. Prune groups from existingGroups that belonged to currentWs (or had no workspace) but are no longer in the DOM
+        for (const gId of Object.keys(existingGroups)) {
+          const meta = existingGroups[gId];
+          if (!meta) continue;
+          const ws = meta.workspaceId;
+          const isCurrentWs = !ws || !currentWs || ws === currentWs;
+          if (isCurrentWs && !liveGroupIds.has(gId)) {
+            delete mergedGroups[gId];
+            delete mergedTabMapping[gId];
+          }
+        }
+
+        liveGroups.forEach(group => {
           if (!group.id) return;
           if (group.hasAttribute("split-view-group") || group.hasAttribute("zen-split-view") || group.hasAttribute("is-zen-split")) return;
 
           const parent = group.parentElement?.closest("tab-group, zen-folder") ?? null;
-          const posContainer = parent || group.parentElement;
-          const groupSiblings = posContainer
-            ? Array.from(posContainer.children).filter(
-                el => el.tagName?.toLowerCase() === "tab-group" && !el.hasAttribute("split-view-group") && !el.hasAttribute("zen-split-view") && !el.hasAttribute("is-zen-split")
-              )
-            : [];
-          const index = groupSiblings.indexOf(group);
+          const posContainer = parent ? (parent.querySelector(".tab-group-container") || parent) : group.parentElement;
+          const allSiblings = posContainer ? Array.from(posContainer.children) : [];
+          const childIndex = allSiblings.indexOf(group);
 
-          const label = group.label || group.getAttribute("label") || "Group";
-          const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || (existingGroups[group.id]?.color) || "";
-          const wsId = this.getWorkspaceForElement(group);
-          if (wsId) group.setAttribute("zen-workspace-id", wsId);
+          // Detect neighboring siblings for robust interleaved positioning between tabs or other groups
+          let nextTabZenId = null;
+          let nextGroupId = null;
+          let prevTabZenId = null;
+          let prevGroupId = null;
 
-          mergedGroups[group.id] = {
-            id: group.id,
-            label,
-            color,
-            collapsed: group.hasAttribute("collapsed"),
-            parentId: parent?.id ?? null,
-            workspaceId: wsId,
-            index,
-          };
+          const nextSib = group.nextElementSibling;
+          if (nextSib) {
+            const isTab = nextSib.tagName?.toLowerCase() === "tab" || nextSib.classList?.contains("tabbrowser-tab");
+            if (isTab) nextTabZenId = nextSib.getAttribute("zen-tab-id") || nextSib.id;
+            else if (nextSib.tagName?.toLowerCase() === "tab-group") nextGroupId = nextSib.id;
+          }
+
+          const prevSib = group.previousElementSibling;
+          if (prevSib) {
+            const isTab = prevSib.tagName?.toLowerCase() === "tab" || prevSib.classList?.contains("tabbrowser-tab");
+            if (isTab) prevTabZenId = prevSib.getAttribute("zen-tab-id") || prevSib.id;
+            else if (prevSib.tagName?.toLowerCase() === "tab-group") prevGroupId = prevSib.id;
+          }
 
           let directTabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
           if (directTabs.length === 0 && group.tabs) {
             directTabs = Array.from(group.tabs);
           }
+
+          // Check if this group contains nested child groups
+          const hasChildGroup = liveGroups.some(other => other.parentElement?.closest("tab-group") === group);
+
+          // If a live group has 0 direct tabs and no child groups, it is an empty zombie: remove from DOM and skip saving
+          if (directTabs.length === 0 && !hasChildGroup && !this.#state.creatingGroup) {
+            delete mergedGroups[group.id];
+            delete mergedTabMapping[group.id];
+            try { group.remove(); } catch (_) {}
+            return;
+          }
+
+          const label = group.label || group.getAttribute("label") || "Group";
+          const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || (existingGroups[group.id]?.color) || "";
+          const wsId = this.getWorkspaceForElement(group);
+          if (wsId) group.setAttribute("zen-workspace-id", wsId);
+          const isCollapsed = group.hasAttribute("collapsed") || group.collapsed === true;
+
+          mergedGroups[group.id] = {
+            id: group.id,
+            label,
+            color,
+            collapsed: isCollapsed,
+            parentId: parent?.id ?? null,
+            workspaceId: wsId,
+            index: childIndex >= 0 ? childIndex : 0,
+            nextTabZenId,
+            nextGroupId,
+            prevTabZenId,
+            prevGroupId,
+          };
 
           mergedTabMapping[group.id] = directTabs.map(t => ({
             zenTabId: t.getAttribute("zen-tab-id") || t.id,
@@ -8156,10 +8488,13 @@
           });
         });
 
-        Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify({
+        // Run final sanitization pass to strip 0-tab orphans across all workspaces
+        const sanitized = this.sanitizeState({
           groups: mergedGroups,
           tabMapping: mergedTabMapping
-        }));
+        });
+
+        Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify(sanitized));
       } catch (e) {
         console.warn("[ZentralTabGroups] Error saving state", e);
       }
@@ -8195,29 +8530,43 @@
 
             const targetParentContainer = parent.querySelector(".tab-group-container") || parent;
 
-            const freshGroupChildren = Array.from(targetParentContainer.children).filter(
-              el =>
-                el.tagName?.toLowerCase() === "tab-group" &&
-                !el.hasAttribute("split-view-group") &&
-                el !== group
-            );
-
-            const targetIndex = groupState.index ?? freshGroupChildren.length;
-
-            const alreadyInParent = group.parentElement === targetParentContainer || group.parentElement === parent;
-            if (alreadyInParent) {
-              const currentIdx = Array.from(targetParentContainer.children)
-                .filter(
-                  el => el.tagName?.toLowerCase() === "tab-group" && !el.hasAttribute("split-view-group")
-                )
-                .indexOf(group);
-              if (currentIdx === targetIndex) return;
+            // Check if group is already correctly placed inside targetParentContainer
+            if (group.parentElement === targetParentContainer) {
+              const nextSib = group.nextElementSibling;
+              const prevSib = group.previousElementSibling;
+              const matchesNext = groupState.nextTabZenId && (nextSib?.getAttribute?.("zen-tab-id") === groupState.nextTabZenId || nextSib?.id === groupState.nextTabZenId);
+              const matchesPrev = groupState.prevTabZenId && (prevSib?.getAttribute?.("zen-tab-id") === groupState.prevTabZenId || prevSib?.id === groupState.prevTabZenId);
+              if (matchesNext || matchesPrev) return; // Already positioned perfectly between the saved tabs!
             }
 
-            const refSibling = freshGroupChildren[targetIndex] ?? null;
-            if (refSibling) {
+            let refSibling = null;
+            if (groupState.nextTabZenId) {
+              refSibling = Array.from(targetParentContainer.children).find(el => {
+                const isTab = el.tagName?.toLowerCase() === "tab" || el.classList?.contains("tabbrowser-tab");
+                return isTab && (el.getAttribute("zen-tab-id") === groupState.nextTabZenId || el.id === groupState.nextTabZenId);
+              }) || null;
+            }
+            if (!refSibling && groupState.nextGroupId) {
+              refSibling = Array.from(targetParentContainer.children).find(el => el.tagName?.toLowerCase() === "tab-group" && el.id === groupState.nextGroupId) || null;
+            }
+            if (!refSibling && groupState.prevTabZenId) {
+              const prevEl = Array.from(targetParentContainer.children).find(el => {
+                const isTab = el.tagName?.toLowerCase() === "tab" || el.classList?.contains("tabbrowser-tab");
+                return isTab && (el.getAttribute("zen-tab-id") === groupState.prevTabZenId || el.id === groupState.prevTabZenId);
+              });
+              if (prevEl) refSibling = prevEl.nextElementSibling;
+            }
+            if (!refSibling && groupState.prevGroupId) {
+              const prevEl = Array.from(targetParentContainer.children).find(el => el.tagName?.toLowerCase() === "tab-group" && el.id === groupState.prevGroupId);
+              if (prevEl) refSibling = prevEl.nextElementSibling;
+            }
+            if (!refSibling && typeof groupState.index === "number" && groupState.index >= 0 && groupState.index < targetParentContainer.children.length) {
+              refSibling = targetParentContainer.children[groupState.index];
+            }
+
+            if (refSibling && refSibling !== group) {
               targetParentContainer.insertBefore(group, refSibling);
-            } else {
+            } else if (group.parentElement !== targetParentContainer) {
               targetParentContainer.appendChild(group);
             }
           });
@@ -8228,10 +8577,11 @@
           const isCollapsed = forceCollapse || state[group.id]?.collapsed === true;
           if (isCollapsed) {
             group.setAttribute("collapsed", "true");
+            group.collapsed = true;
           } else {
             group.removeAttribute("collapsed");
+            group.collapsed = false;
           }
-          group.collapsed = isCollapsed;
         });
       } catch (e) {
         console.warn("[ZentralTabGroups] Failed to load state", e);
