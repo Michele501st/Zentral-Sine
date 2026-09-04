@@ -21,7 +21,6 @@ tab-group.zentral-standard {
 /* Neutralize native pill backgrounds & aspect-ratio constraints */
 tab-group.zentral-standard > .tab-group-label-container,
 tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
-  --tab-group-color: transparent !important;
   background: transparent !important;
 }
 
@@ -846,22 +845,72 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease !important;
 }
 
+/* Unloaded App Styling */
+.zen-app-tile[data-loaded="false"] img,
+.zen-app-tile[data-loaded="false"] svg,
+.zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) img,
+.zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg {
+  filter: grayscale(100%) opacity(0.55) !important;
+  transition: filter 0.2s ease, opacity 0.2s ease !important;
+}
+
+.zen-app-tile[data-loaded="false"]:hover img,
+.zen-app-tile[data-loaded="false"]:hover svg,
+.zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
+.zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg {
+  filter: grayscale(60%) opacity(0.85) !important;
+}
+
+.zen-app-tile[data-loaded="true"] img,
+.zen-app-tile[data-loaded="true"] svg {
+  filter: none;
+  opacity: 1 !important;
+}
+
+#zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"] img,
+#zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"] svg,
+#zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) img,
+#zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg {
+  filter: grayscale(100%) opacity(0.55) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+}
+
+#zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"]:hover img,
+#zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"]:hover svg,
+#zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
+#zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg {
+  filter: grayscale(60%) opacity(0.85) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
+}
+
 :is(
   :root[zen-compact-mode="true"],
   :root[zen-sidebar-collapsed="true"],
   :root[zentral-sidebar-collapsed="true"]
-) #zen-apps-sidebar-grid .zen-app-tile img,
+) #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"] img,
 :is(
   :root[zen-compact-mode="true"],
   :root[zen-sidebar-collapsed="true"],
   :root[zentral-sidebar-collapsed="true"]
-) #zen-apps-sidebar-grid .zen-app-tile svg,
+) #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"] svg,
 :is(
   :root[zen-compact-mode="true"],
   :root[zen-sidebar-collapsed="true"],
   :root[zentral-sidebar-collapsed="true"]
 ) #zentral-apps-utility-section .zentral-utility-btn svg {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+  transition: transform 0.15s ease, filter 0.15s ease !important;
+}
+
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) img,
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg {
+  filter: grayscale(100%) opacity(0.55) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
   transition: transform 0.15s ease, filter 0.15s ease !important;
 }
 
