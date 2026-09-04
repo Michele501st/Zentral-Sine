@@ -5082,6 +5082,10 @@
                 collapsed,
                 workspaceId: wsId,
                 index,
+                nextTabZenId: savedMeta.nextTabZenId || null,
+                nextGroupId: savedMeta.nextGroupId || null,
+                prevTabZenId: savedMeta.prevTabZenId || null,
+                prevGroupId: savedMeta.prevGroupId || null,
                 tabs: []
               });
             }
@@ -5106,6 +5110,10 @@
                   collapsed: meta.collapsed === true,
                   workspaceId: meta.workspaceId || "",
                   index: meta.index ?? 0,
+                  nextTabZenId: meta.nextTabZenId || null,
+                  nextGroupId: meta.nextGroupId || null,
+                  prevTabZenId: meta.prevTabZenId || null,
+                  prevGroupId: meta.prevGroupId || null,
                   tabs: []
                 });
                 addedParent = true;
@@ -5257,9 +5265,27 @@
             if (!group.isConnected || !isInCorrectParent) {
               let targetNode = null;
               
-              if (info.tabs.length > 0 && info.tabs[0].parentNode === parentEl) {
-                targetNode = info.tabs[0];
-              } else if (typeof info.index === "number" && info.index >= 0 && info.index < parentEl.children.length) {
+              if (info.nextTabZenId) {
+                targetNode = Array.from(parentEl.children).find(el => {
+                  const isTab = el.tagName?.toLowerCase() === "tab" || el.classList?.contains("tabbrowser-tab");
+                  return isTab && (el.getAttribute("zen-tab-id") === info.nextTabZenId || el.id === info.nextTabZenId);
+                }) || null;
+              }
+              if (!targetNode && info.nextGroupId) {
+                targetNode = Array.from(parentEl.children).find(el => el.tagName?.toLowerCase() === "tab-group" && el.id === info.nextGroupId) || null;
+              }
+              if (!targetNode && info.prevTabZenId) {
+                const prevEl = Array.from(parentEl.children).find(el => {
+                  const isTab = el.tagName?.toLowerCase() === "tab" || el.classList?.contains("tabbrowser-tab");
+                  return isTab && (el.getAttribute("zen-tab-id") === info.prevTabZenId || el.id === info.prevTabZenId);
+                });
+                if (prevEl) targetNode = prevEl.nextElementSibling;
+              }
+              if (!targetNode && info.prevGroupId) {
+                const prevEl = Array.from(parentEl.children).find(el => el.tagName?.toLowerCase() === "tab-group" && el.id === info.prevGroupId);
+                if (prevEl) targetNode = prevEl.nextElementSibling;
+              }
+              if (!targetNode && typeof info.index === "number" && info.index >= 0 && info.index < parentEl.children.length) {
                 targetNode = parentEl.children[info.index];
               }
 
@@ -8068,13 +8094,29 @@
           if (group.hasAttribute("split-view-group") || group.hasAttribute("zen-split-view") || group.hasAttribute("is-zen-split")) return;
 
           const parent = group.parentElement?.closest("tab-group, zen-folder") ?? null;
-          const posContainer = parent || group.parentElement;
-          const groupSiblings = posContainer
-            ? Array.from(posContainer.children).filter(
-                el => el.tagName?.toLowerCase() === "tab-group" && !el.hasAttribute("split-view-group") && !el.hasAttribute("zen-split-view") && !el.hasAttribute("is-zen-split")
-              )
-            : [];
-          const index = groupSiblings.indexOf(group);
+          const posContainer = parent ? (parent.querySelector(".tab-group-container") || parent) : group.parentElement;
+          const allSiblings = posContainer ? Array.from(posContainer.children) : [];
+          const childIndex = allSiblings.indexOf(group);
+
+          // Detect neighboring siblings for robust interleaved positioning between tabs or other groups
+          let nextTabZenId = null;
+          let nextGroupId = null;
+          let prevTabZenId = null;
+          let prevGroupId = null;
+
+          const nextSib = group.nextElementSibling;
+          if (nextSib) {
+            const isTab = nextSib.tagName?.toLowerCase() === "tab" || nextSib.classList?.contains("tabbrowser-tab");
+            if (isTab) nextTabZenId = nextSib.getAttribute("zen-tab-id") || nextSib.id;
+            else if (nextSib.tagName?.toLowerCase() === "tab-group") nextGroupId = nextSib.id;
+          }
+
+          const prevSib = group.previousElementSibling;
+          if (prevSib) {
+            const isTab = prevSib.tagName?.toLowerCase() === "tab" || prevSib.classList?.contains("tabbrowser-tab");
+            if (isTab) prevTabZenId = prevSib.getAttribute("zen-tab-id") || prevSib.id;
+            else if (prevSib.tagName?.toLowerCase() === "tab-group") prevGroupId = prevSib.id;
+          }
 
           let directTabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
           if (directTabs.length === 0 && group.tabs) {
@@ -8096,15 +8138,20 @@
           const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || (existingGroups[group.id]?.color) || "";
           const wsId = this.getWorkspaceForElement(group);
           if (wsId) group.setAttribute("zen-workspace-id", wsId);
+          const isCollapsed = group.hasAttribute("collapsed") || group.collapsed === true;
 
           mergedGroups[group.id] = {
             id: group.id,
             label,
             color,
-            collapsed: group.hasAttribute("collapsed"),
+            collapsed: isCollapsed,
             parentId: parent?.id ?? null,
             workspaceId: wsId,
-            index,
+            index: childIndex >= 0 ? childIndex : 0,
+            nextTabZenId,
+            nextGroupId,
+            prevTabZenId,
+            prevGroupId,
           };
 
           mergedTabMapping[group.id] = directTabs.map(t => ({
@@ -8193,29 +8240,43 @@
 
             const targetParentContainer = parent.querySelector(".tab-group-container") || parent;
 
-            const freshGroupChildren = Array.from(targetParentContainer.children).filter(
-              el =>
-                el.tagName?.toLowerCase() === "tab-group" &&
-                !el.hasAttribute("split-view-group") &&
-                el !== group
-            );
-
-            const targetIndex = groupState.index ?? freshGroupChildren.length;
-
-            const alreadyInParent = group.parentElement === targetParentContainer || group.parentElement === parent;
-            if (alreadyInParent) {
-              const currentIdx = Array.from(targetParentContainer.children)
-                .filter(
-                  el => el.tagName?.toLowerCase() === "tab-group" && !el.hasAttribute("split-view-group")
-                )
-                .indexOf(group);
-              if (currentIdx === targetIndex) return;
+            // Check if group is already correctly placed inside targetParentContainer
+            if (group.parentElement === targetParentContainer) {
+              const nextSib = group.nextElementSibling;
+              const prevSib = group.previousElementSibling;
+              const matchesNext = groupState.nextTabZenId && (nextSib?.getAttribute?.("zen-tab-id") === groupState.nextTabZenId || nextSib?.id === groupState.nextTabZenId);
+              const matchesPrev = groupState.prevTabZenId && (prevSib?.getAttribute?.("zen-tab-id") === groupState.prevTabZenId || prevSib?.id === groupState.prevTabZenId);
+              if (matchesNext || matchesPrev) return; // Already positioned perfectly between the saved tabs!
             }
 
-            const refSibling = freshGroupChildren[targetIndex] ?? null;
-            if (refSibling) {
+            let refSibling = null;
+            if (groupState.nextTabZenId) {
+              refSibling = Array.from(targetParentContainer.children).find(el => {
+                const isTab = el.tagName?.toLowerCase() === "tab" || el.classList?.contains("tabbrowser-tab");
+                return isTab && (el.getAttribute("zen-tab-id") === groupState.nextTabZenId || el.id === groupState.nextTabZenId);
+              }) || null;
+            }
+            if (!refSibling && groupState.nextGroupId) {
+              refSibling = Array.from(targetParentContainer.children).find(el => el.tagName?.toLowerCase() === "tab-group" && el.id === groupState.nextGroupId) || null;
+            }
+            if (!refSibling && groupState.prevTabZenId) {
+              const prevEl = Array.from(targetParentContainer.children).find(el => {
+                const isTab = el.tagName?.toLowerCase() === "tab" || el.classList?.contains("tabbrowser-tab");
+                return isTab && (el.getAttribute("zen-tab-id") === groupState.prevTabZenId || el.id === groupState.prevTabZenId);
+              });
+              if (prevEl) refSibling = prevEl.nextElementSibling;
+            }
+            if (!refSibling && groupState.prevGroupId) {
+              const prevEl = Array.from(targetParentContainer.children).find(el => el.tagName?.toLowerCase() === "tab-group" && el.id === groupState.prevGroupId);
+              if (prevEl) refSibling = prevEl.nextElementSibling;
+            }
+            if (!refSibling && typeof groupState.index === "number" && groupState.index >= 0 && groupState.index < targetParentContainer.children.length) {
+              refSibling = targetParentContainer.children[groupState.index];
+            }
+
+            if (refSibling && refSibling !== group) {
               targetParentContainer.insertBefore(group, refSibling);
-            } else {
+            } else if (group.parentElement !== targetParentContainer) {
               targetParentContainer.appendChild(group);
             }
           });
@@ -8226,10 +8287,11 @@
           const isCollapsed = forceCollapse || state[group.id]?.collapsed === true;
           if (isCollapsed) {
             group.setAttribute("collapsed", "true");
+            group.collapsed = true;
           } else {
             group.removeAttribute("collapsed");
+            group.collapsed = false;
           }
-          group.collapsed = isCollapsed;
         });
       } catch (e) {
         console.warn("[ZentralTabGroups] Failed to load state", e);

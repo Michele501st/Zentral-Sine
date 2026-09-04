@@ -555,11 +555,13 @@ tab-group.zentral-standard[collapsed] .tab-group-container::after {
   display: none !important;
 }
 
-tab-group.zentral-standard .tab-group-container tab {
+tab-group.zentral-standard .tab-group-container tab,
+tab-group.zentral-standard .tab-group-container tab-group {
   transition: max-height 0.15s ease, opacity 0.15s ease !important;
 }
 
-tab-group.zentral-standard[collapsed] .tab-group-container tab:not([selected]) {
+tab-group.zentral-standard[collapsed] .tab-group-container tab:not([selected]),
+tab-group.zentral-standard[collapsed] .tab-group-container tab-group {
   max-height: 0 !important;
   min-height: 0 !important;
   opacity: 0 !important;
@@ -568,6 +570,7 @@ tab-group.zentral-standard[collapsed] .tab-group-container tab:not([selected]) {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   pointer-events: none !important;
+  overflow: hidden !important;
 }
 
 /* Hide tree guide lines and native pseudo-elements when a tab group is collapsed/closed or in Collapsed Sidebar Mode */
