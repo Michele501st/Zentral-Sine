@@ -2547,6 +2547,17 @@
     }
 
     /**
+     * Updates documentElement and utilitySection state based on hide utility section preference.
+     */
+    applyHideUtilitySectionPref() {
+      const hide = Core.getPref(Constants.Apps.PREF_HIDE_UTILITY_SECTION, false) === true;
+      document.documentElement.setAttribute("zentral-apps-hide-utility", hide ? "true" : "false");
+      if (this.#dom.utilitySection) {
+        this.#dom.utilitySection.setAttribute("data-permanently-hidden", hide ? "true" : "false");
+      }
+    }
+
+    /**
      * Sets whether the utility section is revealed (Autohide OFF mode).
      * @param {boolean} hovered - Whether utility section or apps grid is hovered.
      */
