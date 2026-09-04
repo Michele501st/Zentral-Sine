@@ -4824,94 +4824,11 @@
           if (el) el.remove();
         });
 
-        // 4. Secure state persistence across restarts: capture full hierarchy and tab assignments across all workspaces
-        const ss = this.#getSessionStore();
-        const currentWs = window.gZenWorkspaces?.activeWorkspace;
-        const allGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
-
-        // Load existing state to preserve groups from other workspaces
-        let existingGroups = {};
-        let existingTabMapping = {};
+        // 4. Secure state persistence across restarts: prune deleted groups and capture live hierarchy
         try {
-          const stateStr = Core.getPref(Constants.TabGroups.PREF_STATE);
-          if (stateStr && stateStr !== "{}") {
-            const parsed = JSON.parse(stateStr);
-            existingGroups = (parsed && parsed.groups) ? parsed.groups : (parsed || {});
-            existingTabMapping = (parsed && parsed.tabMapping) ? parsed.tabMapping : {};
-          }
+          this.saveTabGroupState();
         } catch (_) {}
-
-        const mergedGroups = { ...existingGroups };
-        const mergedTabMapping = { ...existingTabMapping };
-
-        allGroups.forEach(group => {
-          if (!group.id) group.id = "zentral-group-" + Math.random().toString(36).substr(2, 9);
-          const parentGroup = group.parentElement?.closest("tab-group:not([split-view-group])");
-          const parentId = parentGroup?.id || null;
-          const label = group.label || group.getAttribute("label") || "Group";
-          const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || "";
-          const isCollapsed = group.hasAttribute("collapsed") && group.getAttribute("collapsed") === "true";
-          const wsId = this.getWorkspaceForElement(group);
-          if (wsId) group.setAttribute("zen-workspace-id", wsId);
-
-          const posContainer = parentGroup || group.parentElement;
-          const groupSiblings = posContainer
-            ? Array.from(posContainer.children).filter(el => el.tagName?.toLowerCase() === "tab-group" && !el.hasAttribute("split-view-group"))
-            : [];
-          const index = groupSiblings.indexOf(group);
-
-          mergedGroups[group.id] = {
-            id: group.id,
-            label,
-            color,
-            collapsed: isCollapsed,
-            parentId,
-            workspaceId: wsId,
-            index: index >= 0 ? index : 0
-          };
-
-          // Collect direct tabs of this group
-          let directTabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
-          if (directTabs.length === 0 && group.tabs) {
-            directTabs = Array.from(group.tabs);
-          }
-
-          mergedTabMapping[group.id] = directTabs.map(t => ({
-            zenTabId: t.getAttribute("zen-tab-id") || t.id,
-            url: t.linkedBrowser?.currentURI?.spec || ""
-          }));
-
-          directTabs.forEach(tab => {
-            if (!tab) return;
-            tab.setAttribute("data-zentral-group-id", group.id);
-            tab.setAttribute("data-zentral-group-label", label);
-            if (color) tab.setAttribute("data-zentral-group-color", color);
-            tab.setAttribute("data-zentral-group-collapsed", isCollapsed ? "true" : "false");
-            if (wsId) {
-              tab.setAttribute("data-zentral-group-ws", wsId);
-              tab.setAttribute("zen-workspace-id", wsId);
-            }
-            if (parentId) tab.setAttribute("data-zentral-parent-id", parentId);
-
-            // Persist into Firefox SessionStore so metadata survives browser restarts & cache clears
-            if (ss && typeof ss.setCustomTabValue === "function") {
-              try {
-                ss.setCustomTabValue(tab, "zentral-group-id", group.id);
-                ss.setCustomTabValue(tab, "zentral-group-label", label);
-                if (color) ss.setCustomTabValue(tab, "zentral-group-color", color);
-                if (parentId) ss.setCustomTabValue(tab, "zentral-parent-id", parentId);
-                ss.setCustomTabValue(tab, "zentral-group-collapsed", isCollapsed ? "true" : "false");
-                if (wsId) ss.setCustomTabValue(tab, "zentral-group-ws", wsId);
-              } catch (_) {}
-            }
-          });
-        });
-
-        // Persist full merged state across all workspaces to preferences
-        Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify({
-          groups: mergedGroups,
-          tabMapping: mergedTabMapping
-        }));
+        const allGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group])"));
 
         // 5. Flatten groups cleanly into regular top-level tabs across their respective workspaces
         const rootTabContainer = (typeof gZenWorkspaces !== "undefined" && gZenWorkspaces.activeWorkspaceStrip) ||
@@ -5022,16 +4939,62 @@
     }
 
     /**
+     * Sanitizes tab group state by removing empty zombie groups (0 tabs & no children)
+     * and resolving untitled empty entries.
+     * @param {Object} state - { groups, tabMapping }
+     * @returns {Object} Sanitized state
+     */
+    sanitizeState(state) {
+      if (!state || typeof state !== "object") return { groups: {}, tabMapping: {} };
+      const groups = { ...(state.groups || {}) };
+      const tabMapping = { ...(state.tabMapping || {}) };
+
+      // Find all groups that are parents of other groups
+      const parentIds = new Set();
+      for (const g of Object.values(groups)) {
+        if (g && g.parentId) parentIds.add(g.parentId);
+      }
+
+      // Identify zombie groups: 0 tabs and not a parent of any group
+      for (const [id, g] of Object.entries(groups)) {
+        const tabs = tabMapping[id] || [];
+        const isParent = parentIds.has(id);
+        const hasNoTabs = !tabs || tabs.length === 0;
+        const cleanLabel = (g?.label || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+
+        if (hasNoTabs && !isParent) {
+          delete groups[id];
+          delete tabMapping[id];
+        } else if (!cleanLabel && hasNoTabs) {
+          delete groups[id];
+          delete tabMapping[id];
+        }
+      }
+
+      return { groups, tabMapping };
+    }
+
+    /**
      * Reconstructs tab-group containers from tabs tagged with data-zentral-group-* attributes, SessionStore values, or saved state.
      */
     reconstructSavedGroups() {
       try {
         const ss = this.#getSessionStore();
+
+        // 0. Scrub any empty ghost groups lingering in the DOM (0 tabs and 0 child groups)
+        document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])").forEach(g => {
+          const directTabs = g.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab");
+          const childGroups = g.querySelectorAll("tab-group");
+          if (directTabs.length === 0 && childGroups.length === 0 && !this.#state.creatingGroup) {
+            try { g.remove(); } catch (_) {}
+          }
+        });
+
         let savedState = null;
         try {
           const stateStr = Core.getPref(Constants.TabGroups.PREF_STATE);
           if (stateStr && stateStr !== "{}") {
-            savedState = JSON.parse(stateStr);
+            savedState = this.sanitizeState(JSON.parse(stateStr));
           }
         } catch (_) {}
 
@@ -5063,7 +5026,7 @@
         const allTabs = getAllTabs();
         const groupsToReconstruct = new Map();
 
-        // 1. Match tabs to groups using DOM attributes, SessionStore, or URL fallback
+        // 1. Match tabs to groups using DOM attributes, SessionStore, or unique zenTabId fallback
         allTabs.forEach(tab => {
           if (tab.hasAttribute?.("is-zen-split") || tab.hasAttribute?.("zen-split-view") || tab.closest?.("tab-group[split-view-group], tab-group[zen-split-view], tab-group[is-zen-split]")) {
             return;
@@ -5074,14 +5037,15 @@
             groupId = ss.getCustomTabValue(tab, "zentral-group-id");
           }
 
-          // Fallback: match by zenTabId or URL from tabMapping
+          // Fallback: match by unique zenTabId only (never loose URL matching)
           if (!groupId && savedTabMapping) {
-            const tabUrl = tab.linkedBrowser?.currentURI?.spec;
             const zenTabId = tab.getAttribute("zen-tab-id") || tab.id;
-            for (const [gId, tabList] of Object.entries(savedTabMapping)) {
-              if (Array.isArray(tabList) && tabList.some(item => (zenTabId && item.zenTabId === zenTabId) || (tabUrl && tabUrl !== "about:blank" && item.url === tabUrl))) {
-                groupId = gId;
-                break;
+            if (zenTabId) {
+              for (const [gId, tabList] of Object.entries(savedTabMapping)) {
+                if (Array.isArray(tabList) && tabList.some(item => item.zenTabId === zenTabId)) {
+                  groupId = gId;
+                  break;
+                }
               }
             }
           }
@@ -5125,23 +5089,8 @@
           }
         });
 
-        // Also add missing parent groups and any groups from savedGroupsMap
+        // 2. Add missing legitimate parent groups for any matched child groups
         if (savedGroupsMap) {
-          for (const [gId, meta] of Object.entries(savedGroupsMap)) {
-            if (meta && !groupsToReconstruct.has(gId)) {
-              groupsToReconstruct.set(gId, {
-                id: meta.id || gId,
-                label: meta.label || "Group",
-                color: meta.color || "",
-                parentId: meta.parentId || null,
-                collapsed: meta.collapsed === true,
-                workspaceId: meta.workspaceId || "",
-                index: meta.index ?? 0,
-                tabs: []
-              });
-            }
-          }
-
           let addedParent = true;
           while (addedParent) {
             addedParent = false;
@@ -5173,8 +5122,7 @@
               if (tabGId === gId) return true;
               if (savedTabMapping && Array.isArray(savedTabMapping[gId])) {
                 const zenTabId = t.getAttribute("zen-tab-id") || t.id;
-                const tabUrl = t.linkedBrowser?.currentURI?.spec;
-                return savedTabMapping[gId].some(item => (zenTabId && item.zenTabId === zenTabId) || (tabUrl && tabUrl !== "about:blank" && item.url === tabUrl));
+                return zenTabId && savedTabMapping[gId].some(item => item.zenTabId === zenTabId);
               }
               return false;
             });
@@ -5213,6 +5161,12 @@
 
         // Helper to instantiate a fully-structured tab-group DOM element
         const createGroupElement = (info) => {
+          // Guard: Never create an empty group element if it has 0 tabs and no child groups
+          const hasChildren = Array.from(groupsToReconstruct.values()).some(g => g.parentId === info.id);
+          if (info.tabs.length === 0 && !hasChildren) {
+            return null;
+          }
+
           let group = document.getElementById(info.id);
           if (group) {
             // If this group already exists in the DOM as a native Zen split view, skip it entirely.
@@ -6256,6 +6210,20 @@
                 const obs = this.#groupObservers.get(node);
                 if (obs) { obs.disconnect(); this.#groupObservers.delete(node); }
                 this.#processedGroups.delete(node);
+                if (node.id) {
+                  try { this.removeSavedColor(node.id); } catch (_) {}
+                  try {
+                    const stateStr = Core.getPref(Constants.TabGroups.PREF_STATE);
+                    if (stateStr && stateStr !== "{}") {
+                      const parsed = JSON.parse(stateStr);
+                      const groups = (parsed && parsed.groups) ? parsed.groups : (parsed || {});
+                      const tabMapping = (parsed && parsed.tabMapping) ? parsed.tabMapping : {};
+                      delete groups[node.id];
+                      delete tabMapping[node.id];
+                      Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify({ groups, tabMapping }));
+                    }
+                  } catch (_) {}
+                }
               }
             }
           }
@@ -8079,7 +8047,23 @@
         const mergedGroups = { ...existingGroups };
         const mergedTabMapping = { ...existingTabMapping };
 
-        document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])").forEach(group => {
+        // Identify live groups currently present in the DOM
+        const liveGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])"));
+        const liveGroupIds = new Set(liveGroups.map(g => g.id).filter(Boolean));
+
+        // 1. Prune groups from existingGroups that belonged to currentWs (or had no workspace) but are no longer in the DOM
+        for (const gId of Object.keys(existingGroups)) {
+          const meta = existingGroups[gId];
+          if (!meta) continue;
+          const ws = meta.workspaceId;
+          const isCurrentWs = !ws || !currentWs || ws === currentWs;
+          if (isCurrentWs && !liveGroupIds.has(gId)) {
+            delete mergedGroups[gId];
+            delete mergedTabMapping[gId];
+          }
+        }
+
+        liveGroups.forEach(group => {
           if (!group.id) return;
           if (group.hasAttribute("split-view-group") || group.hasAttribute("zen-split-view") || group.hasAttribute("is-zen-split")) return;
 
@@ -8091,6 +8075,22 @@
               )
             : [];
           const index = groupSiblings.indexOf(group);
+
+          let directTabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
+          if (directTabs.length === 0 && group.tabs) {
+            directTabs = Array.from(group.tabs);
+          }
+
+          // Check if this group contains nested child groups
+          const hasChildGroup = liveGroups.some(other => other.parentElement?.closest("tab-group") === group);
+
+          // If a live group has 0 direct tabs and no child groups, it is an empty zombie: remove from DOM and skip saving
+          if (directTabs.length === 0 && !hasChildGroup && !this.#state.creatingGroup) {
+            delete mergedGroups[group.id];
+            delete mergedTabMapping[group.id];
+            try { group.remove(); } catch (_) {}
+            return;
+          }
 
           const label = group.label || group.getAttribute("label") || "Group";
           const color = group.style.getPropertyValue("--tab-group-color") || group.style.getPropertyValue("--zentral-custom-color") || (existingGroups[group.id]?.color) || "";
@@ -8106,11 +8106,6 @@
             workspaceId: wsId,
             index,
           };
-
-          let directTabs = Array.from(group.querySelectorAll("tab, tabbrowser-tab, .tabbrowser-tab")).filter(t => t.closest("tab-group") === group);
-          if (directTabs.length === 0 && group.tabs) {
-            directTabs = Array.from(group.tabs);
-          }
 
           mergedTabMapping[group.id] = directTabs.map(t => ({
             zenTabId: t.getAttribute("zen-tab-id") || t.id,
@@ -8156,10 +8151,13 @@
           });
         });
 
-        Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify({
+        // Run final sanitization pass to strip 0-tab orphans across all workspaces
+        const sanitized = this.sanitizeState({
           groups: mergedGroups,
           tabMapping: mergedTabMapping
-        }));
+        });
+
+        Core.setPref(Constants.TabGroups.PREF_STATE, JSON.stringify(sanitized));
       } catch (e) {
         console.warn("[ZentralTabGroups] Error saving state", e);
       }
