@@ -926,6 +926,10 @@
     // Settings Modal elements
     const modal = t.closest("#zentral-settings-modal");
     if (modal) {
+      if (t.closest("#zs-kofi-btn")) {
+        ZentralLogger.log("UI:Settings", "Clicked Ko-fi Support Button");
+        return;
+      }
       ZentralLogger.log("UI:Settings", `Interaction on ${formatElementSelector(t)}`);
       return;
     }

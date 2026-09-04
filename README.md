@@ -13,6 +13,7 @@
   <a href="theme.json"><img src="https://img.shields.io/badge/Version-v1.0.0-4A72FF.svg?style=flat-square" alt="Version"></a>
   <a href="https://zen-browser.app/"><img src="https://img.shields.io/badge/Zen_Browser-Compatible-9B51E0.svg?style=flat-square" alt="Zen Browser"></a>
   <a href="theme.json"><img src="https://img.shields.io/badge/Sine_Engine-Native_Mod-00C853.svg?style=flat-square" alt="Sine Engine"></a>
+  <a href="https://ko-fi.com/michele501st"><img src="https://img.shields.io/badge/Support-Ko--fi-FF5E5B.svg?style=flat-square&logo=ko-fi&logoColor=white" alt="Support on Ko-fi"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-CC_BY--NC--SA_4.0-FF9800.svg?style=flat-square" alt="License"></a>
 </p>
 
@@ -192,6 +193,18 @@ Zentral-Sine/
 │   └── Zentral Logo.svg  # Vector branding asset
 └── serverless/           # Issue reporter worker endpoint definition
 ```
+
+---
+
+## ☕ Support the Project
+
+If you enjoy using **Zentral** and would like to support its ongoing development, optimization, and new features, consider buying me a coffee! Every bit of support is deeply appreciated and helps keep the project active and independent.
+
+<p align="center">
+  <a href="https://ko-fi.com/michele501st" target="_blank">
+    <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi" height="36" />
+  </a>
+</p>
 
 ---
 
