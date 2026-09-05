@@ -4702,6 +4702,10 @@
     #tabOpenListener = null;
     /** @private Original gBrowser.addTab reference */
     #origAddTab = null;
+    /** @private Latch indicating sub-group badge updating in progress */
+    #isUpdatingBadges = false;
+    /** @private RAF handle for debounced badge updates */
+    #badgeUpdateRAF = null;
 
     /**
      * Safely retrieves Firefox SessionStore service for persistent tab metadata across restarts.
@@ -4804,6 +4808,10 @@
             Services.obs.removeObserver(this.#sessionRestoreObserver, "sessionstore-windows-restored");
           } catch (_) {}
           this.#sessionRestoreObserver = null;
+        }
+        if (this.#badgeUpdateRAF) {
+          window.cancelAnimationFrame(this.#badgeUpdateRAF);
+          this.#badgeUpdateRAF = null;
         }
         this.#isRestoring = false;
 
@@ -5405,7 +5413,7 @@
             console.error(`[ZentralTabGroups] Error reconstructing group ${gId}:`, err);
           }
         });
-        this.updateAllSubGroupsBadges();
+        this.scheduleBadgeUpdate();
       } catch (e) {
         console.error("[ZentralTabGroups] Error in reconstructSavedGroups:", e);
       }
@@ -6222,6 +6230,7 @@
     setupObserver() {
       const observer = new MutationObserver((mutations) => {
         let needsSave = false;
+        let groupsStructureChanged = false;
         for (const mutation of mutations) {
           if (mutation.type === "attributes") {
             const attr = mutation.attributeName;
@@ -6230,6 +6239,7 @@
               if (g && g.tagName?.toUpperCase() === "TAB-GROUP") {
                 const lc = g.querySelector(":scope > .tab-group-label-container");
                 if (lc) lc.remove();
+                groupsStructureChanged = true;
               }
             }
             if (attr === "collapsed") {
@@ -6258,6 +6268,7 @@
               }
               
               if (tag === "TAB-GROUP") {
+                groupsStructureChanged = true;
                 window.requestAnimationFrame(() => {
                   if (node.isConnected) {
                     const isSplit = node.hasAttribute?.("split-view-group") || 
@@ -6269,6 +6280,7 @@
                       this.processGroup(node);
                       this.checkAndApplyFirstTimeGroupColor(node);
                       this.scheduleStateSave();
+                      this.scheduleBadgeUpdate();
                     } else {
                       const lc = node.querySelector(":scope > .tab-group-label-container");
                       if (lc) lc.remove();
@@ -6279,6 +6291,7 @@
               
               const childGroups = node.querySelectorAll?.("tab-group") || [];
               if (childGroups.length > 0) {
+                groupsStructureChanged = true;
                 childGroups.forEach((group) => {
                   window.requestAnimationFrame(() => {
                     if (group.isConnected) {
@@ -6291,6 +6304,7 @@
                         this.processGroup(group);
                         this.checkAndApplyFirstTimeGroupColor(group);
                         this.scheduleStateSave();
+                        this.scheduleBadgeUpdate();
                       } else {
                         const lc = group.querySelector(":scope > .tab-group-label-container");
                         if (lc) lc.remove();
@@ -6311,6 +6325,7 @@
             for (const node of mutation.removedNodes) {
               if (node.nodeType === Node.ELEMENT_NODE && node.tagName?.toUpperCase() === "TAB-GROUP") {
                 needsSave = true;
+                groupsStructureChanged = true;
                 const obs = this.#groupObservers.get(node);
                 if (obs) { obs.disconnect(); this.#groupObservers.delete(node); }
                 this.#processedGroups.delete(node);
@@ -6334,7 +6349,7 @@
         }
         
         if (needsSave) this.scheduleStateSave();
-        this.updateAllSubGroupsBadges();
+        if (groupsStructureChanged) this.scheduleBadgeUpdate();
       });
       const tabContainer = document.getElementById("tabbrowser-tabs") || document.body;
       observer.observe(tabContainer, { childList: true, subtree: true, attributes: true, attributeFilter: ["collapsed", "split-view-group", "zen-split-view", "is-zen-split", "label"] });
@@ -7870,6 +7885,17 @@
     }
 
     /**
+     * Schedules a debounced refresh of sub-groups indicator badges.
+     */
+    scheduleBadgeUpdate() {
+      if (this.#badgeUpdateRAF) return;
+      this.#badgeUpdateRAF = window.requestAnimationFrame(() => {
+        this.#badgeUpdateRAF = null;
+        this.updateAllSubGroupsBadges();
+      });
+    }
+
+    /**
      * Updates the sub-groups indicator badge on a tab group header.
      * Displays count of direct child sub-groups when collapsed.
      * @param {Element} group - The tab-group element.
@@ -7884,12 +7910,19 @@
       const allGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])")).filter(g => !g.classList?.contains("zen-split-view"));
       const childCount = allGroups.filter(other => other !== group && other.isConnected && other.parentElement?.closest("tab-group") === group).length;
 
-      if (childCount > 0) {
-        group.setAttribute("data-has-subgroups", childCount.toString());
-        badge.textContent = childCount === 1 ? "1 Sub-Group" : `${childCount} Sub-Groups`;
-      } else {
-        group.removeAttribute("data-has-subgroups");
-        badge.textContent = "";
+      const currentHas = group.getAttribute("data-has-subgroups");
+      const targetHas = childCount > 0 ? childCount.toString() : null;
+      if (currentHas !== targetHas) {
+        if (targetHas) {
+          group.setAttribute("data-has-subgroups", targetHas);
+        } else {
+          group.removeAttribute("data-has-subgroups");
+        }
+      }
+
+      const targetText = childCount > 0 ? (childCount === 1 ? "1 Sub-Group" : `${childCount} Sub-Groups`) : "";
+      if (badge.textContent !== targetText) {
+        badge.textContent = targetText;
       }
     }
 
@@ -7897,12 +7930,20 @@
      * Refreshes sub-group badges across all tab groups in the document.
      */
     updateAllSubGroupsBadges() {
-      const allGroups = document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])");
-      allGroups.forEach(g => {
-        if (!g.classList?.contains("zen-split-view")) {
-          this.updateGroupSubGroupsBadge(g);
-        }
-      });
+      if (this.#isUpdatingBadges) return;
+      this.#isUpdatingBadges = true;
+      try {
+        const allGroups = document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])");
+        allGroups.forEach(g => {
+          if (!g.classList?.contains("zen-split-view")) {
+            this.updateGroupSubGroupsBadge(g);
+          }
+        });
+      } catch (err) {
+        console.error("[ZentralTabGroups] Error updating badges:", err);
+      } finally {
+        this.#isUpdatingBadges = false;
+      }
     }
 
     /**
@@ -8631,7 +8672,7 @@
             group.collapsed = false;
           }
         });
-        this.updateAllSubGroupsBadges();
+        this.scheduleBadgeUpdate();
       } catch (e) {
         console.warn("[ZentralTabGroups] Failed to load state", e);
       }
