@@ -5405,6 +5405,7 @@
             console.error(`[ZentralTabGroups] Error reconstructing group ${gId}:`, err);
           }
         });
+        this.updateAllSubGroupsBadges();
       } catch (e) {
         console.error("[ZentralTabGroups] Error in reconstructSavedGroups:", e);
       }
@@ -6333,6 +6334,7 @@
         }
         
         if (needsSave) this.scheduleStateSave();
+        this.updateAllSubGroupsBadges();
       });
       const tabContainer = document.getElementById("tabbrowser-tabs") || document.body;
       observer.observe(tabContainer, { childList: true, subtree: true, attributes: true, attributeFilter: ["collapsed", "split-view-group", "zen-split-view", "is-zen-split", "label"] });
@@ -6712,9 +6714,9 @@
           labelContainer.style.setProperty("width", "100%", "important");
           labelContainer.style.setProperty("min-width", "100%", "important");
           labelContainer.style.setProperty("max-width", "100%", "important");
-          labelContainer.style.setProperty("height", "26px", "important");
-          labelContainer.style.setProperty("min-height", "26px", "important");
-          labelContainer.style.setProperty("max-height", "26px", "important");
+          labelContainer.style.setProperty("height", "var(--tab-min-height, 36px)", "important");
+          labelContainer.style.setProperty("min-height", "var(--tab-min-height, 36px)", "important");
+          labelContainer.style.setProperty("max-height", "var(--tab-min-height, 36px)", "important");
           labelContainer.style.setProperty("box-sizing", "border-box", "important");
           labelContainer.style.setProperty("display", "flex", "important");
           labelContainer.style.setProperty("flex-direction", "row", "important");
@@ -6949,6 +6951,13 @@
       if (currentInnerLabel && currentInnerLabel.parentNode !== wrapper) wrapper.appendChild(currentInnerLabel);
       if (initialsEl && initialsEl.parentNode !== wrapper) wrapper.appendChild(initialsEl);
 
+      let subGroupsBadge = wrapper.querySelector(".zentral-subgroups-badge");
+      if (!subGroupsBadge) {
+        subGroupsBadge = document.createElement("span");
+        subGroupsBadge.className = "zentral-subgroups-badge";
+        wrapper.appendChild(subGroupsBadge);
+      }
+
       group.classList.remove('tab-group-editor-mode-create');
       this.#processedGroups.add(group);
       group.setAttribute("data-close-button-added", "true"); // Kept for external compatibility
@@ -6960,6 +6969,9 @@
       }
 
       this.checkAndApplyFirstTimeGroupColor(group);
+      this.updateGroupSubGroupsBadge(group);
+      const parentGroup = group.parentElement?.closest("tab-group");
+      if (parentGroup) this.updateGroupSubGroupsBadge(parentGroup);
     }
 
     /**
@@ -7858,6 +7870,42 @@
     }
 
     /**
+     * Updates the sub-groups indicator badge on a tab group header.
+     * Displays count of direct child sub-groups when collapsed.
+     * @param {Element} group - The tab-group element.
+     */
+    updateGroupSubGroupsBadge(group) {
+      if (!group || !group.isConnected || group.nodeType !== Node.ELEMENT_NODE) return;
+      if (group.hasAttribute("split-view-group") || group.hasAttribute("zen-split-view") || group.hasAttribute("is-zen-split") || group.classList?.contains("zen-split-view")) return;
+
+      const badge = group.querySelector(":scope > .tab-group-label-container .zentral-subgroups-badge");
+      if (!badge) return;
+
+      const allGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])")).filter(g => !g.classList?.contains("zen-split-view"));
+      const childCount = allGroups.filter(other => other !== group && other.isConnected && other.parentElement?.closest("tab-group") === group).length;
+
+      if (childCount > 0) {
+        group.setAttribute("data-has-subgroups", childCount.toString());
+        badge.textContent = childCount === 1 ? "1 Sub-Group" : `${childCount} Sub-Groups`;
+      } else {
+        group.removeAttribute("data-has-subgroups");
+        badge.textContent = "";
+      }
+    }
+
+    /**
+     * Refreshes sub-group badges across all tab groups in the document.
+     */
+    updateAllSubGroupsBadges() {
+      const allGroups = document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])");
+      allGroups.forEach(g => {
+        if (!g.classList?.contains("zen-split-view")) {
+          this.updateGroupSubGroupsBadge(g);
+        }
+      });
+    }
+
+    /**
      * Prevents dormant tabs and split views from being selected and loaded while being dragged or reordered.
      * Defers mousedown tab selection until mouseup (for clicks) and isolates the drag payload during startTabDrag (for drags).
      */
@@ -8583,6 +8631,7 @@
             group.collapsed = false;
           }
         });
+        this.updateAllSubGroupsBadges();
       } catch (e) {
         console.warn("[ZentralTabGroups] Failed to load state", e);
       }

@@ -84,9 +84,9 @@ tab-group.zentral-standard > .tab-group-label-container {
   width: 100% !important;
   min-width: 100% !important;
   max-width: 100% !important;
-  height: 26px !important;
-  min-height: 26px !important;
-  max-height: 26px !important;
+  height: var(--tab-min-height, 36px) !important;
+  min-height: var(--tab-min-height, 36px) !important;
+  max-height: var(--tab-min-height, 36px) !important;
   aspect-ratio: auto !important;
   margin: 2px 0 !important;
   padding: 0 !important;
@@ -121,9 +121,9 @@ tab-group.zentral-standard > .tab-group-label-container .zentral-tab-title-wrapp
   width: 100% !important;
   min-width: 100% !important;
   max-width: 100% !important;
-  height: 26px !important;
-  min-height: 26px !important;
-  max-height: 26px !important;
+  height: var(--tab-min-height, 36px) !important;
+  min-height: var(--tab-min-height, 36px) !important;
+  max-height: var(--tab-min-height, 36px) !important;
   padding: 0 8px 0 10px !important;
   border-radius: 8px !important;
   background-color: color-mix(in srgb, var(--zentral-custom-color, var(--tab-group-color, #777777)) calc(var(--zentral-tabgroup-label-opacity, 0.85) * 100%), transparent) !important;
@@ -262,6 +262,46 @@ tab-group.zentral-standard > .tab-group-label-container .tab-group-label {
   text-align: start !important;
   order: 2 !important;
   margin: 0 0 0 6px !important;
+}
+
+/* Sub-Groups Counter Badge */
+.zentral-subgroups-badge {
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 2px 7px !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  border-radius: 10px !important;
+  background: color-mix(in srgb, currentColor 18%, transparent) !important;
+  backdrop-filter: blur(8px) !important;
+  color: var(--zentral-tabgroup-contrast-color, #ffffff) !important;
+  letter-spacing: 0.02em !important;
+  white-space: nowrap !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  order: 0 !important;
+  margin-right: auto !important;
+  margin-left: 0 !important;
+  transition: opacity 0.15s ease !important;
+}
+
+/* Right Sidebar: Place badge at the far right edge (opposite from left-aligned name) */
+:is(html[zen-sidebar-right="true"], html[zen-right-side="true"]) #tabbrowser-tabs tab-group > .tab-group-label-container .zentral-subgroups-badge {
+  order: 3 !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+}
+
+/* Reveal ONLY when the parent group is collapsed and has sub-groups */
+tab-group:is([collapsed="true"], [collapsed])[data-has-subgroups] > .tab-group-label-container .zentral-subgroups-badge {
+  display: inline-flex !important;
+}
+
+/* Hide in collapsed sidebar mode */
+:is(html[zentral-sidebar-collapsed="true"], html[zen-sidebar-collapsed="true"], #tabbrowser-tabs[zentral-sidebar-collapsed="true"]) tab-group > .tab-group-label-container .zentral-subgroups-badge {
+  display: none !important;
 }
 
 /* Icon container within title wrapper */
@@ -613,9 +653,9 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   padding: 0 !important;
   width: 100% !important;
   min-width: 100% !important;
-  height: 26px !important;
-  min-height: 26px !important;
-  max-height: 26px !important;
+  height: var(--tab-min-height, 36px) !important;
+  min-height: var(--tab-min-height, 36px) !important;
+  max-height: var(--tab-min-height, 36px) !important;
   box-sizing: border-box !important;
 }
 
