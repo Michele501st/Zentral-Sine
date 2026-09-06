@@ -5827,7 +5827,7 @@
           border: 1px solid color-mix(in srgb, currentColor 40%, transparent) !important;
           border-radius: 6px !important;
           color: var(--zentral-tabgroup-contrast-color, #ffffff) !important;
-          font-size: 12.5px !important;
+          font-size: 13.5px !important;
           font-weight: 600 !important;
           font-family: inherit !important;
           text-align: center !important;
