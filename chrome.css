@@ -890,12 +890,12 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease !important;
 }
 
-/* Unloaded App Styling */
+/* Unloaded App Styling - Desaturated appearance retaining subtle brand tint */
 .zen-app-tile[data-loaded="false"] img,
 .zen-app-tile[data-loaded="false"] svg,
 .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) img,
 .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg {
-  filter: grayscale(100%) opacity(0.55) !important;
+  filter: saturate(35%) opacity(0.72) !important;
   transition: filter 0.2s ease, opacity 0.2s ease !important;
 }
 
@@ -903,27 +903,58 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
 .zen-app-tile[data-loaded="false"]:hover svg,
 .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
 .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg {
-  filter: grayscale(60%) opacity(0.85) !important;
+  filter: saturate(75%) opacity(0.95) !important;
 }
 
+/* Loaded App Styling - A tiny bit more saturated than normal */
 .zen-app-tile[data-loaded="true"] img,
 .zen-app-tile[data-loaded="true"] svg {
-  filter: none;
+  filter: saturate(118%) !important;
   opacity: 1 !important;
+  transition: filter 0.2s ease, opacity 0.2s ease !important;
+}
+
+.zen-app-tile[data-loaded="true"]:hover img,
+.zen-app-tile[data-loaded="true"]:hover svg {
+  filter: saturate(128%) !important;
+  opacity: 1 !important;
+}
+
+/* Vertical Bar Loaded & Unloaded App Styling */
+#zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"] img,
+#zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"] svg {
+  filter: saturate(118%) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+  opacity: 1 !important;
+  transition: transform 0.15s ease, filter 0.2s ease, opacity 0.2s ease !important;
+}
+
+#zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"]:hover img,
+#zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"]:hover svg {
+  filter: saturate(128%) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
 }
 
 #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"] img,
 #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"] svg,
 #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) img,
 #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg {
-  filter: grayscale(100%) opacity(0.55) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+  filter: saturate(35%) opacity(0.72) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+  transition: transform 0.15s ease, filter 0.2s ease, opacity 0.2s ease !important;
 }
 
 #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"]:hover img,
 #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"]:hover svg,
 #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
 #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg {
-  filter: grayscale(60%) opacity(0.85) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
+  filter: saturate(75%) opacity(0.95) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
+}
+
+#zentral-apps-vertical-bar .zen-app-add-btn svg {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+  transition: transform 0.15s ease, filter 0.15s ease !important;
+}
+
+#zentral-apps-vertical-bar .zen-app-add-btn:hover svg {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
 }
 
 :is(
@@ -935,7 +966,25 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   :root[zen-compact-mode="true"],
   :root[zen-sidebar-collapsed="true"],
   :root[zentral-sidebar-collapsed="true"]
-) #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"] svg,
+) #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"] svg {
+  filter: saturate(118%) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+  opacity: 1 !important;
+  transition: transform 0.15s ease, filter 0.2s ease, opacity 0.2s ease !important;
+}
+
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-tile[data-loaded="true"]:hover img,
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-tile[data-loaded="true"]:hover svg {
+  filter: saturate(128%) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
+}
+
 :is(
   :root[zen-compact-mode="true"],
   :root[zen-sidebar-collapsed="true"],
@@ -955,8 +1004,21 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   :root[zen-sidebar-collapsed="true"],
   :root[zentral-sidebar-collapsed="true"]
 ) #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg {
-  filter: grayscale(100%) opacity(0.55) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
-  transition: transform 0.15s ease, filter 0.15s ease !important;
+  filter: saturate(35%) opacity(0.72) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+  transition: transform 0.15s ease, filter 0.2s ease, opacity 0.2s ease !important;
+}
+
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
+:is(
+  :root[zen-compact-mode="true"],
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg {
+  filter: saturate(75%) opacity(0.95) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
 }
 
 :is(
@@ -978,12 +1040,7 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   :root[zen-compact-mode="true"],
   :root[zen-sidebar-collapsed="true"],
   :root[zentral-sidebar-collapsed="true"]
-) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-tile:hover img,
-:is(
-  :root[zen-compact-mode="true"],
-  :root[zen-sidebar-collapsed="true"],
-  :root[zentral-sidebar-collapsed="true"]
-) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-tile:hover svg,
+) #zen-apps-sidebar-grid:not(.zen-apps-horizontal) .zen-app-add-btn:hover svg,
 :is(
   :root[zen-compact-mode="true"],
   :root[zen-sidebar-collapsed="true"],
@@ -1003,17 +1060,30 @@ html[zen-sidebar-collapsed="true"] tab-group > .tab-group-label-container::after
   box-shadow: none !important;
 }
 
-#zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile:hover img,
-#zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile:hover svg,
+#zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile[data-loaded="true"]:hover img,
+#zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile[data-loaded="true"]:hover svg,
 :is(
   :root[zen-sidebar-collapsed="true"],
   :root[zentral-sidebar-collapsed="true"]
-) #zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile:hover img,
+) #zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile[data-loaded="true"]:hover img,
 :is(
   :root[zen-sidebar-collapsed="true"],
   :root[zentral-sidebar-collapsed="true"]
-) #zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile:hover svg {
-  filter: none !important;
+) #zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile[data-loaded="true"]:hover svg {
+  filter: saturate(128%) !important;
+}
+
+#zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
+#zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg,
+:is(
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
+:is(
+  :root[zen-sidebar-collapsed="true"],
+  :root[zentral-sidebar-collapsed="true"]
+) #zen-apps-sidebar-grid.zen-apps-horizontal .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg {
+  filter: saturate(75%) opacity(0.95) !important;
 }
 
 :is(
@@ -2912,8 +2982,32 @@ panel[id*="tabgroup-editor"] {
   width: 18px !important;
   height: 18px !important;
   object-fit: contain !important;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
-  transition: transform 0.15s ease, filter 0.15s ease !important;
+  transition: transform 0.15s ease, filter 0.2s ease, opacity 0.2s ease !important;
+}
+
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"] img,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"] svg {
+  filter: saturate(118%) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+  opacity: 1 !important;
+}
+
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"]:hover img,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"]:hover svg {
+  filter: saturate(128%) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
+}
+
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"] img,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"] svg,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) img,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg {
+  filter: saturate(35%) opacity(0.72) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+}
+
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"]:hover img,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"]:hover svg,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg {
+  filter: saturate(75%) opacity(0.95) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
 }
 
 :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:hover {
@@ -2924,8 +3018,11 @@ panel[id*="tabgroup-editor"] {
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
-:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:hover img,
-:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:hover svg {
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn svg {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+}
+
+:root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn:hover svg {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
 }
 
