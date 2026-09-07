@@ -3,7 +3,7 @@
 // @name           Zentral
 // @description    Unified Apps Grid and Tabs Groups
 // @author         Michele Pierini
-// @version        v1.0.1
+// @version        v1.0.2
 // @include        main
 // ==/UserScript==
 
@@ -348,11 +348,50 @@
       }
       return fallback;
     }
+
+    /**
+     * Standardized diagnostic logger routing to window.ZentralLogger or debug console.
+     * @param {string} module - Component or module name tag (e.g. "ZentralApps").
+     * @param {...any} args - Log arguments.
+     */
+    log(module, ...args) {
+      if (window.ZentralLogger?.log) {
+        window.ZentralLogger.log(module, ...args);
+      } else if (this.getPref(Constants.DEBUG_PREF)) {
+        console.log(`[${module}]`, ...args);
+      }
+    }
+
+    /**
+     * Standardized warning logger routing to window.ZentralLogger or native warn.
+     * @param {string} module - Component or module name tag.
+     * @param {...any} args - Warning arguments.
+     */
+    warn(module, ...args) {
+      if (window.ZentralLogger?.warn) {
+        window.ZentralLogger.warn(module, ...args);
+      } else {
+        console.warn(`[${module}]`, ...args);
+      }
+    }
+
+    /**
+     * Standardized error logger routing to window.ZentralLogger or native error.
+     * @param {string} module - Component or module name tag.
+     * @param {...any} args - Error arguments.
+     */
+    error(module, ...args) {
+      if (window.ZentralLogger?.error) {
+        window.ZentralLogger.error(module, ...args);
+      } else {
+        console.error(`[${module}]`, ...args);
+      }
+    }
   }
 
   // Instantiate Core immediately
   const Core = new ZentralCore();
-  if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralCore] Initialized.");
+  Core.log("ZentralCore", "Initialized.");
   /* ============================================================================
    * 3.0 APPS MODULE (ZentralApps)
    * ============================================================================
@@ -383,7 +422,7 @@
      */
     destroy() {
       try {
-        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] Destroying Apps module...");
+        Core.log("ZentralApps", "Destroying Apps module...");
         
         // 1. Clear timers and animation frames
         if (this.#state.repositionTimer) {
@@ -624,7 +663,7 @@
      */
     init() {
       if (!Core.getPref(Constants.Apps.PREF_ENABLED)) {
-        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] Apps Grid feature is disabled.");
+        Core.log("ZentralApps", "Apps Grid feature is disabled.");
         return;
       }
       this.injectStyles();
@@ -1414,31 +1453,57 @@
         .zen-app-tile[data-active="true"] { background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 36%, rgba(255, 255, 255, 0.18)) !important; border: 1.5px solid color-mix(in srgb, var(--zen-primary-color, #707ac2) 75%, rgba(255, 255, 255, 0.4)) !important; box-shadow: 0 0 10px color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent), 0 1px 3px rgba(0, 0, 0, 0.2) !important; }
         .zen-app-tile[data-active="true"] img, .zen-app-tile[data-active="true"] svg { filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 4px color-mix(in srgb, var(--zen-primary-color, #707ac2) 60%, transparent)) !important; }
         .zen-app-tile img, .zen-app-tile svg { width: 18px; height: 18px; object-fit: contain; pointer-events: none; border-radius: 4px; image-rendering: -webkit-optimize-contrast; transition: filter 0.2s ease, opacity 0.2s ease; }
+        /* Unloaded App Styling - Desaturated appearance retaining subtle brand tint */
         .zen-app-tile[data-loaded="false"] img, .zen-app-tile[data-loaded="false"] svg,
         .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) img,
         .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg {
-          filter: grayscale(100%) opacity(0.55) !important;
+          filter: saturate(35%) opacity(0.72) !important;
+          transition: filter 0.2s ease, opacity 0.2s ease !important;
         }
         .zen-app-tile[data-loaded="false"]:hover img, .zen-app-tile[data-loaded="false"]:hover svg,
         .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
         .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg {
-          filter: grayscale(60%) opacity(0.85) !important;
+          filter: saturate(75%) opacity(0.95) !important;
         }
+        /* Loaded App Styling - A tiny bit more saturated than normal */
         .zen-app-tile[data-loaded="true"] img, .zen-app-tile[data-loaded="true"] svg {
-          filter: none;
+          filter: saturate(118%) !important;
           opacity: 1 !important;
+          transition: filter 0.2s ease, opacity 0.2s ease !important;
+        }
+        .zen-app-tile[data-loaded="true"]:hover img, .zen-app-tile[data-loaded="true"]:hover svg {
+          filter: saturate(128%) !important;
+          opacity: 1 !important;
+        }
+        #zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"] img,
+        #zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"] svg {
+          filter: saturate(118%) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+          opacity: 1 !important;
+          transition: transform 0.15s ease, filter 0.2s ease, opacity 0.2s ease !important;
+        }
+        #zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"]:hover img,
+        #zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"]:hover svg {
+          filter: saturate(128%) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
         }
         #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"] img,
         #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"] svg,
         #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) img,
         #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg {
-          filter: grayscale(100%) opacity(0.55) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+          filter: saturate(35%) opacity(0.72) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+          transition: transform 0.15s ease, filter 0.2s ease, opacity 0.2s ease !important;
         }
         #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"]:hover img,
         #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"]:hover svg,
         #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
         #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg {
-          filter: grayscale(60%) opacity(0.85) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
+          filter: saturate(75%) opacity(0.95) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
+        }
+        #zentral-apps-vertical-bar .zen-app-add-btn svg {
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+          transition: transform 0.15s ease, filter 0.15s ease !important;
+        }
+        #zentral-apps-vertical-bar .zen-app-add-btn:hover svg {
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
         }
         .zen-app-add-btn { background-color: transparent; border: 1px dashed color-mix(in srgb, currentColor 30%, transparent); opacity: 0.7; flex-shrink: 0 !important; }
         .zen-app-add-btn:hover { opacity: 1; border-style: solid; }
@@ -1766,8 +1831,32 @@
           width: 18px !important;
           height: 18px !important;
           object-fit: contain !important;
-          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
-          transition: transform 0.15s ease, filter 0.15s ease !important;
+          transition: transform 0.15s ease, filter 0.2s ease, opacity 0.2s ease !important;
+        }
+
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"] img,
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"] svg {
+          filter: saturate(118%) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+          opacity: 1 !important;
+        }
+
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"]:hover img,
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="true"]:hover svg {
+          filter: saturate(128%) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
+        }
+
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"] img,
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"] svg,
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) img,
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg {
+          filter: saturate(35%) opacity(0.72) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+        }
+
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"]:hover img,
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile[data-loaded="false"]:hover svg,
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg {
+          filter: saturate(75%) opacity(0.95) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
         }
 
         :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:hover {
@@ -1777,8 +1866,11 @@
           box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2) !important;
         }
 
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:hover img,
-        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-tile:hover svg {
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn svg {
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+        }
+
+        :root[zentral-apps-autohide="true"][zentral-apps-placement="vertical-bar"] #zentral-apps-vertical-bar .zen-app-add-btn:hover svg {
           filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
         }
 
@@ -1981,14 +2073,47 @@
           transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease !important;
         }
 
-        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile img,
-        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile svg,
+        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"] img,
+        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"] svg,
+        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"] img,
+        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"] svg,
+        :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"] img,
+        :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"] svg {
+          filter: saturate(118%) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+          opacity: 1 !important;
+          transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease !important;
+        }
+
+        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"]:hover img,
+        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"]:hover svg,
+        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"]:hover img,
+        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"]:hover svg,
+        :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"]:hover img,
+        :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile[data-loaded="true"]:hover svg {
+          filter: saturate(128%) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
+        }
+
+        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) img,
+        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg,
+        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) img,
+        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg,
+        :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) img,
+        :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn) svg {
+          filter: saturate(35%) opacity(0.72) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
+          transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease !important;
+        }
+
+        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
+        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg,
+        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
+        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg,
+        :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover img,
+        :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:not([data-loaded="true"]):not(.zen-app-add-btn):not(.zen-app-vb-footer-btn):hover svg {
+          filter: saturate(75%) opacity(0.95) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
+        }
+
         :root[zen-compact-mode="true"] #zentral-apps-utility-section .zentral-utility-btn svg,
-        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile img,
-        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile svg,
         :root[zen-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn svg,
-        :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile img,
-        :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile svg,
         :root[zentral-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn svg {
           filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)) !important;
           transition: transform 0.15s ease, filter 0.15s ease !important;
@@ -2005,15 +2130,12 @@
           box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2) !important;
         }
 
-        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile:hover img,
-        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-tile:hover svg,
         :root[zen-compact-mode="true"] #zentral-apps-utility-section .zentral-utility-btn:hover svg,
-        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:hover img,
-        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:hover svg,
         :root[zen-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn:hover svg,
-        :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:hover img,
-        :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-tile:hover svg,
-        :root[zentral-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn:hover svg {
+        :root[zentral-sidebar-collapsed="true"] #zentral-apps-utility-section .zentral-utility-btn:hover svg,
+        :root[zen-compact-mode="true"] #zen-apps-sidebar-grid .zen-app-add-btn:hover svg,
+        :root[zen-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-add-btn:hover svg,
+        :root[zentral-sidebar-collapsed="true"] #zen-apps-sidebar-grid .zen-app-add-btn:hover svg {
           filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)) !important;
         }
 
@@ -3210,7 +3332,7 @@
     }
 
     openPanel(app) {
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] openPanel called for app:", app.id, "URL:", app.url);
+      Core.log("ZentralApps", "openPanel called for app:", app.id, "URL:", app.url);
       if (this.#state.closeTimerId) {
         clearTimeout(this.#state.closeTimerId);
         this.#state.closeTimerId = null;
@@ -3284,7 +3406,7 @@
     }
 
     closePanel() {
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] closePanel called");
+      Core.log("ZentralApps", "closePanel called");
       if (!this.#state.activeAppId && !this.#dom.root?.hasAttribute("open")) return;
       
       if (this.#state.closeTimerId) {
@@ -4026,7 +4148,7 @@
 
     togglePin() {
       this.#state.isPinned = !this.#state.isPinned;
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] togglePin - isPinned:", this.#state.isPinned);
+      Core.log("ZentralApps", "togglePin - isPinned:", this.#state.isPinned);
       if(this.#dom.pinBtn) {
         this.#dom.pinBtn.setAttribute("data-pinned", this.#state.isPinned ? "true" : "false");
         this.#dom.pinBtn.title = this.#state.isPinned ? "Unpin panel" : "Pin panel";
@@ -4034,7 +4156,7 @@
     }
 
     toggleExpand() {
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] toggleExpand - current isExpanded:", this.#state.isExpanded);
+      Core.log("ZentralApps", "toggleExpand - current isExpanded:", this.#state.isExpanded);
       if (!this.#state.isExpanded) {
         this.#state.preExpandWidth = this.#state.panelWidthPx || this.loadWidth();
         
@@ -4330,7 +4452,7 @@
       if (e.target.closest && (e.target.closest("#navigator-toolbox") || e.target.closest("#sidebar-box") || e.target.closest("#PersonalToolbar") || e.target.closest("#nav-bar"))) return;
       if (e.target.closest && (e.target.closest("[id*='sine']") || e.target.closest("[class*='sine']"))) return;
       
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] handleOutsideClick closing panel due to click target:", e.target?.tagName, e.target?.id, e.target?.className);
+      Core.log("ZentralApps", "handleOutsideClick closing panel due to click target:", e.target?.tagName, e.target?.id, e.target?.className);
       this.closePanel();
     }
 
@@ -4480,7 +4602,7 @@
             vb.style.display = "flex";
             this.updateVerticalBarBounds();
           }
-          if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Vertical Bar mode placed on opposite edge.");
+          Core.log("ZentralApps", "repositionGrid: Vertical Bar mode placed on opposite edge.");
         } else {
           if (this.#dom.verticalBar) {
             this.#dom.verticalBar.style.display = "none";
@@ -4499,7 +4621,7 @@
             if (this.#dom.utilitySection && this.#dom.utilitySection.parentNode === grid) {
               grid.appendChild(this.#dom.utilitySection);
             }
-            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Collapsed/Compact mode \u2192 grid placed in toolbar.");
+            Core.log("ZentralApps", "repositionGrid: Collapsed/Compact mode → grid placed in toolbar.");
 
             if (bookmarksContainer && bookmarksContainer.parentNode) {
               const targetParent = bookmarksContainer.parentNode;
@@ -4528,7 +4650,7 @@
               }
               grid.style.order = "-1";
             }
-            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Expanded sidebar mode \u2192 grid placed in sidebar.");
+            Core.log("ZentralApps", "repositionGrid: Expanded sidebar mode → grid placed in sidebar.");
           }
         }
         this.updateScrollMask();
@@ -4590,7 +4712,7 @@
             if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) this.positionPanel();
           }
           if (m.attributeName === "zen-sidebar-collapsed" || m.attributeName === "zen-compact-mode" || m.attributeName === "zen-sidebar-expanded") {
-            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] layout attribute changed \u2192 triggering repositionGrid");
+            Core.log("ZentralApps", "layout attribute changed → triggering repositionGrid");
             this.scheduleRepositionGrid(80);
           }
           if (m.attributeName === "style" || m.attributeName === "zen-compact-mode") {
@@ -4651,7 +4773,7 @@
           const crossedThreshold = (lastWidth >= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD && newWidth < Constants.Apps.COLLAPSED_WIDTH_THRESHOLD) || (lastWidth < Constants.Apps.COLLAPSED_WIDTH_THRESHOLD && newWidth >= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD);
           lastWidth = newWidth;
           if (crossedThreshold) {
-            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] Sidebar width crossed threshold (", newWidth, "px) → repositionGrid");
+            Core.log("ZentralApps", "Sidebar width crossed threshold (", newWidth, "px) → repositionGrid");
             this.scheduleRepositionGrid(80);
           }
         });
@@ -4702,6 +4824,10 @@
     #tabOpenListener = null;
     /** @private Original gBrowser.addTab reference */
     #origAddTab = null;
+    /** @private Latch indicating sub-group badge updating in progress */
+    #isUpdatingBadges = false;
+    /** @private RAF handle for debounced badge updates */
+    #badgeUpdateRAF = null;
 
     /**
      * Safely retrieves Firefox SessionStore service for persistent tab metadata across restarts.
@@ -4784,7 +4910,7 @@
      */
     destroy() {
       try {
-        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralTabGroups] Destroying TabGroups module...");
+        Core.log("ZentralTabGroups", "Destroying TabGroups module...");
 
         // 1. Clear timers
         if (this.#restoreSettleTimer) {
@@ -4804,6 +4930,10 @@
             Services.obs.removeObserver(this.#sessionRestoreObserver, "sessionstore-windows-restored");
           } catch (_) {}
           this.#sessionRestoreObserver = null;
+        }
+        if (this.#badgeUpdateRAF) {
+          window.cancelAnimationFrame(this.#badgeUpdateRAF);
+          this.#badgeUpdateRAF = null;
         }
         this.#isRestoring = false;
 
@@ -5198,9 +5328,7 @@
 
         if (groupsToReconstruct.size === 0) return;
 
-        if (Core.getPref(Constants.DEBUG_PREF)) {
-          console.log(`[ZentralTabGroups] Reconstructing ${groupsToReconstruct.size} groups...`);
-        }
+        Core.log("ZentralTabGroups", `Reconstructing ${groupsToReconstruct.size} groups...`);
 
         const rootTabContainer = (typeof gZenWorkspaces !== "undefined" && gZenWorkspaces.activeWorkspaceStrip) ||
                                  gBrowser?.tabContainer?.arrowscrollbox ||
@@ -5405,6 +5533,7 @@
             console.error(`[ZentralTabGroups] Error reconstructing group ${gId}:`, err);
           }
         });
+        this.scheduleBadgeUpdate();
       } catch (e) {
         console.error("[ZentralTabGroups] Error in reconstructSavedGroups:", e);
       }
@@ -5558,11 +5687,11 @@
      */
     init() {
       if (typeof PrivateBrowsingUtils !== "undefined" && PrivateBrowsingUtils.isWindowPrivate(window)) {
-        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralTabGroups] Tab Groups disabled in private window.");
+        Core.log("ZentralTabGroups", "Tab Groups disabled in private window.");
         return;
       }
       if (!Core.getPref(Constants.TabGroups.PREF_ENABLED)) {
-        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralTabGroups] Tab Groups feature is disabled.");
+        Core.log("ZentralTabGroups", "Tab Groups feature is disabled.");
         return;
       }
       this.#isRestoring = true;
@@ -5818,7 +5947,7 @@
           border: 1px solid color-mix(in srgb, currentColor 40%, transparent) !important;
           border-radius: 6px !important;
           color: var(--zentral-tabgroup-contrast-color, #ffffff) !important;
-          font-size: 12.5px !important;
+          font-size: 13.5px !important;
           font-weight: 600 !important;
           font-family: inherit !important;
           text-align: center !important;
@@ -6221,6 +6350,7 @@
     setupObserver() {
       const observer = new MutationObserver((mutations) => {
         let needsSave = false;
+        let groupsStructureChanged = false;
         for (const mutation of mutations) {
           if (mutation.type === "attributes") {
             const attr = mutation.attributeName;
@@ -6229,6 +6359,7 @@
               if (g && g.tagName?.toUpperCase() === "TAB-GROUP") {
                 const lc = g.querySelector(":scope > .tab-group-label-container");
                 if (lc) lc.remove();
+                groupsStructureChanged = true;
               }
             }
             if (attr === "collapsed") {
@@ -6257,6 +6388,7 @@
               }
               
               if (tag === "TAB-GROUP") {
+                groupsStructureChanged = true;
                 window.requestAnimationFrame(() => {
                   if (node.isConnected) {
                     const isSplit = node.hasAttribute?.("split-view-group") || 
@@ -6268,6 +6400,7 @@
                       this.processGroup(node);
                       this.checkAndApplyFirstTimeGroupColor(node);
                       this.scheduleStateSave();
+                      this.scheduleBadgeUpdate();
                     } else {
                       const lc = node.querySelector(":scope > .tab-group-label-container");
                       if (lc) lc.remove();
@@ -6278,6 +6411,7 @@
               
               const childGroups = node.querySelectorAll?.("tab-group") || [];
               if (childGroups.length > 0) {
+                groupsStructureChanged = true;
                 childGroups.forEach((group) => {
                   window.requestAnimationFrame(() => {
                     if (group.isConnected) {
@@ -6290,6 +6424,7 @@
                         this.processGroup(group);
                         this.checkAndApplyFirstTimeGroupColor(group);
                         this.scheduleStateSave();
+                        this.scheduleBadgeUpdate();
                       } else {
                         const lc = group.querySelector(":scope > .tab-group-label-container");
                         if (lc) lc.remove();
@@ -6310,6 +6445,7 @@
             for (const node of mutation.removedNodes) {
               if (node.nodeType === Node.ELEMENT_NODE && node.tagName?.toUpperCase() === "TAB-GROUP") {
                 needsSave = true;
+                groupsStructureChanged = true;
                 const obs = this.#groupObservers.get(node);
                 if (obs) { obs.disconnect(); this.#groupObservers.delete(node); }
                 this.#processedGroups.delete(node);
@@ -6333,6 +6469,7 @@
         }
         
         if (needsSave) this.scheduleStateSave();
+        if (groupsStructureChanged) this.scheduleBadgeUpdate();
       });
       const tabContainer = document.getElementById("tabbrowser-tabs") || document.body;
       observer.observe(tabContainer, { childList: true, subtree: true, attributes: true, attributeFilter: ["collapsed", "split-view-group", "zen-split-view", "is-zen-split", "label"] });
@@ -6712,9 +6849,9 @@
           labelContainer.style.setProperty("width", "100%", "important");
           labelContainer.style.setProperty("min-width", "100%", "important");
           labelContainer.style.setProperty("max-width", "100%", "important");
-          labelContainer.style.setProperty("height", "26px", "important");
-          labelContainer.style.setProperty("min-height", "26px", "important");
-          labelContainer.style.setProperty("max-height", "26px", "important");
+          labelContainer.style.setProperty("height", "var(--tab-min-height, 36px)", "important");
+          labelContainer.style.setProperty("min-height", "var(--tab-min-height, 36px)", "important");
+          labelContainer.style.setProperty("max-height", "var(--tab-min-height, 36px)", "important");
           labelContainer.style.setProperty("box-sizing", "border-box", "important");
           labelContainer.style.setProperty("display", "flex", "important");
           labelContainer.style.setProperty("flex-direction", "row", "important");
@@ -6949,6 +7086,13 @@
       if (currentInnerLabel && currentInnerLabel.parentNode !== wrapper) wrapper.appendChild(currentInnerLabel);
       if (initialsEl && initialsEl.parentNode !== wrapper) wrapper.appendChild(initialsEl);
 
+      let subGroupsBadge = wrapper.querySelector(".zentral-subgroups-badge");
+      if (!subGroupsBadge) {
+        subGroupsBadge = document.createElement("span");
+        subGroupsBadge.className = "zentral-subgroups-badge";
+        wrapper.appendChild(subGroupsBadge);
+      }
+
       group.classList.remove('tab-group-editor-mode-create');
       this.#processedGroups.add(group);
       group.setAttribute("data-close-button-added", "true"); // Kept for external compatibility
@@ -6960,6 +7104,9 @@
       }
 
       this.checkAndApplyFirstTimeGroupColor(group);
+      this.updateGroupSubGroupsBadge(group);
+      const parentGroup = group.parentElement?.closest("tab-group");
+      if (parentGroup) this.updateGroupSubGroupsBadge(parentGroup);
     }
 
     /**
@@ -7858,6 +8005,68 @@
     }
 
     /**
+     * Schedules a debounced refresh of sub-groups indicator badges.
+     */
+    scheduleBadgeUpdate() {
+      if (this.#badgeUpdateRAF) return;
+      this.#badgeUpdateRAF = window.requestAnimationFrame(() => {
+        this.#badgeUpdateRAF = null;
+        this.updateAllSubGroupsBadges();
+      });
+    }
+
+    /**
+     * Updates the sub-groups indicator badge on a tab group header.
+     * Displays count of direct child sub-groups when collapsed.
+     * @param {Element} group - The tab-group element.
+     * @param {Array<Element>} [cachedAllGroups=null] - Optional pre-queried tab-group array to eliminate redundant DOM queries.
+     */
+    updateGroupSubGroupsBadge(group, cachedAllGroups = null) {
+      if (!group || !group.isConnected || group.nodeType !== Node.ELEMENT_NODE) return;
+      if (group.hasAttribute("split-view-group") || group.hasAttribute("zen-split-view") || group.hasAttribute("is-zen-split") || group.classList?.contains("zen-split-view")) return;
+
+      const badge = group.querySelector(":scope > .tab-group-label-container .zentral-subgroups-badge");
+      if (!badge) return;
+
+      const allGroups = cachedAllGroups || Array.from(document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])")).filter(g => !g.classList?.contains("zen-split-view"));
+      const childCount = allGroups.filter(other => other !== group && other.isConnected && other.parentElement?.closest("tab-group") === group).length;
+
+      const currentHas = group.getAttribute("data-has-subgroups");
+      const targetHas = childCount > 0 ? childCount.toString() : null;
+      if (currentHas !== targetHas) {
+        if (targetHas) {
+          group.setAttribute("data-has-subgroups", targetHas);
+        } else {
+          group.removeAttribute("data-has-subgroups");
+        }
+      }
+
+      const targetText = childCount > 0 ? (childCount === 1 ? "1 Sub-Group" : `${childCount} Sub-Groups`) : "";
+      if (badge.textContent !== targetText) {
+        badge.textContent = targetText;
+      }
+    }
+
+    /**
+     * Refreshes sub-group badges across all tab groups in the document.
+     * Pre-queries and batches tab group elements for O(N) traversal efficiency.
+     */
+    updateAllSubGroupsBadges() {
+      if (this.#isUpdatingBadges) return;
+      this.#isUpdatingBadges = true;
+      try {
+        const allGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])")).filter(g => !g.classList?.contains("zen-split-view"));
+        allGroups.forEach(g => {
+          this.updateGroupSubGroupsBadge(g, allGroups);
+        });
+      } catch (err) {
+        Core.error("ZentralTabGroups", "Error updating badges:", err);
+      } finally {
+        this.#isUpdatingBadges = false;
+      }
+    }
+
+    /**
      * Prevents dormant tabs and split views from being selected and loaded while being dragged or reordered.
      * Defers mousedown tab selection until mouseup (for clicks) and isolates the drag payload during startTabDrag (for drags).
      */
@@ -8583,6 +8792,7 @@
             group.collapsed = false;
           }
         });
+        this.scheduleBadgeUpdate();
       } catch (e) {
         console.warn("[ZentralTabGroups] Failed to load state", e);
       }
@@ -8616,7 +8826,7 @@
      */
     destroy() {
       try {
-        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralSettings] Destroying Settings module...");
+        Core.log("ZentralSettings", "Destroying Settings module...");
         if (this.modal) {
           if (this.close) this.close();
           if (this.modal.parentNode) this.modal.remove();
@@ -10644,7 +10854,7 @@
         <div class="zs-header">
           <div class="zs-title-group">
             <h2 class="zs-title">Zentral Settings</h2>
-            <span class="zs-version-badge">v1.0.1</span>
+            <span class="zs-version-badge">v1.0.2</span>
           </div>
           <div class="zs-header-actions">
             <button id="zs-kofi-btn" class="zs-kofi-btn" title="Support Zentral on Ko-fi (ko-fi.com/michele501st)">
@@ -11614,7 +11824,7 @@
           }
 
           const systemInfo = {
-            zentralVersion: "v1.0.1",
+            zentralVersion: "v1.0.2",
             zenVersion: navigator.userAgent,
             platform: navigator.platform || "Desktop",
             windowSize: `${window.innerWidth}x${window.innerHeight}`,
@@ -11784,14 +11994,14 @@
     TabGroups,
     Settings,
     Init: () => {
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[Zentral] Booting Master Script (v1.0.1)...");
+      Core.log("Zentral", "Booting Master Script (v1.0.2)...");
       Apps.init();
       TabGroups.init();
       Settings.init();
       window.ZentralSettingsInstance = Settings;
     },
     Destroy: () => {
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[Zentral] Unloading and destroying Zentral mod...");
+      Core.log("Zentral", "Unloading and destroying Zentral mod...");
       if (Apps.destroy) Apps.destroy();
       if (TabGroups.destroy) TabGroups.destroy();
       if (Settings.destroy) Settings.destroy();
