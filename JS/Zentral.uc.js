@@ -348,11 +348,50 @@
       }
       return fallback;
     }
+
+    /**
+     * Standardized diagnostic logger routing to window.ZentralLogger or debug console.
+     * @param {string} module - Component or module name tag (e.g. "ZentralApps").
+     * @param {...any} args - Log arguments.
+     */
+    log(module, ...args) {
+      if (window.ZentralLogger?.log) {
+        window.ZentralLogger.log(module, ...args);
+      } else if (this.getPref(Constants.DEBUG_PREF)) {
+        console.log(`[${module}]`, ...args);
+      }
+    }
+
+    /**
+     * Standardized warning logger routing to window.ZentralLogger or native warn.
+     * @param {string} module - Component or module name tag.
+     * @param {...any} args - Warning arguments.
+     */
+    warn(module, ...args) {
+      if (window.ZentralLogger?.warn) {
+        window.ZentralLogger.warn(module, ...args);
+      } else {
+        console.warn(`[${module}]`, ...args);
+      }
+    }
+
+    /**
+     * Standardized error logger routing to window.ZentralLogger or native error.
+     * @param {string} module - Component or module name tag.
+     * @param {...any} args - Error arguments.
+     */
+    error(module, ...args) {
+      if (window.ZentralLogger?.error) {
+        window.ZentralLogger.error(module, ...args);
+      } else {
+        console.error(`[${module}]`, ...args);
+      }
+    }
   }
 
   // Instantiate Core immediately
   const Core = new ZentralCore();
-  if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralCore] Initialized.");
+  Core.log("ZentralCore", "Initialized.");
   /* ============================================================================
    * 3.0 APPS MODULE (ZentralApps)
    * ============================================================================
@@ -383,7 +422,7 @@
      */
     destroy() {
       try {
-        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] Destroying Apps module...");
+        Core.log("ZentralApps", "Destroying Apps module...");
         
         // 1. Clear timers and animation frames
         if (this.#state.repositionTimer) {
@@ -624,7 +663,7 @@
      */
     init() {
       if (!Core.getPref(Constants.Apps.PREF_ENABLED)) {
-        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] Apps Grid feature is disabled.");
+        Core.log("ZentralApps", "Apps Grid feature is disabled.");
         return;
       }
       this.injectStyles();
@@ -3210,7 +3249,7 @@
     }
 
     openPanel(app) {
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] openPanel called for app:", app.id, "URL:", app.url);
+      Core.log("ZentralApps", "openPanel called for app:", app.id, "URL:", app.url);
       if (this.#state.closeTimerId) {
         clearTimeout(this.#state.closeTimerId);
         this.#state.closeTimerId = null;
@@ -3284,7 +3323,7 @@
     }
 
     closePanel() {
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] closePanel called");
+      Core.log("ZentralApps", "closePanel called");
       if (!this.#state.activeAppId && !this.#dom.root?.hasAttribute("open")) return;
       
       if (this.#state.closeTimerId) {
@@ -4026,7 +4065,7 @@
 
     togglePin() {
       this.#state.isPinned = !this.#state.isPinned;
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] togglePin - isPinned:", this.#state.isPinned);
+      Core.log("ZentralApps", "togglePin - isPinned:", this.#state.isPinned);
       if(this.#dom.pinBtn) {
         this.#dom.pinBtn.setAttribute("data-pinned", this.#state.isPinned ? "true" : "false");
         this.#dom.pinBtn.title = this.#state.isPinned ? "Unpin panel" : "Pin panel";
@@ -4034,7 +4073,7 @@
     }
 
     toggleExpand() {
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] toggleExpand - current isExpanded:", this.#state.isExpanded);
+      Core.log("ZentralApps", "toggleExpand - current isExpanded:", this.#state.isExpanded);
       if (!this.#state.isExpanded) {
         this.#state.preExpandWidth = this.#state.panelWidthPx || this.loadWidth();
         
@@ -4330,7 +4369,7 @@
       if (e.target.closest && (e.target.closest("#navigator-toolbox") || e.target.closest("#sidebar-box") || e.target.closest("#PersonalToolbar") || e.target.closest("#nav-bar"))) return;
       if (e.target.closest && (e.target.closest("[id*='sine']") || e.target.closest("[class*='sine']"))) return;
       
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] handleOutsideClick closing panel due to click target:", e.target?.tagName, e.target?.id, e.target?.className);
+      Core.log("ZentralApps", "handleOutsideClick closing panel due to click target:", e.target?.tagName, e.target?.id, e.target?.className);
       this.closePanel();
     }
 
@@ -4480,7 +4519,7 @@
             vb.style.display = "flex";
             this.updateVerticalBarBounds();
           }
-          if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Vertical Bar mode placed on opposite edge.");
+          Core.log("ZentralApps", "repositionGrid: Vertical Bar mode placed on opposite edge.");
         } else {
           if (this.#dom.verticalBar) {
             this.#dom.verticalBar.style.display = "none";
@@ -4499,7 +4538,7 @@
             if (this.#dom.utilitySection && this.#dom.utilitySection.parentNode === grid) {
               grid.appendChild(this.#dom.utilitySection);
             }
-            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Collapsed/Compact mode \u2192 grid placed in toolbar.");
+            Core.log("ZentralApps", "repositionGrid: Collapsed/Compact mode → grid placed in toolbar.");
 
             if (bookmarksContainer && bookmarksContainer.parentNode) {
               const targetParent = bookmarksContainer.parentNode;
@@ -4528,7 +4567,7 @@
               }
               grid.style.order = "-1";
             }
-            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] repositionGrid: Expanded sidebar mode \u2192 grid placed in sidebar.");
+            Core.log("ZentralApps", "repositionGrid: Expanded sidebar mode → grid placed in sidebar.");
           }
         }
         this.updateScrollMask();
@@ -4590,7 +4629,7 @@
             if (this.#state.activeAppId && this.#dom.root?.hasAttribute("open")) this.positionPanel();
           }
           if (m.attributeName === "zen-sidebar-collapsed" || m.attributeName === "zen-compact-mode" || m.attributeName === "zen-sidebar-expanded") {
-            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] layout attribute changed \u2192 triggering repositionGrid");
+            Core.log("ZentralApps", "layout attribute changed → triggering repositionGrid");
             this.scheduleRepositionGrid(80);
           }
           if (m.attributeName === "style" || m.attributeName === "zen-compact-mode") {
@@ -4651,7 +4690,7 @@
           const crossedThreshold = (lastWidth >= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD && newWidth < Constants.Apps.COLLAPSED_WIDTH_THRESHOLD) || (lastWidth < Constants.Apps.COLLAPSED_WIDTH_THRESHOLD && newWidth >= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD);
           lastWidth = newWidth;
           if (crossedThreshold) {
-            if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralApps] Sidebar width crossed threshold (", newWidth, "px) → repositionGrid");
+            Core.log("ZentralApps", "Sidebar width crossed threshold (", newWidth, "px) → repositionGrid");
             this.scheduleRepositionGrid(80);
           }
         });
@@ -4788,7 +4827,7 @@
      */
     destroy() {
       try {
-        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralTabGroups] Destroying TabGroups module...");
+        Core.log("ZentralTabGroups", "Destroying TabGroups module...");
 
         // 1. Clear timers
         if (this.#restoreSettleTimer) {
@@ -5206,9 +5245,7 @@
 
         if (groupsToReconstruct.size === 0) return;
 
-        if (Core.getPref(Constants.DEBUG_PREF)) {
-          console.log(`[ZentralTabGroups] Reconstructing ${groupsToReconstruct.size} groups...`);
-        }
+        Core.log("ZentralTabGroups", `Reconstructing ${groupsToReconstruct.size} groups...`);
 
         const rootTabContainer = (typeof gZenWorkspaces !== "undefined" && gZenWorkspaces.activeWorkspaceStrip) ||
                                  gBrowser?.tabContainer?.arrowscrollbox ||
@@ -5567,11 +5604,11 @@
      */
     init() {
       if (typeof PrivateBrowsingUtils !== "undefined" && PrivateBrowsingUtils.isWindowPrivate(window)) {
-        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralTabGroups] Tab Groups disabled in private window.");
+        Core.log("ZentralTabGroups", "Tab Groups disabled in private window.");
         return;
       }
       if (!Core.getPref(Constants.TabGroups.PREF_ENABLED)) {
-        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralTabGroups] Tab Groups feature is disabled.");
+        Core.log("ZentralTabGroups", "Tab Groups feature is disabled.");
         return;
       }
       this.#isRestoring = true;
@@ -7899,15 +7936,16 @@
      * Updates the sub-groups indicator badge on a tab group header.
      * Displays count of direct child sub-groups when collapsed.
      * @param {Element} group - The tab-group element.
+     * @param {Array<Element>} [cachedAllGroups=null] - Optional pre-queried tab-group array to eliminate redundant DOM queries.
      */
-    updateGroupSubGroupsBadge(group) {
+    updateGroupSubGroupsBadge(group, cachedAllGroups = null) {
       if (!group || !group.isConnected || group.nodeType !== Node.ELEMENT_NODE) return;
       if (group.hasAttribute("split-view-group") || group.hasAttribute("zen-split-view") || group.hasAttribute("is-zen-split") || group.classList?.contains("zen-split-view")) return;
 
       const badge = group.querySelector(":scope > .tab-group-label-container .zentral-subgroups-badge");
       if (!badge) return;
 
-      const allGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])")).filter(g => !g.classList?.contains("zen-split-view"));
+      const allGroups = cachedAllGroups || Array.from(document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])")).filter(g => !g.classList?.contains("zen-split-view"));
       const childCount = allGroups.filter(other => other !== group && other.isConnected && other.parentElement?.closest("tab-group") === group).length;
 
       const currentHas = group.getAttribute("data-has-subgroups");
@@ -7928,19 +7966,18 @@
 
     /**
      * Refreshes sub-group badges across all tab groups in the document.
+     * Pre-queries and batches tab group elements for O(N) traversal efficiency.
      */
     updateAllSubGroupsBadges() {
       if (this.#isUpdatingBadges) return;
       this.#isUpdatingBadges = true;
       try {
-        const allGroups = document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])");
+        const allGroups = Array.from(document.querySelectorAll("tab-group:not([split-view-group]):not([zen-split-view]):not([is-zen-split])")).filter(g => !g.classList?.contains("zen-split-view"));
         allGroups.forEach(g => {
-          if (!g.classList?.contains("zen-split-view")) {
-            this.updateGroupSubGroupsBadge(g);
-          }
+          this.updateGroupSubGroupsBadge(g, allGroups);
         });
       } catch (err) {
-        console.error("[ZentralTabGroups] Error updating badges:", err);
+        Core.error("ZentralTabGroups", "Error updating badges:", err);
       } finally {
         this.#isUpdatingBadges = false;
       }
@@ -8706,7 +8743,7 @@
      */
     destroy() {
       try {
-        if (Core.getPref(Constants.DEBUG_PREF)) console.log("[ZentralSettings] Destroying Settings module...");
+        Core.log("ZentralSettings", "Destroying Settings module...");
         if (this.modal) {
           if (this.close) this.close();
           if (this.modal.parentNode) this.modal.remove();
@@ -11874,14 +11911,14 @@
     TabGroups,
     Settings,
     Init: () => {
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[Zentral] Booting Master Script (v1.0.1)...");
+      Core.log("Zentral", "Booting Master Script (v1.0.1)...");
       Apps.init();
       TabGroups.init();
       Settings.init();
       window.ZentralSettingsInstance = Settings;
     },
     Destroy: () => {
-      if (Core.getPref(Constants.DEBUG_PREF)) console.log("[Zentral] Unloading and destroying Zentral mod...");
+      Core.log("Zentral", "Unloading and destroying Zentral mod...");
       if (Apps.destroy) Apps.destroy();
       if (TabGroups.destroy) TabGroups.destroy();
       if (Settings.destroy) Settings.destroy();
