@@ -3,7 +3,7 @@
 // @name           Zentral
 // @description    Unified Apps Grid and Tabs Groups
 // @author         Michele Pierini
-// @version        v1.0.1
+// @version        v1.0.2
 // @include        main
 // ==/UserScript==
 
@@ -10854,7 +10854,7 @@
         <div class="zs-header">
           <div class="zs-title-group">
             <h2 class="zs-title">Zentral Settings</h2>
-            <span class="zs-version-badge">v1.0.1</span>
+            <span class="zs-version-badge">v1.0.2</span>
           </div>
           <div class="zs-header-actions">
             <button id="zs-kofi-btn" class="zs-kofi-btn" title="Support Zentral on Ko-fi (ko-fi.com/michele501st)">
@@ -11824,7 +11824,7 @@
           }
 
           const systemInfo = {
-            zentralVersion: "v1.0.1",
+            zentralVersion: "v1.0.2",
             zenVersion: navigator.userAgent,
             platform: navigator.platform || "Desktop",
             windowSize: `${window.innerWidth}x${window.innerHeight}`,
@@ -11994,7 +11994,7 @@
     TabGroups,
     Settings,
     Init: () => {
-      Core.log("Zentral", "Booting Master Script (v1.0.1)...");
+      Core.log("Zentral", "Booting Master Script (v1.0.2)...");
       Apps.init();
       TabGroups.init();
       Settings.init();
