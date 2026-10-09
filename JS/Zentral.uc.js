@@ -1667,28 +1667,34 @@
         #zen-app-panel-root:not([open]) #zen-app-panel-slider, #zen-app-panel-root[closing] #zen-app-panel-slider { box-shadow: none !important; }
         #zen-app-panel-clip { position: absolute; inset: 0; overflow: hidden; border-radius: var(--zen-border-radius, 8px); pointer-events: none; }
         #zen-app-panel-slider { position: absolute; inset: 0; display: flex; flex-direction: column; border-radius: inherit; overflow: hidden; color-scheme: light dark; background: var(--zen-colors-tertiary, var(--tabpanels-background-color, light-dark(#ffffff, #1e1e24))); color: var(--zen-colors-tertiary-text, light-dark(#18181b, #f4f4f5)); border: 1px solid color-mix(in srgb, var(--zen-primary-color, currentColor) 25%, light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.14))); box-sizing: border-box; box-shadow: 0 8px 32px light-dark(rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.55)), 0 2px 10px light-dark(rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.30)); pointer-events: auto; will-change: transform; }
-        #zen-app-panel-pill-container {
+        #zen-app-panel-pill {
           position: absolute;
           top: 50%;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 6px;
+          gap: 4px;
+          width: 36px !important;
           z-index: 20;
           opacity: 0;
           transition: opacity 0.2s ease 0.3s;
           pointer-events: none;
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+          box-sizing: border-box;
         }
-        #zen-app-panel-root:not([open]) #zen-app-panel-pill-container,
-        #zen-app-panel-root[closing] #zen-app-panel-pill-container {
+        #zen-app-panel-root:not([open]) #zen-app-panel-pill,
+        #zen-app-panel-root[closing] #zen-app-panel-pill {
           display: none !important;
           opacity: 0 !important;
           pointer-events: none !important;
         }
-        :root[zen-right-side="true"] #zen-app-panel-pill-container { left: 0; transform: translate(-50%, -50%); }
-        :root:not([zen-right-side="true"]) #zen-app-panel-pill-container { right: 0; transform: translate(50%, -50%); }
-        #zen-app-panel-root[data-panel-side="right"] #zen-app-panel-pill-container { left: 0 !important; right: auto !important; transform: translate(-50%, -50%) !important; }
-        #zen-app-panel-root[data-panel-side="left"] #zen-app-panel-pill-container { right: 0 !important; left: auto !important; transform: translate(50%, -50%) !important; }
+        :root[zen-right-side="true"] #zen-app-panel-pill { left: 0; transform: translate(-50%, -50%); }
+        :root:not([zen-right-side="true"]) #zen-app-panel-pill { right: 0; transform: translate(50%, -50%); }
+        #zen-app-panel-root[data-panel-side="right"] #zen-app-panel-pill { left: 0 !important; right: auto !important; transform: translate(-50%, -50%) !important; }
+        #zen-app-panel-root[data-panel-side="left"] #zen-app-panel-pill { right: 0 !important; left: auto !important; transform: translate(50%, -50%) !important; }
 
         .zen-app-hover-zone { position: absolute; top: 0; bottom: 0; width: 44px; z-index: 10; pointer-events: none; background: transparent; }
         #zen-app-panel-root[open] .zen-app-hover-zone { pointer-events: auto; }
@@ -1697,16 +1703,15 @@
         #zen-app-panel-root[data-panel-side="right"] .zen-app-hover-zone { left: -22px !important; right: auto !important; }
         #zen-app-panel-root[data-panel-side="left"] .zen-app-hover-zone { right: -22px !important; left: auto !important; }
 
-        .zen-app-hover-zone:hover ~ #zen-app-panel-pill-container,
-        #zen-app-panel-pill-container:hover,
-        .zen-app-resize-strip:hover ~ #zen-app-panel-pill-container {
+        .zen-app-hover-zone:hover ~ #zen-app-panel-pill,
+        #zen-app-panel-pill:hover,
+        .zen-app-resize-strip:hover ~ #zen-app-panel-pill {
           opacity: 1;
           pointer-events: auto;
           transition-delay: 0s;
         }
 
-        #zen-app-panel-pill,
-        #zen-app-panel-close-box {
+        .zen-app-pill-box {
           position: static !important;
           display: flex;
           flex-direction: column;
@@ -1726,7 +1731,7 @@
           opacity: 1 !important;
         }
 
-        #zen-app-panel-pill {
+        #zen-app-panel-pill-main {
           gap: 4px;
           padding: 6px 4px;
         }
@@ -3078,8 +3083,8 @@
         clip.appendChild(panel);
 
         const hoverZone = document.createElement("div"); hoverZone.className = "zen-app-hover-zone";
-        const pillContainer = document.createElement("div"); pillContainer.id = "zen-app-panel-pill-container";
         const pill = document.createElement("div"); pill.id = "zen-app-panel-pill";
+        const pillMain = document.createElement("div"); pillMain.id = "zen-app-panel-pill-main"; pillMain.className = "zen-app-pill-box";
 
         const pinBtn = document.createElement("button"); pinBtn.className = "zen-app-btn"; pinBtn.title = "Pin panel";
         pinBtn.appendChild(this.#createSVG(SVG_STRINGS.PIN));
@@ -3113,7 +3118,7 @@
           }
         });
 
-        const closeBox = document.createElement("div"); closeBox.id = "zen-app-panel-close-box";
+        const closeBox = document.createElement("div"); closeBox.id = "zen-app-panel-close-box"; closeBox.className = "zen-app-pill-box";
         closeBox.title = "Close panel";
         const closeBtn = document.createElement("button"); closeBtn.className = "zen-app-btn zen-app-close-btn"; closeBtn.title = "Close panel";
         closeBtn.appendChild(this.#createSVG(SVG_STRINGS.CLOSE_X));
@@ -3122,8 +3127,8 @@
         closeBox.appendChild(closeBtn);
 
         // Buttons order top to bottom: Refresh app, UA toggle, Drag to resize, Expand panel, Pin panel
-        pill.append(refreshBtn, mobileBtn, grabberBtn, expandBtn, pinBtn);
-        pillContainer.append(pill, closeBox);
+        pillMain.append(refreshBtn, mobileBtn, grabberBtn, expandBtn, pinBtn);
+        pill.append(pillMain, closeBox);
 
         const navbar = document.createElement("div");
         navbar.id = "zen-app-panel-navbar";
@@ -3223,14 +3228,14 @@
         const strip = document.createElement("div"); strip.className = "zen-app-resize-strip";
         strip.addEventListener("mousedown", this.startResize);
 
-        root.append(clip, hoverZone, strip, pillContainer);
+        root.append(clip, hoverZone, strip, pill);
         document.documentElement.appendChild(root);
 
         this.#dom.root = root; 
         this.#dom.clip = clip; 
         this.#dom.panel = panel; 
-        this.#dom.pillContainer = pillContainer;
         this.#dom.pill = pill; 
+        this.#dom.pillMain = pillMain;
         this.#dom.closeBox = closeBox;
         this.#dom.closeBtn = closeBtn;
         this.#dom.pinBtn = pinBtn;
