@@ -11,12 +11,15 @@
     "JS/zentral_logger.uc.js": {
       "include": ["chrome://browser/content/browser.xhtml"]
     },
+    "JS/zentral_panel_geometry.uc.js": {
+      "include": ["chrome://browser/content/browser.xhtml"]
+    },
     "JS/Zentral.uc.js": {
       "include": ["chrome://browser/content/browser.xhtml"]
     }
   },
   "author": "Michele501st",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "preferences": "preferences.json",
   "tags": ["apps", "tabs", "sidebar", "groups"],
   "fork": ["zen"],

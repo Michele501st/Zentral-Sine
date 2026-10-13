@@ -1,5 +1,5 @@
 /* ============================================================================ */
-/*               ZENTRAL TAB GROUPS & UI STYLESHEET (v1.0.2)                  */
+/*               ZENTRAL TAB GROUPS & UI STYLESHEET (v1.1.0)                  */
 /* ============================================================================ */
 /*  Part of the Zentral userChrome.js suite for Zen Browser.                   */
 /*  License: CC BY-NC-SA 4.0                                                   */
@@ -3195,12 +3195,89 @@ panel[id*="tabgroup-editor"] {
   right: auto !important;
 }
 
+#zen-app-panel-root #zen-app-panel-pill { z-index: 45 !important; }
 #zen-app-panel-root[data-panel-side="right"] #zen-app-panel-pill { left: 0 !important; right: auto !important; transform: translate(-50%, -50%) !important; }
 #zen-app-panel-root[data-panel-side="left"] #zen-app-panel-pill { right: 0 !important; left: auto !important; transform: translate(50%, -50%) !important; }
-#zen-app-panel-root[data-panel-side="right"] .zen-app-hover-zone { left: -22px !important; right: auto !important; }
-#zen-app-panel-root[data-panel-side="left"] .zen-app-hover-zone { right: -22px !important; left: auto !important; }
+#zen-app-panel-root .zen-app-hover-zone { width: 52px !important; }
+#zen-app-panel-root[data-panel-side="right"] .zen-app-hover-zone { left: -26px !important; right: auto !important; }
+#zen-app-panel-root[data-panel-side="left"] .zen-app-hover-zone { right: -26px !important; left: auto !important; }
+#zen-app-panel-root .zen-app-hover-zone-left { left: -26px !important; width: 52px !important; }
+#zen-app-panel-root .zen-app-hover-zone-right { right: -26px !important; width: 52px !important; }
+#zen-app-panel-root .zen-app-pill-box { pointer-events: auto !important; }
 #zen-app-panel-root[data-panel-side="right"] .zen-app-resize-strip { left: -5px !important; right: auto !important; }
 #zen-app-panel-root[data-panel-side="left"] .zen-app-resize-strip { right: -5px !important; left: auto !important; }
+
+/* Floating App Panel Mode & Pill Position Overrides */
+#zen-app-panel-root[data-floating="true"] {
+  min-width: 320px !important;
+  min-height: 360px !important;
+  box-shadow: 0 16px 48px light-dark(rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.65)), 0 4px 16px light-dark(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.40)) !important;
+  border-radius: var(--zen-border-radius, 10px);
+  transition: none;
+}
+#zen-app-panel-root[data-floating="true"] #zen-app-panel-slider {
+  transform: none !important;
+}
+#zen-app-panel-root[data-floating="true"] .zen-app-resize-strip {
+  display: none !important;
+  pointer-events: none !important;
+}
+#zen-app-panel-root[data-floating="true"][data-pill-side="left"] #zen-app-panel-pill {
+  left: 0 !important;
+  right: auto !important;
+  transform: translate(-50%, -50%) !important;
+}
+#zen-app-panel-root[data-floating="true"][data-pill-side="right"] #zen-app-panel-pill {
+  right: 0 !important;
+  left: auto !important;
+  transform: translate(50%, -50%) !important;
+}
+#zen-app-panel-root[open][data-floating="true"] .zen-app-hover-zone-left,
+#zen-app-panel-root[open][data-floating="true"] .zen-app-hover-zone-right {
+  pointer-events: auto;
+}
+#zen-app-panel-root[open][data-floating="true"] .zen-app-float-handle {
+  pointer-events: auto;
+}
+.zen-app-hover-zone:hover ~ #zen-app-panel-pill,
+.zen-app-hover-zone-left:hover ~ #zen-app-panel-pill,
+.zen-app-hover-zone-right:hover ~ #zen-app-panel-pill,
+.zen-app-float-handle:hover ~ #zen-app-panel-pill,
+#zen-app-panel-pill:hover {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transition-delay: 0s !important;
+}
+
+/* Floating App Panel Dock Snap Ghost Preview */
+#zen-app-panel-dock-ghost {
+  position: fixed;
+  display: none;
+  pointer-events: none;
+  z-index: 2147483640 !important;
+  border-radius: var(--zen-border-radius, 10px);
+  background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 22%, transparent);
+  border: 3px dashed color-mix(in srgb, var(--zen-primary-color, #707ac2) 90%, white);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent);
+  box-sizing: border-box;
+  transition: left 0.12s ease, top 0.12s ease, width 0.12s ease, height 0.12s ease;
+}
+#zen-app-panel-dock-ghost[data-active="true"] {
+  display: block !important;
+}
+
+/* Floating App Panel Drag Shield */
+#zen-app-panel-drag-shield {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647 !important;
+  background: transparent;
+  display: none;
+  user-select: none;
+}
+#zen-app-panel-drag-shield[data-active="true"] {
+  display: block !important;
+}
 
 /* Floating App Panel Pill: Refresh Button */
 .zen-app-refresh-btn svg {

@@ -3,7 +3,7 @@
 // @name           Zentral
 // @description    Unified Apps Grid and Tabs Groups
 // @author         Michele Pierini
-// @version        v1.0.2
+// @version        v1.1.0
 // @include        main
 // ==/UserScript==
 
@@ -524,6 +524,233 @@
   const Core = new ZentralCore();
   Core.log("ZentralCore", "Initialized.");
   /* ============================================================================
+   * 2.8 PANEL GEOMETRY ENGINE (Built-in Fallback)
+   * ============================================================================
+   */
+  const ZentralGeometryBuiltin = {
+    clampRect(rect, bounds, min = {}, options = {}) {
+      const minW = min.minW ?? 320;
+      const minH = min.minH ?? 360;
+      const availableW = Math.max(minW, bounds.width);
+      const availableH = Math.max(minH, bounds.height);
+      const inputW = (rect && typeof rect.w === "number" && !isNaN(rect.w) && rect.w > 0) ? rect.w : minW;
+      const inputH = (rect && typeof rect.h === "number" && !isNaN(rect.h) && rect.h > 0) ? rect.h : minH;
+      let w = Math.max(minW, Math.min(inputW, availableW));
+      let h = Math.max(minH, Math.min(inputH, availableH));
+
+      const allowOverflow = options.allowOverflow ?? false;
+      const minVisible = options.minVisibleMargin ?? 80;
+
+      let minX, maxX;
+      if (allowOverflow) {
+        minX = bounds.left - w + minVisible;
+        maxX = bounds.left + bounds.width - minVisible;
+      } else {
+        minX = bounds.left;
+        maxX = bounds.left + bounds.width - w;
+      }
+      const inputX = (rect && typeof rect.x === "number" && !isNaN(rect.x)) ? rect.x : bounds.left;
+      let x = (bounds.width < w && !allowOverflow) ? bounds.left : Math.max(minX, Math.min(inputX, maxX));
+
+      let minY, maxY;
+      if (allowOverflow) {
+        minY = bounds.top;
+        maxY = bounds.top + bounds.height - minVisible;
+      } else {
+        minY = bounds.top;
+        maxY = bounds.top + bounds.height - h;
+      }
+      const inputY = (rect && typeof rect.y === "number" && !isNaN(rect.y)) ? rect.y : bounds.top;
+      let y = (bounds.height < h && !allowOverflow) ? bounds.top : Math.max(minY, Math.min(inputY, maxY));
+
+      return { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) };
+    },
+
+    getDockSlots(params) {
+      const {
+        contentRect,
+        sidebarRect,
+        vbRect,
+        isSidebarRight = false,
+        isPlacementVerticalBar = false,
+        isSidebarCollapsed = false,
+        isVbRevealed = true,
+        gap = 12,
+        collapsedGap = 7,
+        panelWidth = 420,
+        topInset = 12,
+        windowWidth = (typeof window !== "undefined" ? window.innerWidth : 1920),
+        windowHeight = (typeof window !== "undefined" ? window.innerHeight : 1080)
+      } = params;
+
+      const sideGap = isSidebarCollapsed ? collapsedGap : gap;
+      const top = Math.max(gap, Math.round(topInset));
+      const height = Math.max(200, Math.round(windowHeight - top - gap));
+      const w = Math.max(320, Math.round(panelWidth));
+
+      let sidebarSlot = null;
+      let oppositeSlot = null;
+
+      if (isPlacementVerticalBar) {
+        const isVbRight = !isSidebarRight;
+        const vbWidth = (vbRect && vbRect.width > 0) ? vbRect.width : 44;
+        const vbOffset = (isVbRevealed ? vbWidth : 0) + sideGap;
+
+        if (isVbRight) {
+          const sbX = windowWidth - vbOffset - w;
+          sidebarSlot = { x: sbX, y: top, w, h: height, side: "right" };
+          let oppLeft = gap;
+          if (sidebarRect && sidebarRect.width > 0) {
+            oppLeft = Math.max(gap, Math.round(sidebarRect.right) + sideGap);
+          }
+          oppositeSlot = { x: oppLeft, y: top, w, h: height, side: "left" };
+        } else {
+          const sbX = vbOffset;
+          sidebarSlot = { x: sbX, y: top, w, h: height, side: "left" };
+          let oppRightOffset = gap;
+          if (sidebarRect && sidebarRect.width > 0) {
+            oppRightOffset = Math.max(gap, Math.round(windowWidth - sidebarRect.left) + sideGap);
+          }
+          const oppX = windowWidth - oppRightOffset - w;
+          oppositeSlot = { x: oppX, y: top, w, h: height, side: "right" };
+        }
+      } else {
+        if (isSidebarRight) {
+          let sbRightOffset = gap;
+          if (sidebarRect && sidebarRect.width > 0) {
+            sbRightOffset = Math.max(gap, Math.round(windowWidth - sidebarRect.left) + sideGap);
+          }
+          const sbX = windowWidth - sbRightOffset - w;
+          sidebarSlot = { x: sbX, y: top, w, h: height, side: "right" };
+          oppositeSlot = { x: gap, y: top, w, h: height, side: "left" };
+        } else {
+          let sbLeft = gap;
+          if (sidebarRect && sidebarRect.width > 0) {
+            sbLeft = Math.max(gap, Math.round(sidebarRect.right) + sideGap);
+          }
+          sidebarSlot = { x: sbLeft, y: top, w, h: height, side: "left" };
+          const oppX = windowWidth - gap - w;
+          oppositeSlot = { x: oppX, y: top, w, h: height, side: "right" };
+        }
+      }
+
+      return { sidebar: sidebarSlot, opposite: oppositeSlot };
+    },
+
+    hitTestSnapZone(pointerOrOptions, boundsOrSlots, threshold = 100, isSidebarAttachedRight = false) {
+      if (!boundsOrSlots) return null;
+      let pointerX = null;
+      let panelRect = null;
+
+      if (typeof pointerOrOptions === "number") {
+        pointerX = pointerOrOptions;
+      } else if (pointerOrOptions && typeof pointerOrOptions === "object") {
+        pointerX = typeof pointerOrOptions.pointerX === "number" ? pointerOrOptions.pointerX : null;
+        panelRect = pointerOrOptions.panelRect || null;
+      }
+
+      const pX = (panelRect && typeof panelRect.x === "number" && !isNaN(panelRect.x))
+        ? panelRect.x
+        : ((panelRect && typeof panelRect.left === "number" && !isNaN(panelRect.left)) ? panelRect.left : null);
+
+      const pW = (panelRect && typeof panelRect.w === "number" && !isNaN(panelRect.w))
+        ? panelRect.w
+        : ((panelRect && typeof panelRect.width === "number" && !isNaN(panelRect.width)) ? panelRect.width : 0);
+
+      const pRight = (pX !== null) ? (pX + pW) : null;
+
+      if (boundsOrSlots.sidebar && boundsOrSlots.opposite) {
+        const slots = boundsOrSlots;
+        const leftSlot = (slots.sidebar.side === "left") ? slots.sidebar : slots.opposite;
+        const rightSlot = (slots.sidebar.side === "right") ? slots.sidebar : slots.opposite;
+
+        const leftEdge = leftSlot.x;
+        const rightEdge = rightSlot.x + rightSlot.w;
+
+        const nearLeft = (
+          (pX !== null && pX <= (leftEdge + threshold)) ||
+          (pointerX !== null && pointerX <= (leftEdge + threshold + 40))
+        );
+
+        const nearRight = (
+          (pRight !== null && pRight >= (rightEdge - threshold)) ||
+          (pointerX !== null && pointerX >= (rightEdge - threshold - 40))
+        );
+
+        if (nearLeft && nearRight) {
+          if (pX === null) return (leftSlot === slots.sidebar) ? "sidebar" : "opposite";
+          const distLeft = Math.abs(pX - leftEdge);
+          const distRight = Math.abs(pRight - rightEdge);
+          return (distLeft <= distRight)
+            ? ((leftSlot === slots.sidebar) ? "sidebar" : "opposite")
+            : ((rightSlot === slots.sidebar) ? "sidebar" : "opposite");
+        }
+
+        if (nearLeft) return (leftSlot === slots.sidebar) ? "sidebar" : "opposite";
+        if (nearRight) return (rightSlot === slots.sidebar) ? "sidebar" : "opposite";
+        return null;
+      }
+
+      const bounds = boundsOrSlots;
+      if (typeof bounds.left === "number" && typeof bounds.right === "number") {
+        const nearLeft = (pointerX !== null && pointerX <= (bounds.left + threshold)) ||
+                         (pX !== null && pX <= (bounds.left + threshold));
+        const nearRight = (pointerX !== null && pointerX >= (bounds.right - threshold)) ||
+                          (pRight !== null && pRight >= (bounds.right - threshold));
+        if (nearLeft) return isSidebarAttachedRight ? "opposite" : "sidebar";
+        if (nearRight) return isSidebarAttachedRight ? "sidebar" : "opposite";
+      }
+
+      return null;
+    },
+
+    computeResize(arg1, arg2, dx, dy, min = {}, bounds = null) {
+      const dir = (typeof arg1 === "string") ? arg1 : (typeof arg2 === "string" ? arg2 : "se");
+      const startRect = (typeof arg1 === "object" && arg1 !== null) ? arg1 : (typeof arg2 === "object" && arg2 !== null ? arg2 : { x: 0, y: 0, w: 420, h: 600 });
+
+      const minW = min?.minW ?? 320;
+      const minH = min?.minH ?? 360;
+      let { x, y, w, h } = startRect;
+
+      if (dir.includes("e")) w = Math.max(minW, startRect.w + dx);
+      if (dir.includes("s")) h = Math.max(minH, startRect.h + dy);
+      if (dir.includes("w")) {
+        const rawW = startRect.w - dx;
+        if (rawW >= minW) { w = rawW; x = startRect.x + dx; }
+        else { w = minW; x = startRect.x + (startRect.w - minW); }
+      }
+      if (dir.includes("n")) {
+        const rawH = startRect.h - dy;
+        if (rawH >= minH) { h = rawH; y = startRect.y + dy; }
+        else { h = minH; y = startRect.y + (startRect.h - minH); }
+      }
+
+      if (bounds) {
+        return this.clampRect({ x, y, w, h }, bounds, { minW, minH }, { allowOverflow: true, minVisibleMargin: 80 });
+      }
+      return { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) };
+    },
+
+    pickPillSide(panelRect, bounds, pillWidth = 44, preferredSide = "right") {
+      const spaceRight = (bounds.left + bounds.width) - (panelRect.x + panelRect.w);
+      const spaceLeft = panelRect.x - bounds.left;
+
+      if (spaceLeft < pillWidth && spaceRight >= pillWidth) return "right";
+      if (spaceRight < pillWidth && spaceLeft >= pillWidth) return "left";
+
+      if (preferredSide === "right") {
+        if (spaceRight >= pillWidth) return "right";
+        if (spaceLeft >= pillWidth) return "left";
+        return "right";
+      } else {
+        if (spaceLeft >= pillWidth) return "left";
+        if (spaceRight >= pillWidth) return "right";
+        return "left";
+      }
+    }
+  };
+
+  /* ============================================================================
    * 3.0 APPS MODULE (ZentralApps)
    * ============================================================================
    */
@@ -533,6 +760,14 @@
    * Manages sidebar app grid, floating app panels, workspace isolation, and drag/drop reordering.
    */
   class ZentralApps {
+    /**
+     * Authoritative panel geometry engine: uses loaded singleton or embedded fallback.
+     * @returns {Object}
+     */
+    get #geo() {
+      return window.ZentralPanelGeometry || globalThis.ZentralPanelGeometry || ZentralGeometryBuiltin;
+    }
+
     /** @private Side attribute MutationObserver */
     #sideObserver = null;
     /** @private Toolbox & theme mutation observer */
@@ -637,6 +872,8 @@
           "zen-apps-sidebar-styles",
           "zentral-apps-utility-section",
           "zen-app-panel-root",
+          "zen-app-panel-dock-ghost",
+          "zen-app-panel-drag-shield",
           "zen-apps-autohide-trigger",
           "zen-apps-sidebar-tile-context",
           "zentral-apps-vertical-bar",
@@ -723,7 +960,11 @@
       utilityCollapseTimer: null,
       autohideCollapseTimer: null,
       autohideRevealTimer: null,
-      isInstaPeeking: false
+      isInstaPeeking: false,
+      isFloating: false,
+      prePinned: false,
+      floatRects: new Map(),
+      floatDrag: null
     };
 
     /**
@@ -751,10 +992,19 @@
       clip: null,
       panel: null,
       pill: null,
+      pillMain: null,
+      closeBox: null,
+      closeBtn: null,
       pinBtn: null,
       expandBtn: null,
+      grabberBtn: null,
       refreshBtn: null,
       mobileBtn: null,
+      dockGhost: null,
+      dragShield: null,
+      resizeHandles: [],
+      hoverZoneLeft: null,
+      hoverZoneRight: null,
       navbar: null,
       navBackBtn: null,
       navForwardBtn: null,
@@ -780,6 +1030,9 @@
       this.startResize = this.startResize.bind(this);
       this.onDrag = this.onDrag.bind(this);
       this.onStopDrag = this.onStopDrag.bind(this);
+      this.beginDetachGesture = this.beginDetachGesture.bind(this);
+      this.onFloatDrag = this.onFloatDrag.bind(this);
+      this.onFloatDrop = this.onFloatDrop.bind(this);
       this.repositionGrid = this.repositionGrid.bind(this);
       this._loadingAppIds = new Set();
       this._loadingTimeouts = new Map();
@@ -845,6 +1098,7 @@
                 a.workspaceId = "all";
               }
               if (a.mobile === undefined) a.mobile = false;
+              if (a.flipSide === undefined) a.flipSide = false;
               if (typeof a.zoom !== "number" || isNaN(a.zoom)) a.zoom = 1;
               return a;
             });
@@ -859,9 +1113,10 @@
      */
     saveApps() {
       try {
-        const clean = this.#state.apps.map(({ id, url, title, icon, width, preload, workspaceId, mobile, zoom }) => {
+        const clean = this.#state.apps.map(({ id, url, title, icon, width, preload, workspaceId, mobile, zoom, flipSide }) => {
           const entry = { id, url, title, icon, width, preload: !!preload, workspaceId };
           if (mobile) entry.mobile = true;
+          if (flipSide) entry.flipSide = true;
           if (typeof zoom === "number" && !isNaN(zoom) && zoom !== 1) entry.zoom = zoom;
           return entry;
         });
@@ -1017,11 +1272,15 @@
      * Determines whether the active floating app panel should attach to and slide from the right.
      * @returns {boolean} True if panel attaches to the right edge.
      */
-    isPanelAttachedToRight() {
+    isPanelAttachedToRight(targetApp = null) {
+      const app = targetApp || (this.#state.activeAppId ? this.#state.apps.find(a => a.id === this.#state.activeAppId) : null);
+      let baseRight = false;
       if (this.isPlacementVerticalBar()) {
-        return this.isVerticalBarOnRight();
+        baseRight = this.isVerticalBarOnRight();
+      } else {
+        baseRight = this.isSidebarRight();
       }
-      return this.isSidebarRight();
+      return app?.flipSide ? !baseRight : baseRight;
     }
 
     /**
@@ -1675,7 +1934,7 @@
           align-items: center;
           gap: 4px;
           width: 36px !important;
-          z-index: 20;
+          z-index: 45 !important;
           opacity: 0;
           transition: opacity 0.2s ease 0.3s;
           pointer-events: none;
@@ -1696,19 +1955,22 @@
         #zen-app-panel-root[data-panel-side="right"] #zen-app-panel-pill { left: 0 !important; right: auto !important; transform: translate(-50%, -50%) !important; }
         #zen-app-panel-root[data-panel-side="left"] #zen-app-panel-pill { right: 0 !important; left: auto !important; transform: translate(50%, -50%) !important; }
 
-        .zen-app-hover-zone { position: absolute; top: 0; bottom: 0; width: 44px; z-index: 10; pointer-events: none; background: transparent; }
+        .zen-app-hover-zone { position: absolute; top: 0; bottom: 0; width: 52px; z-index: 10; pointer-events: none; background: transparent; }
         #zen-app-panel-root[open] .zen-app-hover-zone { pointer-events: auto; }
-        :root[zen-right-side="true"] .zen-app-hover-zone { left: -22px; right: auto; }
-        :root:not([zen-right-side="true"]) .zen-app-hover-zone { right: -22px; left: auto; }
-        #zen-app-panel-root[data-panel-side="right"] .zen-app-hover-zone { left: -22px !important; right: auto !important; }
-        #zen-app-panel-root[data-panel-side="left"] .zen-app-hover-zone { right: -22px !important; left: auto !important; }
+        :root[zen-right-side="true"] .zen-app-hover-zone { left: -26px; right: auto; }
+        :root:not([zen-right-side="true"]) .zen-app-hover-zone { right: -26px; left: auto; }
+        #zen-app-panel-root[data-panel-side="right"] .zen-app-hover-zone { left: -26px !important; right: auto !important; }
+        #zen-app-panel-root[data-panel-side="left"] .zen-app-hover-zone { right: -26px !important; left: auto !important; }
 
         .zen-app-hover-zone:hover ~ #zen-app-panel-pill,
+        .zen-app-hover-zone-left:hover ~ #zen-app-panel-pill,
+        .zen-app-hover-zone-right:hover ~ #zen-app-panel-pill,
+        .zen-app-float-handle:hover ~ #zen-app-panel-pill,
         #zen-app-panel-pill:hover,
         .zen-app-resize-strip:hover ~ #zen-app-panel-pill {
-          opacity: 1;
-          pointer-events: auto;
-          transition-delay: 0s;
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          transition-delay: 0s !important;
         }
 
         .zen-app-pill-box {
@@ -1723,7 +1985,7 @@
           border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
           box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
           box-sizing: border-box;
-          pointer-events: auto;
+          pointer-events: auto !important;
           transform: none !important;
           left: auto !important;
           right: auto !important;
@@ -1762,15 +2024,135 @@
         .zen-app-close-btn:hover { background-color: rgba(255, 77, 77, 0.22) !important; color: #ff6666 !important; }
         .zen-app-close-btn svg { stroke: #ff4d4d !important; stroke-width: 2 !important; }
         .zen-app-close-btn:hover svg { stroke: #ff6666 !important; }
-        .zen-app-grabber { cursor: ew-resize; padding: 4px 2px; width: 26px; height: 24px; display: flex; align-items: center; justify-content: center; color: inherit; border-radius: 8px; user-select: none; transition: background-color 0.15s ease; box-sizing: border-box; }
+        .zen-app-grabber { cursor: grab; padding: 4px 2px; width: 26px; height: 24px; display: flex; align-items: center; justify-content: center; color: inherit; border-radius: 8px; user-select: none; transition: background-color 0.15s ease; box-sizing: border-box; }
         .zen-app-grabber:hover { background-color: color-mix(in srgb, currentColor 15%, transparent); }
+        .zen-app-grabber:active { cursor: grabbing; }
         .zen-app-grabber svg { width: 10px; height: 14px; fill: currentColor; stroke: none; display: block; }
         .zen-app-resize-strip { position: absolute; top: 0; bottom: 0; width: 10px; cursor: ew-resize; z-index: 15; background: transparent; pointer-events: none; }
-        #zen-app-panel-root[open] .zen-app-resize-strip { pointer-events: auto; }
+        #zen-app-panel-root[open]:not([data-floating="true"]) .zen-app-resize-strip { pointer-events: auto; }
         :root[zen-right-side="true"] .zen-app-resize-strip { left: -5px; right: auto; }
         :root:not([zen-right-side="true"]) .zen-app-resize-strip { right: -5px; left: auto; }
         #zen-app-panel-root[data-panel-side="right"] .zen-app-resize-strip { left: -5px !important; right: auto !important; }
         #zen-app-panel-root[data-panel-side="left"] .zen-app-resize-strip { right: -5px !important; left: auto !important; }
+
+        /* Floating Panel Mode Styles */
+        #zen-app-panel-root[data-floating="true"] {
+          min-width: 320px !important;
+          min-height: 360px !important;
+          box-shadow: 0 16px 48px light-dark(rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.65)), 0 4px 16px light-dark(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.40)) !important;
+          border-radius: var(--zen-border-radius, 10px);
+          transition: none;
+        }
+        #zen-app-panel-root[data-floating="true"] .zen-app-resize-strip {
+          display: none !important;
+          pointer-events: none !important;
+        }
+        #zen-app-panel-root[data-floating="true"] #zen-app-panel-slider {
+          transform: none !important;
+        }
+        #zen-app-panel-root[data-floating="true"][data-animating="true"] {
+          transition: left 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+                      top 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+                      width 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+                      height 0.24s cubic-bezier(0.22, 1, 0.36, 1) !important;
+        }
+
+        /* Floating Pill Side Positioning */
+        #zen-app-panel-root[data-floating="true"][data-pill-side="left"] #zen-app-panel-pill {
+          left: 0 !important;
+          right: auto !important;
+          transform: translate(-50%, -50%) !important;
+        }
+        #zen-app-panel-root[data-floating="true"][data-pill-side="right"] #zen-app-panel-pill {
+          right: 0 !important;
+          left: auto !important;
+          transform: translate(50%, -50%) !important;
+        }
+
+        /* Dual hover zones for floating pill detection */
+        .zen-app-hover-zone-left { position: absolute; top: 0; bottom: 0; left: -26px; width: 52px; z-index: 10; pointer-events: none; background: transparent; }
+        .zen-app-hover-zone-right { position: absolute; top: 0; bottom: 0; right: -26px; width: 52px; z-index: 10; pointer-events: none; background: transparent; }
+        #zen-app-panel-root[open][data-floating="true"] .zen-app-hover-zone-left,
+        #zen-app-panel-root[open][data-floating="true"] .zen-app-hover-zone-right {
+          pointer-events: auto;
+        }
+        .zen-app-hover-zone-left:hover ~ #zen-app-panel-pill,
+        .zen-app-hover-zone-right:hover ~ #zen-app-panel-pill {
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          transition-delay: 0s !important;
+        }
+
+        /* Floating Panel 8-direction Resize Handles */
+        .zen-app-float-handle {
+          position: absolute;
+          z-index: 30;
+          pointer-events: none;
+          background: transparent;
+        }
+        #zen-app-panel-root[open][data-floating="true"] .zen-app-float-handle {
+          pointer-events: auto;
+        }
+        .zen-app-float-handle[data-dir="n"] { top: -4px; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+        .zen-app-float-handle[data-dir="s"] { bottom: -4px; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+        .zen-app-float-handle[data-dir="w"] { top: 8px; bottom: 8px; left: -4px; width: 8px; cursor: ew-resize; }
+        .zen-app-float-handle[data-dir="e"] { top: 8px; bottom: 8px; right: -4px; width: 8px; cursor: ew-resize; }
+        .zen-app-float-handle[data-dir="nw"] { top: -6px; left: -6px; width: 14px; height: 14px; cursor: nwse-resize; }
+        .zen-app-float-handle[data-dir="ne"] { top: -6px; right: -6px; width: 14px; height: 14px; cursor: nesw-resize; }
+        .zen-app-float-handle[data-dir="sw"] { bottom: -6px; left: -6px; width: 14px; height: 14px; cursor: nesw-resize; }
+        .zen-app-float-handle[data-dir="se"] { bottom: -6px; right: -6px; width: 14px; height: 14px; cursor: nwse-resize; }
+
+        /* Floating Pop-in / Pop-out Keyframes */
+        @keyframes zenAppPopIn {
+          0% { opacity: 0; transform: scale(0.95); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes zenAppPopOut {
+          0% { opacity: 1; transform: scale(1); }
+          100% { opacity: 0; transform: scale(0.95); }
+        }
+        #zen-app-panel-root[data-pop-state="in"] {
+          animation: zenAppPopIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+        }
+        #zen-app-panel-root[data-pop-state="out"] {
+          animation: zenAppPopOut 0.16s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+        }
+
+        /* Locked pin style when floating */
+        #zen-app-panel-root[data-floating="true"] .zen-app-btn[data-pinned="true"] {
+          opacity: 0.85;
+          cursor: default;
+        }
+
+        /* Dock Snap Ghost Preview */
+        #zen-app-panel-dock-ghost {
+          position: fixed;
+          display: none;
+          pointer-events: none;
+          z-index: 2147483640 !important;
+          border-radius: var(--zen-border-radius, 10px);
+          background-color: color-mix(in srgb, var(--zen-primary-color, #707ac2) 22%, transparent);
+          border: 3px dashed color-mix(in srgb, var(--zen-primary-color, #707ac2) 90%, white);
+          box-shadow: 0 0 28px color-mix(in srgb, var(--zen-primary-color, #707ac2) 40%, transparent);
+          box-sizing: border-box;
+          transition: left 0.12s ease, top 0.12s ease, width 0.12s ease, height 0.12s ease;
+        }
+        #zen-app-panel-dock-ghost[data-active="true"] {
+          display: block !important;
+        }
+
+        /* Drag & Resize Shield to prevent remote browser from eating pointer events */
+        #zen-app-panel-drag-shield {
+          position: fixed;
+          inset: 0;
+          z-index: 2147483647 !important;
+          background: transparent;
+          display: none;
+          user-select: none;
+        }
+        #zen-app-panel-drag-shield[data-active="true"] {
+          display: block;
+        }
 
         .zen-app-mobile-btn,
         .zen-app-mobile-btn[data-active="true"] {
@@ -3083,6 +3465,20 @@
         clip.appendChild(panel);
 
         const hoverZone = document.createElement("div"); hoverZone.className = "zen-app-hover-zone";
+        const hoverZoneLeft = document.createElement("div"); hoverZoneLeft.className = "zen-app-hover-zone-left";
+        const hoverZoneRight = document.createElement("div"); hoverZoneRight.className = "zen-app-hover-zone-right";
+
+        hoverZoneLeft.addEventListener("mouseenter", () => {
+          if (this.#state.isFloating && this.#dom.root) {
+            this.#dom.root.setAttribute("data-pill-side", "left");
+          }
+        });
+        hoverZoneRight.addEventListener("mouseenter", () => {
+          if (this.#state.isFloating && this.#dom.root) {
+            this.#dom.root.setAttribute("data-pill-side", "right");
+          }
+        });
+
         const pill = document.createElement("div"); pill.id = "zen-app-panel-pill";
         const pillMain = document.createElement("div"); pillMain.id = "zen-app-panel-pill-main"; pillMain.className = "zen-app-pill-box";
 
@@ -3094,9 +3490,9 @@
         expandBtn.appendChild(this.#createSVG(SVG_STRINGS.EXPAND));
         expandBtn.addEventListener("click", (e) => { e.stopPropagation(); this.toggleExpand(); });
 
-        const grabberBtn = document.createElement("div"); grabberBtn.className = "zen-app-grabber"; grabberBtn.title = "Drag to resize";
+        const grabberBtn = document.createElement("div"); grabberBtn.className = "zen-app-grabber"; grabberBtn.title = "Drag to detach";
         grabberBtn.appendChild(this.#createSVG(SVG_STRINGS.GRABBER));
-        grabberBtn.addEventListener("mousedown", this.startResize);
+        grabberBtn.addEventListener("pointerdown", this.beginDetachGesture);
 
         const refreshBtn = document.createElement("button"); refreshBtn.className = "zen-app-btn zen-app-refresh-btn"; refreshBtn.title = "Refresh app";
         refreshBtn.appendChild(this.#createSVG(SVG_STRINGS.REFRESH));
@@ -3126,7 +3522,7 @@
         closeBox.addEventListener("click", (e) => { e.stopPropagation(); this.closePanel(); });
         closeBox.appendChild(closeBtn);
 
-        // Buttons order top to bottom: Refresh app, UA toggle, Drag to resize, Expand panel, Pin panel
+        // Buttons order top to bottom: Refresh app, UA toggle, Drag to detach, Expand panel, Pin panel
         pillMain.append(refreshBtn, mobileBtn, grabberBtn, expandBtn, pinBtn);
         pill.append(pillMain, closeBox);
 
@@ -3228,7 +3624,35 @@
         const strip = document.createElement("div"); strip.className = "zen-app-resize-strip";
         strip.addEventListener("mousedown", this.startResize);
 
-        root.append(clip, hoverZone, strip, pill);
+        // 8 Directional floating resize handles
+        const resizeHandles = [];
+        const dirs = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
+        dirs.forEach(dir => {
+          const h = document.createElement("div");
+          h.className = "zen-app-float-handle";
+          h.dataset.dir = dir;
+          h.addEventListener("pointerdown", (e) => this.startFloatResize(dir, e));
+          root.appendChild(h);
+          resizeHandles.push(h);
+        });
+
+        // Snap Ghost Preview Element
+        let ghost = document.getElementById("zen-app-panel-dock-ghost");
+        if (!ghost) {
+          ghost = document.createElement("div");
+          ghost.id = "zen-app-panel-dock-ghost";
+          (document.body || document.documentElement).appendChild(ghost);
+        }
+
+        // Pointer Shield Element
+        let shield = document.getElementById("zen-app-panel-drag-shield");
+        if (!shield) {
+          shield = document.createElement("div");
+          shield.id = "zen-app-panel-drag-shield";
+          (document.body || document.documentElement).appendChild(shield);
+        }
+
+        root.append(clip, hoverZone, hoverZoneLeft, hoverZoneRight, strip, pill);
         document.documentElement.appendChild(root);
 
         this.#dom.root = root; 
@@ -3240,8 +3664,14 @@
         this.#dom.closeBtn = closeBtn;
         this.#dom.pinBtn = pinBtn;
         this.#dom.expandBtn = expandBtn;
+        this.#dom.grabberBtn = grabberBtn;
         this.#dom.refreshBtn = refreshBtn;
         this.#dom.mobileBtn = mobileBtn;
+        this.#dom.dockGhost = ghost;
+        this.#dom.dragShield = shield;
+        this.#dom.resizeHandles = resizeHandles;
+        this.#dom.hoverZoneLeft = hoverZoneLeft;
+        this.#dom.hoverZoneRight = hoverZoneRight;
         this.#dom.navbar = navbar;
         this.#dom.navBackBtn = navBackBtn;
         this.#dom.navForwardBtn = navForwardBtn;
@@ -3717,6 +4147,11 @@
         const togglePanel = () => {
           if (this.#state.activeAppId === app.id) {
             this.closePanel();
+          } else if (this.#state.isFloating) {
+            this.closePanel();
+            setTimeout(() => {
+              this.openPanel(app);
+            }, 180);
           } else {
             this.openPanel(app);
           }
@@ -3922,12 +4357,27 @@
         this.#dom.root.style.pointerEvents = "";
       }
       this.#state.activeAppId = app.id;
-      this.#state.isPinned = false;
       this.#state.isExpanded = false;
       document.documentElement.setAttribute("zentral-app-panel-open", "true");
       this.setAutohideHovered(true);
       this.#state.preExpandWidth = null;
-      if(this.#dom.pinBtn) this.#dom.pinBtn.setAttribute("data-pinned", "false");
+
+      let hasSavedFloat = this.#state.floatRects.has(app.id);
+      if (hasSavedFloat) {
+        const saved = this.#state.floatRects.get(app.id);
+        if (!saved || typeof saved.w !== "number" || isNaN(saved.w) || saved.w < 320 ||
+            typeof saved.h !== "number" || isNaN(saved.h) || saved.h < 200) {
+          this.#state.floatRects.delete(app.id);
+          hasSavedFloat = false;
+        }
+      }
+      this.#state.isFloating = hasSavedFloat;
+      this.#state.isPinned = hasSavedFloat ? true : false;
+
+      if(this.#dom.pinBtn) {
+        this.#dom.pinBtn.setAttribute("data-pinned", this.#state.isPinned ? "true" : "false");
+        this.#dom.pinBtn.title = hasSavedFloat ? "Pinned (Floating)" : (this.#state.isPinned ? "Unpin panel" : "Pin panel");
+      }
       if(this.#dom.expandBtn) {
         this.#dom.expandBtn.title = "Expand panel";
         this.#dom.expandBtn.replaceChildren(this.#createSVG(SVG_STRINGS.EXPAND));
@@ -3949,7 +4399,55 @@
       
       const targetWidth = app.width || this.loadWidth();
       this.updateWidthVar(Math.max(Constants.Apps.MIN_WIDTH_PX, targetWidth));
-      this.positionPanel();
+
+      const Geo = this.#geo;
+      const { bounds } = this.getContentAreaGeometry();
+
+      if (hasSavedFloat) {
+        const savedRect = this.#state.floatRects.get(app.id);
+        const clamped = Geo ? Geo.clampRect(savedRect, bounds, { minW: Constants.Apps.MIN_WIDTH_PX, minH: 360 }, { allowOverflow: true, minVisibleMargin: 80 }) : {
+          x: Math.max(bounds.left - savedRect.w + 80, Math.min(savedRect.x, bounds.left + bounds.width - 80)),
+          y: Math.max(bounds.top, Math.min(savedRect.y, bounds.top + bounds.height - 80)),
+          w: Math.max(Constants.Apps.MIN_WIDTH_PX, savedRect.w),
+          h: Math.max(360, savedRect.h)
+        };
+        this.#state.floatRects.set(app.id, clamped);
+
+        const root = this.#dom.root;
+        if (root) {
+          root.removeAttribute("data-panel-side");
+          root.style.transform = "none";
+          root.style.transition = "none";
+          root.style.left = clamped.x + "px";
+          root.style.top = clamped.y + "px";
+          root.style.width = clamped.w + "px";
+          root.style.height = clamped.h + "px";
+          root.style.right = "auto";
+          root.style.bottom = "auto";
+          root.setAttribute("data-floating", "true");
+
+          const preferredSide = this.isPanelAttachedToRight(app) ? "left" : "right";
+          const pillSide = Geo ? Geo.pickPillSide(clamped, bounds, 44, preferredSide) : preferredSide;
+          root.setAttribute("data-pill-side", pillSide);
+
+          if (this.#dom.grabberBtn) {
+            this.#dom.grabberBtn.title = "Drag to move";
+          }
+        }
+      } else {
+        this.#state.isFloating = false;
+        if (this.#dom.root) {
+          this.#dom.root.removeAttribute("data-floating");
+          this.#dom.root.removeAttribute("data-pill-side");
+          this.#dom.root.style.height = "";
+          this.#dom.root.style.bottom = "";
+        }
+        if (this.#dom.grabberBtn) {
+          this.#dom.grabberBtn.title = "Drag to detach";
+        }
+        this.positionPanel();
+      }
+
       this.updateVerticalBarBounds();
       this.startPositionTracking();
 
@@ -3971,31 +4469,52 @@
         } catch (e) { console.error("[ZentralApps] Failed to load URL:", e); }
       }
 
-      const isTopSlide = this.isCollapsedLayoutMode() && !this.isPlacementVerticalBar();
-      const isFromRight = this.isPanelAttachedToRight();
-      const slideFrom = isTopSlide 
-        ? "translateY(-100%)" 
-        : (isFromRight ? "translateX(100%)" : "translateX(-100%)");
-      this.#dom.panel.style.transition = "none";
-      this.#dom.panel.style.transform  = slideFrom;
-      if (this.#dom.root) {
-        this.#dom.root.removeAttribute("closing");
-        this.#dom.root.setAttribute("open", "true");
-      }
-      this.#dom.panel.getBoundingClientRect(); // Reflow
-
-      requestAnimationFrame(() => {
-        const slideMs = Core.getPref(Constants.Apps.PREF_ANIMATION_SPEED);
-        const animType = Core.getPref(Constants.Apps.PREF_ANIMATION_TYPE);
-        const bezier = this.#getEasingBezier(animType);
-        
-        if (animType === "none") {
-          this.#dom.panel.style.transition = "none";
-        } else {
-          this.#dom.panel.style.transition = `transform ${slideMs}ms ${bezier}`;
+      if (hasSavedFloat) {
+        // Floating: pop-up animation (scale + fade)
+        this.#dom.panel.style.transition = "none";
+        this.#dom.panel.style.transform = "none";
+        if (this.#dom.root) {
+          this.#dom.root.removeAttribute("closing");
+          this.#dom.root.setAttribute("open", "true");
+          const animType = Core.getPref(Constants.Apps.PREF_ANIMATION_TYPE);
+          if (animType !== "none") {
+            this.#dom.root.setAttribute("data-pop-state", "in");
+            setTimeout(() => {
+              if (this.#dom.root?.getAttribute("data-pop-state") === "in") {
+                this.#dom.root.removeAttribute("data-pop-state");
+              }
+            }, 240);
+          }
         }
-        this.#dom.panel.style.transform  = isTopSlide ? "translateY(0)" : "translateX(0)";
-      });
+      } else {
+        // Docked: standard slide animation
+        const isTopSlide = this.isCollapsedLayoutMode() && !this.isPlacementVerticalBar();
+        const isFromRight = this.isPanelAttachedToRight(app);
+        const slideFrom = isTopSlide 
+          ? "translateY(-100%)" 
+          : (isFromRight ? "translateX(100%)" : "translateX(-100%)");
+        this.#dom.panel.style.transition = "none";
+        this.#dom.panel.style.transform  = slideFrom;
+        if (this.#dom.root) {
+          this.#dom.root.removeAttribute("closing");
+          this.#dom.root.removeAttribute("data-pop-state");
+          this.#dom.root.setAttribute("open", "true");
+        }
+        this.#dom.panel.getBoundingClientRect(); // Reflow
+
+        requestAnimationFrame(() => {
+          const slideMs = Core.getPref(Constants.Apps.PREF_ANIMATION_SPEED);
+          const animType = Core.getPref(Constants.Apps.PREF_ANIMATION_TYPE);
+          const bezier = this.#getEasingBezier(animType);
+          
+          if (animType === "none") {
+            this.#dom.panel.style.transition = "none";
+          } else {
+            this.#dom.panel.style.transition = `transform ${slideMs}ms ${bezier}`;
+          }
+          this.#dom.panel.style.transform  = isTopSlide ? "translateY(0)" : "translateX(0)";
+        });
+      }
     }
 
     closePanel() {
@@ -4006,6 +4525,9 @@
         clearTimeout(this.#state.closeTimerId);
         this.#state.closeTimerId = null;
       }
+
+      const activeApp = this.#state.apps.find(a => a.id === this.#state.activeAppId);
+      const isFloating = this.#state.isFloating;
 
       if (this.#dom.root) {
         this.#dom.root.setAttribute("closing", "true");
@@ -4023,6 +4545,25 @@
       if (this.#state.activeAppId) {
         this.setAppLoading(this.#state.activeAppId, false);
       }
+
+      // Save sanitized floating rect into session cache before clearing activeAppId
+      if (isFloating && activeApp && this.#dom.root) {
+        const rect = this.#dom.root.getBoundingClientRect();
+        const safeW = Math.max(Constants.Apps.MIN_WIDTH_PX, Math.round(rect.width || 420));
+        const safeH = Math.max(360, Math.round(rect.height || 600));
+        const safeX = Math.round((typeof rect.left === "number" && !isNaN(rect.left)) ? rect.left : 12);
+        const safeY = Math.round((typeof rect.top === "number" && !isNaN(rect.top)) ? rect.top : 12);
+
+        this.#state.floatRects.set(activeApp.id, {
+          x: safeX,
+          y: safeY,
+          w: safeW,
+          h: safeH
+        });
+      }
+
+      const wasAttachedRight = this.isPanelAttachedToRight(activeApp);
+
       this.#state.activeAppId = null;
       this.#state.isPinned = false;
       document.documentElement.removeAttribute("zentral-app-panel-open");
@@ -4033,11 +4574,47 @@
       const tiles = document.querySelectorAll(".zen-app-tile[data-app-id]");
       tiles.forEach(tile => tile.dataset.active = "false");
 
+      if (isFloating) {
+        // Floating: pop-out animation
+        const animType = Core.getPref(Constants.Apps.PREF_ANIMATION_TYPE);
+        if (animType === "none") {
+          if (this.#dom.root) {
+            this.#dom.root.removeAttribute("open");
+            this.#dom.root.removeAttribute("closing");
+            this.#dom.root.removeAttribute("data-pop-state");
+            this.#dom.root.style.pointerEvents = "";
+            this.#dom.root.style.height = "";
+            this.#dom.root.style.bottom = "";
+          }
+          this.#state.isFloating = false;
+          this.stopPositionTracking();
+          return;
+        }
+
+        if (this.#dom.root) {
+          this.#dom.root.setAttribute("data-pop-state", "out");
+        }
+        this.#state.closeTimerId = setTimeout(() => {
+          this.#state.closeTimerId = null;
+          if (this.#dom.root) {
+            this.#dom.root.removeAttribute("open");
+            this.#dom.root.removeAttribute("closing");
+            this.#dom.root.removeAttribute("data-pop-state");
+            this.#dom.root.style.pointerEvents = "";
+            this.#dom.root.style.height = "";
+            this.#dom.root.style.bottom = "";
+          }
+          this.#state.isFloating = false;
+          this.stopPositionTracking();
+        }, 170);
+        return;
+      }
+
+      // Docked slide out
       const isTopSlide = this.isCollapsedLayoutMode() && !this.isPlacementVerticalBar();
-      const isToRight = this.isPanelAttachedToRight();
       const slideTo = isTopSlide 
         ? "translateY(-100%)" 
-        : (isToRight ? "translateX(100%)" : "translateX(-100%)");
+        : (wasAttachedRight ? "translateX(100%)" : "translateX(-100%)");
       
       const slideMs = Core.getPref(Constants.Apps.PREF_ANIMATION_SPEED);
       const animType = Core.getPref(Constants.Apps.PREF_ANIMATION_TYPE);
@@ -4050,6 +4627,8 @@
           this.#dom.root.removeAttribute("open");
           this.#dom.root.removeAttribute("closing");
           this.#dom.root.style.pointerEvents = "";
+          this.#dom.root.style.height = "";
+          this.#dom.root.style.bottom = "";
         }
         this.stopPositionTracking();
         return;
@@ -4064,6 +4643,8 @@
           this.#dom.root.removeAttribute("open");
           this.#dom.root.removeAttribute("closing");
           this.#dom.root.style.pointerEvents = "";
+          this.#dom.root.style.height = "";
+          this.#dom.root.style.bottom = "";
         }
         this.stopPositionTracking();
       }, slideMs + 20);
@@ -4915,6 +5496,8 @@
     positionPanel() {
       const root = this.#dom.root;
       if (!root || !gBrowser?.tabContainer) return;
+      if (this.#state.isFloating) return;
+      root.style.height = "";
       const tcRect = gBrowser.tabContainer.getBoundingClientRect();
       const gap = 12;
 
@@ -4954,12 +5537,19 @@
           panelRight = panelLeft + panelWidth;
         }
       } else {
-        if (this.isPanelAttachedToRight()) {
-          targetRight = Math.max(gap, Math.round(window.innerWidth - sidebarRect.left) + sideGap);
+        const isSbRight = this.isSidebarRight();
+        const isPanelRight = this.isPanelAttachedToRight();
+
+        if (isPanelRight) {
+          targetRight = isSbRight
+            ? Math.max(gap, Math.round(window.innerWidth - sidebarRect.left) + sideGap)
+            : gap;
           panelRight = window.innerWidth - targetRight;
           panelLeft = panelRight - panelWidth;
         } else {
-          targetLeft = Math.max(gap, Math.round(sidebarRect.right) + sideGap);
+          targetLeft = isSbRight
+            ? gap
+            : Math.max(gap, Math.round(sidebarRect.right) + sideGap);
           panelLeft = targetLeft;
           panelRight = panelLeft + panelWidth;
         }
@@ -4994,6 +5584,7 @@
 
       root.style.top = top + "px";
       root.style.bottom = gap + "px";
+      root.style.height = "";
 
       if (this.isPanelAttachedToRight()) {
         root.style.left = "auto";
@@ -5217,8 +5808,11 @@
       }
     }
 
-    toggleExpand() {
-      Core.log("ZentralApps", "toggleExpand - current isExpanded:", this.#state.isExpanded);
+    async toggleExpand() {
+      Core.log("ZentralApps", "toggleExpand - current isExpanded:", this.#state.isExpanded, "isFloating:", this.#state.isFloating);
+      if (this.#state.isFloating) {
+        await this.redockPanel("sidebar");
+      }
       if (!this.#state.isExpanded) {
         this.#state.preExpandWidth = this.#state.panelWidthPx || this.loadWidth();
         
@@ -5290,6 +5884,577 @@
       document.removeEventListener("mouseup", this.onStopDrag);
       if (this.#dom.panel) this.#dom.panel.style.pointerEvents = "";
       this.saveWidth(this.#state.panelWidthPx);
+    }
+
+    /**
+     * Retrieves current geometry bounds for content area and sidebar anchors.
+     * @returns {{
+     *   contentRect: {left: number, right: number, top: number, bottom: number, width: number, height: number},
+     *   bounds: {left: number, top: number, width: number, height: number},
+     *   sidebarRect: {left: number, right: number, width: number, height: number},
+     *   vbRect: {left: number, right: number, width: number, height: number},
+     *   topInset: number
+     * }}
+     */
+    getContentAreaGeometry() {
+      const gap = 12;
+      let top = gap;
+      try {
+        let maxBottom = 0;
+        const contentBox = document.getElementById("tabbrowser-tabbox") || 
+                           document.getElementById("tabbrowser-tabpanels") || 
+                           gBrowser?.selectedBrowser || 
+                           document.getElementById("appcontent");
+        if (contentBox) {
+          const cRect = contentBox.getBoundingClientRect();
+          if (cRect.top > 0 && cRect.top < 200) {
+            maxBottom = Math.max(maxBottom, cRect.top);
+          }
+        }
+        const floatingNavbar = document.getElementById("zen-appcontent-navbar-wrapper");
+        if (floatingNavbar) {
+          const cs = window.getComputedStyle(floatingNavbar);
+          if (cs.display !== "none" && cs.visibility !== "hidden" && parseFloat(cs.opacity || "1") > 0.1) {
+            const navRect = floatingNavbar.getBoundingClientRect();
+            if (navRect.height > 0 && navRect.bottom > 0 && navRect.bottom < 200) {
+              maxBottom = Math.max(maxBottom, navRect.bottom);
+            }
+          }
+        }
+        top = Math.max(gap, Math.round(maxBottom));
+      } catch (_) {}
+
+      const tcRect = gBrowser?.tabContainer ? gBrowser.tabContainer.getBoundingClientRect() : { left: 0, right: 0, width: 0, height: window.innerHeight };
+      let sidebarRect = tcRect;
+      const sidebarEl = document.getElementById("sidebar-box") || 
+                        document.getElementById("sidebar-container") || 
+                        document.getElementById("vertical-tabs");
+      if (sidebarEl) {
+        const sRect = sidebarEl.getBoundingClientRect();
+        if (sRect.width > 0 && sRect.height > 0) {
+          sidebarRect = sRect;
+        }
+      }
+
+      const vb = this.#dom.verticalBar;
+      const vbRect = vb ? vb.getBoundingClientRect() : { left: 0, right: 0, width: 0, height: window.innerHeight };
+
+      const bounds = {
+        left: gap,
+        top,
+        width: Math.max(320, window.innerWidth - (gap * 2)),
+        height: Math.max(200, window.innerHeight - top - gap)
+      };
+
+      const contentRect = {
+        left: gap,
+        right: window.innerWidth - gap,
+        top,
+        bottom: window.innerHeight - gap,
+        width: bounds.width,
+        height: bounds.height
+      };
+
+      return { contentRect, bounds, sidebarRect, vbRect, topInset: top };
+    }
+
+    /**
+     * Begins pointer gesture on panel pill grabber ("Drag to detach" / drag floating panel).
+     * @param {PointerEvent} e
+     */
+    beginDetachGesture(e) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const root = this.#dom.root;
+      if (!root) return;
+
+      const rect = root.getBoundingClientRect();
+      const pointerStartX = e.clientX;
+      const pointerStartY = e.clientY;
+      const offsetX = pointerStartX - rect.left;
+      const offsetY = pointerStartY - rect.top;
+
+      const safeW = Math.max(Constants.Apps.MIN_WIDTH_PX, Math.round(rect.width || this.#state.panelWidthPx || 420));
+      const safeH = Math.max(360, Math.round(this.#state.isFloating ? (rect.height || 600) : ((rect.height || window.innerHeight - 24) - 32)));
+      const currentPillSide = root.getAttribute("data-pill-side") || (this.isPanelAttachedToRight() ? "left" : "right");
+
+      this.#state.floatDrag = {
+        pointerStartX,
+        pointerStartY,
+        offsetX,
+        offsetY,
+        currentW: safeW,
+        currentH: safeH,
+        lockedPillSide: currentPillSide,
+        hasDetached: this.#state.isFloating,
+        startRect: {
+          x: rect.left,
+          y: rect.top,
+          w: rect.width,
+          h: rect.height,
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height
+        }
+      };
+
+      if (this.#dom.dragShield) {
+        this.#dom.dragShield.setAttribute("data-active", "true");
+      }
+
+      window.addEventListener("pointermove", this.onFloatDrag);
+      window.addEventListener("pointerup", this.onFloatDrop);
+      window.addEventListener("pointercancel", this.onFloatDrop);
+    }
+
+    /**
+     * Detaches docked panel, shrinking it vertically and entering floating mode.
+     * @param {Object} [currentRect]
+     * @param {boolean} [isDragGesture=false] - True if triggered during active drag (skips transition lag)
+     */
+    detachPanel(currentRect, isDragGesture = false) {
+      const root = this.#dom.root;
+      if (!root) return;
+
+      Core.log("ZentralApps", "detachPanel: converting panel to floating state");
+      this.#state.isFloating = true;
+      this.#state.prePinned = this.#state.isPinned;
+      this.#state.isPinned = true;
+
+      if (this.#dom.grabberBtn) {
+        this.#dom.grabberBtn.title = "Drag to move";
+      }
+
+      // Ensure panel is unexpanded before detaching
+      if (this.#state.isExpanded) {
+        this.#state.isExpanded = false;
+        if (this.#dom.expandBtn) {
+          this.#dom.expandBtn.title = "Expand panel";
+          this.#dom.expandBtn.replaceChildren(this.#createSVG(SVG_STRINGS.EXPAND));
+        }
+      }
+
+      const baseRect = currentRect || root.getBoundingClientRect();
+      const { bounds } = this.getContentAreaGeometry();
+      const app = this.#state.apps.find(a => a.id === this.#state.activeAppId);
+
+      const rawLeft = (typeof baseRect?.left === "number" && !isNaN(baseRect.left))
+        ? baseRect.left
+        : ((typeof baseRect?.x === "number" && !isNaN(baseRect.x)) ? baseRect.x : bounds.left);
+
+      const rawTop = (typeof baseRect?.top === "number" && !isNaN(baseRect.top))
+        ? baseRect.top
+        : ((typeof baseRect?.y === "number" && !isNaN(baseRect.y)) ? baseRect.y : bounds.top);
+
+      const rawWidth = (typeof baseRect?.width === "number" && !isNaN(baseRect.width) && baseRect.width > 0)
+        ? baseRect.width
+        : ((typeof baseRect?.w === "number" && !isNaN(baseRect.w) && baseRect.w > 0) ? baseRect.w : (app?.width || this.#state.panelWidthPx || 420));
+
+      const rawHeight = (typeof baseRect?.height === "number" && !isNaN(baseRect.height) && baseRect.height > 0)
+        ? baseRect.height
+        : ((typeof baseRect?.h === "number" && !isNaN(baseRect.h) && baseRect.h > 0) ? baseRect.h : (bounds.height || window.innerHeight - 48));
+
+      const preservedWidth = Math.max(Constants.Apps.MIN_WIDTH_PX, Math.round(rawWidth));
+
+      // Shrink by 16px vertically top & bottom when detaching
+      const shrinkInsetY = 16;
+      let newY = Math.round(rawTop + shrinkInsetY);
+      let newH = Math.max(360, Math.round(rawHeight - (shrinkInsetY * 2)));
+      let newW = preservedWidth;
+      let newX = Math.round(rawLeft);
+
+      const Geo = this.#geo;
+      const clamped = Geo.clampRect({ x: newX, y: newY, w: newW, h: newH }, bounds, { minW: 320, minH: 360 }, { allowOverflow: true, minVisibleMargin: 80 });
+
+      // Apply inline geometry synchronously without transition lag
+      root.style.transform = "none";
+      root.style.transition = "none";
+      root.style.left = clamped.x + "px";
+      root.style.top = clamped.y + "px";
+      root.style.width = clamped.w + "px";
+      root.style.height = clamped.h + "px";
+      root.style.right = "auto";
+      root.style.bottom = "auto";
+
+      root.removeAttribute("data-panel-side");
+      root.setAttribute("data-floating", "true");
+
+      if (this.#dom.panel) {
+        this.#dom.panel.style.transition = "none";
+        this.#dom.panel.style.transform = "none";
+      }
+
+      if (this.#state.floatDrag) {
+        this.#state.floatDrag.currentW = clamped.w;
+        this.#state.floatDrag.currentH = clamped.h;
+        this.#state.floatDrag.offsetY = Math.max(0, this.#state.floatDrag.offsetY - shrinkInsetY);
+      }
+
+      if (!isDragGesture) {
+        root.setAttribute("data-animating", "true");
+        setTimeout(() => {
+          if (root) root.removeAttribute("data-animating");
+        }, 260);
+      } else {
+        root.removeAttribute("data-animating");
+      }
+
+      const preferredSide = this.#state.floatDrag?.lockedPillSide ||
+                            (this.isPanelAttachedToRight(app) ? "left" : "right");
+      const pillSide = Geo ? Geo.pickPillSide(clamped, bounds, 44, preferredSide) : preferredSide;
+      root.setAttribute("data-pill-side", pillSide);
+      if (this.#state.floatDrag) {
+        this.#state.floatDrag.lockedPillSide = pillSide;
+      }
+
+      if (this.#dom.pinBtn) {
+        this.#dom.pinBtn.setAttribute("data-pinned", "true");
+        this.#dom.pinBtn.title = "Pinned (Floating)";
+      }
+
+      if (this.#state.activeAppId) {
+        this.#state.floatRects.set(this.#state.activeAppId, clamped);
+      }
+    }
+
+    /**
+     * Handles active pointer movement during floating drag gesture.
+     * @param {PointerEvent} e
+     */
+    onFloatDrag(e) {
+      const drag = this.#state.floatDrag;
+      if (!drag) return;
+
+      const delta = Math.hypot(e.clientX - drag.pointerStartX, e.clientY - drag.pointerStartY);
+      if (!drag.hasDetached) {
+        if (delta < 5) return;
+        this.detachPanel(drag.startRect, true);
+        drag.hasDetached = true;
+      }
+
+      const root = this.#dom.root;
+      if (!root) return;
+
+      const Geo = this.#geo;
+      const { contentRect, bounds, sidebarRect, vbRect, topInset } = this.getContentAreaGeometry();
+
+      const rect = root.getBoundingClientRect();
+      const curW = drag.currentW || Math.max(Constants.Apps.MIN_WIDTH_PX, Math.round(rect.width || 420));
+      const curH = drag.currentH || Math.max(360, Math.round(rect.height || 600));
+
+      const rawX = e.clientX - drag.offsetX;
+      const rawY = e.clientY - drag.offsetY;
+
+      // Allow panel to be moved partially off-screen like standard OS windows
+      const clamped = Geo.clampRect({ x: rawX, y: rawY, w: curW, h: curH }, bounds, { minW: 320, minH: 360 }, { allowOverflow: true, minVisibleMargin: 80 });
+
+      root.style.left = clamped.x + "px";
+      root.style.top = clamped.y + "px";
+      root.style.width = clamped.w + "px";
+      root.style.height = clamped.h + "px";
+      root.style.right = "auto";
+      root.style.bottom = "auto";
+
+      // CRITICAL: Keep pill locked to its initial side during active dragging to prevent flickering
+      if (drag.lockedPillSide) {
+        root.setAttribute("data-pill-side", drag.lockedPillSide);
+      }
+
+      // Compute precise dock slots and hit-test edge snap zones
+      const isCollapsed = this.isCollapsedSidebar() || (sidebarRect.width > 0 && sidebarRect.width <= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD);
+      const isVbRevealed = this.#dom.verticalBar?.hasAttribute("data-revealed") ?? true;
+      const app = this.#state.apps.find(a => a.id === this.#state.activeAppId);
+      const appWidth = app?.width || this.loadWidth();
+
+      const slots = Geo.getDockSlots({
+        contentRect,
+        sidebarRect,
+        vbRect,
+        isSidebarRight: this.isSidebarRight(),
+        isPlacementVerticalBar: this.isPlacementVerticalBar(),
+        isSidebarCollapsed: isCollapsed,
+        isVbRevealed,
+        gap: 12,
+        collapsedGap: 7,
+        panelWidth: appWidth,
+        topInset,
+        windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight
+      });
+
+      const snapHit = slots ? Geo.hitTestSnapZone({ pointerX: e.clientX, panelRect: clamped }, slots, 100) : null;
+      if (drag.activeSnapHit !== snapHit) {
+        Core.log("ZentralApps", "onFloatDrag: snap state changed ->", snapHit);
+      }
+      drag.activeSnapHit = snapHit;
+
+      if (snapHit && slots) {
+        const targetSlot = (snapHit === "sidebar") ? slots.sidebar : slots.opposite;
+        if (targetSlot && this.#dom.dockGhost) {
+          const ghost = this.#dom.dockGhost;
+          ghost.style.left = targetSlot.x + "px";
+          ghost.style.top = targetSlot.y + "px";
+          ghost.style.width = targetSlot.w + "px";
+          ghost.style.height = targetSlot.h + "px";
+          ghost.setAttribute("data-active", "true");
+        }
+      } else {
+        if (this.#dom.dockGhost) {
+          this.#dom.dockGhost.removeAttribute("data-active");
+        }
+      }
+
+      if (this.#state.activeAppId) {
+        this.#state.floatRects.set(this.#state.activeAppId, {
+          x: clamped.x,
+          y: clamped.y,
+          w: clamped.w,
+          h: clamped.h
+        });
+      }
+    }
+
+    /**
+     * Concludes floating drag gesture, snapping to dock or saving floating position.
+     * @param {PointerEvent} e
+     */
+    onFloatDrop(e) {
+      window.removeEventListener("pointermove", this.onFloatDrag);
+      window.removeEventListener("pointerup", this.onFloatDrop);
+      window.removeEventListener("pointercancel", this.onFloatDrop);
+
+      if (this.#dom.dragShield) {
+        this.#dom.dragShield.removeAttribute("data-active");
+      }
+      if (this.#dom.dockGhost) {
+        this.#dom.dockGhost.removeAttribute("data-active");
+      }
+
+      const drag = this.#state.floatDrag;
+      this.#state.floatDrag = null;
+      if (!drag) return;
+
+      if (!drag.hasDetached && !this.#state.isFloating) {
+        // User clicked the grabber button without dragging -> detach in-place cleanly
+        this.detachPanel(drag.startRect, false);
+        return;
+      }
+
+      const Geo = this.#geo;
+      const { contentRect, bounds, sidebarRect, vbRect, topInset } = this.getContentAreaGeometry();
+      const isCollapsed = this.isCollapsedSidebar() || (sidebarRect.width > 0 && sidebarRect.width <= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD);
+      const isVbRevealed = this.#dom.verticalBar?.hasAttribute("data-revealed") ?? true;
+      const app = this.#state.apps.find(a => a.id === this.#state.activeAppId);
+      const appWidth = app?.width || this.loadWidth();
+
+      const slots = Geo.getDockSlots({
+        contentRect,
+        sidebarRect,
+        vbRect,
+        isSidebarRight: this.isSidebarRight(),
+        isPlacementVerticalBar: this.isPlacementVerticalBar(),
+        isSidebarCollapsed: isCollapsed,
+        isVbRevealed,
+        gap: 12,
+        collapsedGap: 7,
+        panelWidth: appWidth,
+        topInset,
+        windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight
+      });
+
+      const currentRect = this.#dom.root ? this.#dom.root.getBoundingClientRect() : null;
+      const dropSnapHit = drag.activeSnapHit || (slots ? Geo.hitTestSnapZone({
+        pointerX: e.clientX,
+        panelRect: currentRect ? { x: currentRect.left, y: currentRect.top, w: currentRect.width, h: currentRect.height } : null
+      }, slots, 120) : null);
+
+      Core.log("ZentralApps", "onFloatDrop: activeSnapHit =", drag.activeSnapHit, "dropSnapHit =", dropSnapHit);
+
+      if (dropSnapHit) {
+        this.redockPanel(dropSnapHit);
+      } else if (this.#state.isFloating && this.#dom.root) {
+        const rect = this.#dom.root.getBoundingClientRect();
+        const safeW = Math.max(Constants.Apps.MIN_WIDTH_PX, Math.round(rect.width || drag.currentW || 420));
+        const safeH = Math.max(360, Math.round(rect.height || drag.currentH || 600));
+        const safeX = Math.round((typeof rect.left === "number" && !isNaN(rect.left)) ? rect.left : 12);
+        const safeY = Math.round((typeof rect.top === "number" && !isNaN(rect.top)) ? rect.top : 12);
+
+        // Drag is complete: if panel is resting near an edge or partially off-screen, ensure pill is on visible side
+        if (Geo && bounds) {
+          const finalSide = Geo.pickPillSide({ x: safeX, w: safeW }, bounds, 44, drag.lockedPillSide || "right");
+          this.#dom.root.setAttribute("data-pill-side", finalSide);
+        }
+
+        if (this.#state.activeAppId) {
+          this.#state.floatRects.set(this.#state.activeAppId, {
+            x: safeX,
+            y: safeY,
+            w: safeW,
+            h: safeH
+          });
+        }
+      }
+    }
+
+    /**
+     * Re-docks a floating panel into a docked edge slot ('sidebar' or 'opposite').
+     * @param {'sidebar'|'opposite'} dockTargetSide
+     */
+    async redockPanel(dockTargetSide = "sidebar") {
+      const root = this.#dom.root;
+      if (!root) return;
+
+      Core.log("ZentralApps", "redockPanel: docking panel to:", dockTargetSide);
+      if (this.#dom.dockGhost) {
+        this.#dom.dockGhost.removeAttribute("data-active");
+      }
+      const Geo = this.#geo;
+      const { contentRect, sidebarRect, vbRect, topInset } = this.getContentAreaGeometry();
+      const isCollapsed = this.isCollapsedSidebar() || (sidebarRect.width > 0 && sidebarRect.width <= Constants.Apps.COLLAPSED_WIDTH_THRESHOLD);
+      const isVbRevealed = this.#dom.verticalBar?.hasAttribute("data-revealed") ?? true;
+      const app = this.#state.apps.find(a => a.id === this.#state.activeAppId);
+      const appWidth = app?.width || this.loadWidth();
+
+      const slots = Geo ? Geo.getDockSlots({
+        contentRect,
+        sidebarRect,
+        vbRect,
+        isSidebarRight: this.isSidebarRight(),
+        isPlacementVerticalBar: this.isPlacementVerticalBar(),
+        isSidebarCollapsed: isCollapsed,
+        isVbRevealed,
+        gap: 12,
+        collapsedGap: 7,
+        panelWidth: appWidth,
+        topInset,
+        windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight
+      }) : null;
+
+      const targetSlot = (dockTargetSide === "sidebar") ? slots?.sidebar : slots?.opposite;
+
+      if (targetSlot) {
+        root.setAttribute("data-animating", "true");
+        root.style.left = targetSlot.x + "px";
+        root.style.top = targetSlot.y + "px";
+        root.style.width = targetSlot.w + "px";
+        root.style.height = targetSlot.h + "px";
+        await new Promise(r => setTimeout(r, 250));
+      }
+
+      root.removeAttribute("data-animating");
+      root.removeAttribute("data-floating");
+      root.removeAttribute("data-pill-side");
+      root.style.left = "";
+      root.style.top = "";
+      root.style.width = "";
+      root.style.height = "";
+      root.style.right = "";
+      root.style.bottom = "";
+
+      this.#state.isFloating = false;
+      this.#state.isPinned = this.#state.prePinned ?? false;
+
+      // Persist per-app side flip if opposite dock side was chosen
+      if (app) {
+        const isOpposite = (dockTargetSide === "opposite");
+        app.flipSide = isOpposite;
+        this.saveApps();
+        this.#state.floatRects.delete(app.id);
+      }
+
+      if (this.#dom.grabberBtn) {
+        this.#dom.grabberBtn.title = "Drag to detach";
+      }
+
+      if (this.#dom.pinBtn) {
+        this.#dom.pinBtn.setAttribute("data-pinned", this.#state.isPinned ? "true" : "false");
+        this.#dom.pinBtn.title = this.#state.isPinned ? "Unpin panel" : "Pin panel";
+      }
+
+      this.updateWidthVar(appWidth);
+      this.positionPanel();
+    }
+
+    /**
+     * Initiates edge or corner resizing for a floating panel.
+     * @param {string} dir - Handle direction ('n','s','e','w','ne','nw','se','sw')
+     * @param {PointerEvent} e
+     */
+    startFloatResize(dir, e) {
+      if (e.button !== 0 || !this.#state.isFloating) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const root = this.#dom.root;
+      if (!root) return;
+
+      const rect = root.getBoundingClientRect();
+      const startRect = { x: rect.left, y: rect.top, w: rect.width, h: rect.height };
+      const startX = e.clientX;
+      const startY = e.clientY;
+
+      if (this.#dom.dragShield) {
+        this.#dom.dragShield.setAttribute("data-active", "true");
+      }
+
+      const Geo = this.#geo;
+      const { bounds } = this.getContentAreaGeometry();
+
+      const onPointerMove = (ev) => {
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+
+        const newRect = Geo ? Geo.computeResize(dir, startRect, dx, dy, { minW: 320, minH: 360 }, bounds)
+                            : { x: startRect.x, y: startRect.y, w: Math.max(320, startRect.w + dx), h: Math.max(360, startRect.h + dy) };
+
+        root.style.left = newRect.x + "px";
+        root.style.top = newRect.y + "px";
+        root.style.width = newRect.w + "px";
+        root.style.height = newRect.h + "px";
+
+        if (this.#state.activeAppId) {
+          this.#state.floatRects.set(this.#state.activeAppId, newRect);
+        }
+      };
+
+      const onPointerUp = () => {
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+        window.removeEventListener("pointercancel", onPointerUp);
+
+        if (this.#dom.dragShield) {
+          this.#dom.dragShield.removeAttribute("data-active");
+        }
+
+        const app = this.#state.apps.find(a => a.id === this.#state.activeAppId);
+        if (app && this.#dom.root) {
+          const r = this.#dom.root.getBoundingClientRect();
+          const finalW = Math.round(r.width);
+          const finalH = Math.round(r.height);
+          if (finalW >= Constants.Apps.MIN_WIDTH_PX) {
+            app.width = finalW;
+            this.saveApps();
+            this.updateWidthVar(finalW);
+          }
+          Core.log("ZentralApps", "startFloatResize: resize completed ->", finalW, "x", finalH);
+        }
+
+        if (this.#state.isFloating && this.#dom.root && Geo && bounds) {
+          const r = this.#dom.root.getBoundingClientRect();
+          const curSide = this.#dom.root.getAttribute("data-pill-side") || "right";
+          const newSide = Geo.pickPillSide({ x: r.left, w: r.width }, bounds, 44, curSide);
+          this.#dom.root.setAttribute("data-pill-side", newSide);
+        }
+      };
+
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+      window.addEventListener("pointercancel", onPointerUp);
     }
 
     setupContextMenu() {
@@ -5502,7 +6667,7 @@
     }
 
     handleOutsideClick(e) {
-      if (!this.#state.activeAppId || this.#state.isPinned || this.#state.isInstaPeeking) {
+      if (!this.#state.activeAppId || this.#state.isPinned || this.#state.isFloating || this.#state.isInstaPeeking) {
         return;
       }
       
@@ -5745,6 +6910,20 @@
           }
         }
         this.updateScrollMask();
+
+        if (this.#state.isFloating && this.#dom.root && this.#state.activeAppId) {
+          const Geo = this.#geo;
+          if (Geo) {
+            const { bounds } = this.getContentAreaGeometry();
+            const rect = this.#dom.root.getBoundingClientRect();
+            const clamped = Geo.clampRect({ x: rect.left, y: rect.top, w: rect.width, h: rect.height }, bounds, { minW: 320, minH: 360 }, { allowOverflow: true, minVisibleMargin: 80 });
+            this.#dom.root.style.left = clamped.x + "px";
+            this.#dom.root.style.top = clamped.y + "px";
+            this.#dom.root.style.width = clamped.w + "px";
+            this.#dom.root.style.height = clamped.h + "px";
+            this.#state.floatRects.set(this.#state.activeAppId, clamped);
+          }
+        }
       } catch (e) {
         console.warn("[ZentralApps] Failed to reposition grid", e);
       }
@@ -12025,7 +13204,7 @@
         <div class="zs-header">
           <div class="zs-title-group">
             <h2 class="zs-title">Zentral Settings</h2>
-            <span class="zs-version-badge">v1.0.2</span>
+            <span class="zs-version-badge">v1.1.0</span>
           </div>
           <div class="zs-header-actions">
             <button id="zs-kofi-btn" class="zs-kofi-btn" title="Support Zentral on Ko-fi (ko-fi.com/michele501st)">
@@ -13007,7 +14186,7 @@
           }
 
           const systemInfo = {
-            zentralVersion: "v1.0.2",
+            zentralVersion: "v1.1.0",
             zenVersion: navigator.userAgent,
             platform: navigator.platform || "Desktop",
             windowSize: `${window.innerWidth}x${window.innerHeight}`,
@@ -13178,7 +14357,7 @@
     TabGroups,
     Settings,
     Init: () => {
-      Core.log("Zentral", "Booting Master Script (v1.0.2)...");
+      Core.log("Zentral", "Booting Master Script (v1.1.0)...");
       Apps.init();
       TabGroups.init();
       Settings.init();
